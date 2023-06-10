@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="d-flex flex-column align-items-center justify-content-center">
+    
+    <div class="div-form mt-4">
+        <p class="text-center" style="font-size: 30px; font-family: Arial, Helvetica, sans-serif;">Faça sua reserva!</p>
+        <form action="{% url 'reserva' %}" method="post"> {% csrf_token %}
+            <div class="form-group">
+                <label for="nomeCompleto">Nome Completo</label>
+                <input required type="text" class="form-control" name='nome' id="nomeCompleto" placeholder="Nome Completo">
+            </div>
+            
+            <div class="form-group">
+                <label for="checkin">Dia de chegada</label>
+                <input required type="date" name="chegada" class="form-control" id="checkin">
+            </div>
+            
+            <div class="form-group">
+                <label for="checkout">Dia de saída</label>
+                <input required type="date" class="form-control" id="checkout" name="saida">
+            </div>
+            
+            <div class="form-group">
+                <label for="qtdAdultos">Quantidade de hóspedes (Adultos)</label>
+                <input required type="number" class="form-control" id="qtdAdultos" placeholder="0" name="qtdAdultos">
+            </div>
+            
+            <div class="form-group">
+                <label for="qtdCriancas">Quantidade de crianças</label>
+                <input required type="number" class="form-control" id="qtdCriancas" placeholder="0" name="qtdCriancas">
+            </div>
+            
+            <div class="form-group">
+                <label for="telefone">Telefone</label>
+                <input required type="text" class="form-control" id="telefone" placeholder="(xx) xxxxx-xxxx" name="telefone">
+            </div>
+            
+            <div class="form-group">
+                <label for="email">E-mail</label>
+                <input required type="email" class="form-control" id="email" placeholder="example@email.com" name="email">
+            </div>
+            
+            <div class="form-group">
+                <label for="reservaObs">Observações</label>
+                <textarea class="form-control" id="reservaObs" name="observacoes" rows="5" placeholder="Faça observações e pedidos especiais aqui."></textarea>
+            </div>
+            
+            <button type="submit" class="btn">Enviar</button>
+        </form>
+    </div>
+</div>
+
+{% endblock content %}

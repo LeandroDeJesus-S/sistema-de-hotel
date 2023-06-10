@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href={% static "/home/css/home.css" %}>
+    <link rel="stylesheet" href={% static "/reserva/css/reserva.css" %}>
+    <link rel="stylesheet" href={% static "/vendor/bootstrap/css/bootstrap.min.css" %}>
+    <title>Hotel {% block title %}{% endblock title %}</title>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <a class="nav-link" href="#">Início</a>
+            <a class="nav-link" href="#">Acomodações</a>
+            <a class="nav-link" href="#">Serviços</a>
+            <a class="nav-link" href="#">Restaurantes</a>
+            <a class="nav-link" href="#">Reservas</a>
+            <a class="nav-link" href="#">Contato</a>  
+        </div>
+      </nav>
+
+    {% block content %}{% endblock content %}
+
+    <footer class="d-flex">
+        <p class="footerp1 text-left">Feito com Django</p>
+        
+        <p class="footerp2 text-right">
+            <a class="text-decoration-none" href="#">Por Leandro J. Santos</a>
+        </p>
+    </footer>
+</body>
+</html>
