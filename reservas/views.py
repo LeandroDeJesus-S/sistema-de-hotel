@@ -12,6 +12,7 @@ class Reserva(View):
         CHECKOUT = self.request.POST.get('saida')
         QTD_ADULTS = self.request.POST.get('qtdAdultos')
         QTD_CHILDREN = self.request.POST.get('qtdCriacas')
+        ROOM_TYPE = self.request.POST.get('tipoQuarto')
         PHONE = self.request.POST.get('telefone')
         EMAIL = self.request.POST.get('email')
         return HttpResponse(self.request.POST.items())
