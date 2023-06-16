@@ -9,7 +9,7 @@
         <form action="{% url 'reserva' %}" method="post"> {% csrf_token %}
             <div class="form-group">
                 <label for="nomeCompleto">Nome Completo</label>
-                <input required type="text" class="form-control" name='nome' id="nomeCompleto" placeholder="Nome Completo">
+                <input maxlength="255" required type="text" class="form-control" name='nome' id="nomeCompleto" placeholder="Nome Completo">
             </div>
             
             <div class="form-group">
@@ -24,17 +24,17 @@
             
             <div class="form-group">
                 <label for="qtdAdultos">Quantidade de hóspedes (Adultos)</label>
-                <input required type="number" class="form-control" id="qtdAdultos" placeholder="0" name="qtdAdultos">
+                <input max="4" min="1" required type="number" class="form-control" id="qtdAdultos" placeholder="0" name="qtdAdultos">
             </div>
             
             <div class="form-group">
                 <label for="qtdCriancas">Quantidade de crianças</label>
-                <input required type="number" class="form-control" id="qtdCriancas" placeholder="0" name="qtdCriancas">
+                <input max="4" required type="number" class="form-control" id="qtdCriancas" placeholder="0" name="qtdCriancas">
             </div>
             
             <div class="form-group">
                 <label for="tipoQuarto">Modelo de quarto</label>
-                <select name="tipoQuarto">
+                <select name="tipoQuarto" id="tipoQuarto">
                     <option value="Básico">Básico</option>
                     <option value="Luxo">Luxo</option>
                     <option value="VIP">VIP</option>
@@ -44,17 +44,17 @@
             
             <div class="form-group">
                 <label for="telefone">Telefone</label>
-                <input required type="text" class="form-control" id="telefone" placeholder="(xx) xxxxx-xxxx" name="telefone">
+                <input maxlength="15" required type="text" class="form-control" id="telefone" placeholder="(xx) xxxxx-xxxx" name="telefone">
             </div>
             
             <div class="form-group">
                 <label for="email">E-mail</label>
-                <input required type="email" class="form-control" id="email" placeholder="example@email.com" name="email">
+                <input maxlength="155" required type="email" class="form-control" id="email" placeholder="example@email.com" name="email">
             </div>
             
             <div class="form-group">
                 <label for="reservaObs">Observações</label>
-                <textarea class="form-control" id="reservaObs" name="observacoes" rows="5" placeholder="Faça observações e pedidos especiais aqui."></textarea>
+                <textarea maxlength="100" class="form-control" id="reservaObs" name="observacoes" rows="5" placeholder="Faça observações e pedidos especiais aqui."></textarea>
             </div>
             
             <button type="submit" class="btn">Enviar</button>

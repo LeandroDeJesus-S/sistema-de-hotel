@@ -1,5 +1,8 @@
 from django.shortcuts import render, HttpResponse
 from django.views import View
+from django.core.exceptions import ValidationError
+
+from . import validators
 
 
 class Reserva(View):
@@ -15,5 +18,14 @@ class Reserva(View):
         ROOM_TYPE = self.request.POST.get('tipoQuarto')
         PHONE = self.request.POST.get('telefone')
         EMAIL = self.request.POST.get('email')
-        return HttpResponse(self.request.POST.items())
         
+        try:
+            validators.validate_fullname(NAME)
+            validators.validate_checkin_and_checkout(CHECK_IN, CHECKOUT)
+            validators.validate_qtd_adultos(QTD_ADULTS)
+        except ValidationError as msg_list:
+            print(msg_list)
+        
+        print(CHECK_IN, CHECKOUT)
+        return HttpResponse(self.request.POST.items())
+
