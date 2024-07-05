@@ -125,4 +125,5 @@ dmypy.json
 .pyre/
 
 *.txt
+*.bak
 test*
