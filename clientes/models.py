@@ -4,6 +4,7 @@ from django.core.validators import validate_email
 from .validators import validate_phone_number
 from functools import reduce
 
+
 class Cliente(models.Model):
     nome = models.CharField(
         'Nome', 

@@ -27,13 +27,25 @@ class Beneficio(models.Model):
         return self.nome
 
 
-class Quarto(models.Model):
-    classe = models.CharField(
+class Classe(models.Model):
+    nome = models.CharField(
         'Classe', 
         max_length=15, 
         blank=False, 
         null=False, 
         unique=True
+    )
+
+    def __str__(self) -> str:
+        return self.nome
+    
+
+class Quarto(models.Model):
+    classe = models.ForeignKey(
+        Classe,
+        on_delete=models.DO_NOTHING,
+        related_name='quartos',
+        related_query_name='quarto'
     )
     numero = models.SmallIntegerField(
         'Número',
@@ -53,7 +65,7 @@ class Quarto(models.Model):
     )
     preco_diaria = models.DecimalField(
         'Diária', 
-        max_digits=5, 
+        max_digits=10, 
         decimal_places=5, 
         blank=False, 
         null=False
@@ -75,6 +87,10 @@ class Quarto(models.Model):
 
     def __str__(self) -> str:
         return f'Nº{self.numero} {self.classe}'
+
+    @property
+    def daily_price_formatted(self):
+        return f'R${self.preco_diaria:.2f}'
 
 
 class Reserva(models.Model):
@@ -121,7 +137,7 @@ class Reserva(models.Model):
     custo =  models.DecimalField(
         'Valor da reserva', 
         max_digits=10, 
-        decimal_places=10,
+        decimal_places=8,
         blank=True,
     )
     data_reserva = models.DateTimeField(
@@ -131,7 +147,6 @@ class Reserva(models.Model):
         blank=False,
     )
 
-    
     def __str__(self) -> str:
         room_class = self.quarto.classe
         room_num = self.quarto.numero
@@ -152,6 +167,10 @@ class Reserva(models.Model):
         self.custo = self.calculate_reservation_price()
         super().save(*args, **kwargs)
     
+    @property
+    def formatted_price(self):
+        return f'R${self.custo:.2f}'
+
     class Meta:
         ordering = ['-data_reserva']
         constraints = [
@@ -166,9 +185,5 @@ class Reserva(models.Model):
             models.CheckConstraint(
                 check=Q(qtd_criancas__gte=0), 
                 name='chk_qtd_criancas_gte_0'
-            ),
-            models.CheckConstraint(
-                check=Q(quarto__capacidade__gte=F('qtd_adultos') + F('qtd_criancas')),
-                name='chk_reserva_quarto_capacidade'
             ),
         ]
