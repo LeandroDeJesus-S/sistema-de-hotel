@@ -1,34 +1,21 @@
-nav {
+.navbar {
     background-color: #694464;
-    padding: 3%;
+    padding-inline: 5%;
 }
-nav div {
-    display: flex;
-    justify-content: space-around;
-}
-nav div a {
-    font-size: x-large;
-    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
-    text-decoration: none;
-    color:blanchedalmond
+.nav-link {
+    color: rgb(206, 203, 203);
+
 }
 body {
-    background-image: url('/static/home/img/fundo_pagina.png');
-    background-repeat: no-repeat;
+    height: 100%;
+    background-image: url('../img/bg-3.jpg');
     background-size: cover;
 }
 footer  {
     background-color: #694464;
-    padding: 0%;
-    margin-top: 10px;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-}
-footer p  {
-    color: bisque;
-    margin-top: 10px;
-}
-footer a {
-    color: bisque;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    padding: 10px;
+    text-align: center;
 }

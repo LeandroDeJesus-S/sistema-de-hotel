@@ -1,65 +1,59 @@
+
 {% extends 'base.html' %}
 
 {% block content %}
+    <div class="container">
+        <form action="{% url 'reserva' %}" method="post" class="reservas-form row g-3">
+            {% csrf_token %}
 
-<div class="d-flex flex-column align-items-center justify-content-center">
+            <div class="col-md-12">
+                <input type="text" required class="form-control" name="cliente-nome" id="cliente-nome" placeholder="Nome completo" aria-label="Nome completo">
+            </div>
     
-    <div class="div-form mt-4">
-        <p class="text-center" style="font-size: 30px; font-family: Arial, Helvetica, sans-serif;">Faça sua reserva!</p>
-        <form action="{% url 'reserva' %}" method="post"> {% csrf_token %}
-            <div class="form-group">
-                <label for="nomeCompleto">Nome Completo</label>
-                <input maxlength="255" required type="text" class="form-control" name='nome' id="nomeCompleto" placeholder="Nome Completo">
+            <div class="col-md-6">
+                <label for="checkin" class="form-label">Check-in</label>
+                <input required type="datetime-local" class="form-control" name="checkin">
             </div>
-            
-            <div class="form-group">
-                <label for="checkin">Dia de chegada</label>
-                <input required type="date" name="chegada" class="form-control" id="checkin">
+    
+            <div class="col-md-6">
+                <label for="checkout" class="form-label">Check-out</label>
+                <input required type="datetime-local" class="form-control" name="checkout">
             </div>
-            
-            <div class="form-group">
-                <label for="checkout">Dia de saída</label>
-                <input required type="date" class="form-control" id="checkout" name="saida">
-            </div>
-            
-            <div class="form-group">
-                <label for="qtdAdultos">Quantidade de hóspedes (Adultos)</label>
-                <input max="4" min="1" required type="number" class="form-control" id="qtdAdultos" placeholder="0" name="qtdAdultos">
-            </div>
-            
-            <div class="form-group">
-                <label for="qtdCriancas">Quantidade de crianças</label>
-                <input max="4" required type="number" class="form-control" id="qtdCriancas" placeholder="0" name="qtdCriancas">
-            </div>
-            
-            <div class="form-group">
-                <label for="tipoQuarto">Modelo de quarto</label>
-                <select name="tipoQuarto" id="tipoQuarto">
-                    <option value="Básico">Básico</option>
-                    <option value="Luxo">Luxo</option>
-                    <option value="VIP">VIP</option>
+    
+            <div class="col-md-12 d-flex justify-content-center mt-4">
+                <label for="quarto" class="form-label"></label>
+                <select name="quarto" id="quarto" class="form-select mt-2">
+                    <option value="" selected>Quarto</option>
+                    {% for room_class in room_classes %}
+                        <option value="{{room_class.pk}}" >{{room_class.nome}}</option>
+                    {% endfor %}
                 </select>
-                <!-- <input required type="number" class="form-control" id="qtdCriancas" placeholder="0" name="qtdCriancas"> -->
             </div>
-            
-            <div class="form-group">
-                <label for="telefone">Telefone</label>
-                <input maxlength="15" required type="text" class="form-control" id="telefone" placeholder="(xx) xxxxx-xxxx" name="telefone">
+
+            <div class="col-md-6">
+                <label for="adultos" class="form-label">Qtd. Adultos</label>
+                <input required type="number" class="form-control" name="adultos" id="adultos" value="1">
             </div>
-            
-            <div class="form-group">
-                <label for="email">E-mail</label>
-                <input maxlength="155" required type="email" class="form-control" id="email" placeholder="example@email.com" name="email">
+    
+            <div class="col-md-6">
+                <label for="criancas" class="form-label">Qtd. Crianças</label>
+                <input required type="number" class="form-control" name="criancas" id="criancas" value="0">
             </div>
-            
-            <div class="form-group">
-                <label for="reservaObs">Observações</label>
-                <textarea maxlength="100" class="form-control" id="reservaObs" name="observacoes" rows="5" placeholder="Faça observações e pedidos especiais aqui."></textarea>
+    
+            <div class="col-md-6">
+                <label for="telefone" class="form-label">Telefone</label>
+                <input required type="text" class="form-control" name="telefone" id="telefone" placeholder="apenas números">
             </div>
-            
-            <button type="submit" class="btn">Enviar</button>
+
+            <div class="col-md-6">
+                <label for="email" class="form-label">E-mail</label>
+                <input required type="email" class="form-control" name="email" id="email" placeholder="Informe seu email">
+            </div>
+
+            <div class="col-md-12 d-flex justify-content-center mt-3">
+                    <button type="submit" class="reserva-btn btn">Enviar</button>
+            </div>
+    
         </form>
     </div>
-</div>
-
 {% endblock content %}

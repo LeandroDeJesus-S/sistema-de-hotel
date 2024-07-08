@@ -1,18 +1,32 @@
-.div-form {
-    background-color: #2e253e;
-    border: 1px solid #cccccc;
-    border-radius: 10px;
-    padding: 20px;
-    width: 400px;
-    max-width: 100%;
-    color: rgb(216, 212, 208);
-  }
+.container {
+  background-color: rgba(219, 193, 243, 0.521);
+  border-radius: 10px;
+  border-style: solid;
+  border-color: rgba(214, 167, 198, 0.548);
+  border-width: 1px;
+  padding: 3%;
+  margin-block: 3%;
+  width: 70vh;
+}
+.reserva-btn {
+  background-color: rgb(172, 123, 218);
+}
 
-.div-form .btn {
-    background-color: #912114;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 20px;
-    border: 35px;
-    margin-left: 37%;
-    color: rgb(158, 156, 156);
+.reservas-form div {
+  margin-top: 10px;
+}
+.reservas-form div input {
+  background-color: rgba(86, 83, 88, 0.384);
+  max-width: 100%;
+}
+.reservas-form div select {
+  background-color: rgba(86, 83, 88, 0.384);
+  max-width: 60%;
+}
+
+.reserva-btn {
+  background-color: rgb(192, 140, 241);
+}
+.reserva-btn:hover {
+  background-color: rgba(137, 43, 226, 0.397);
 }
