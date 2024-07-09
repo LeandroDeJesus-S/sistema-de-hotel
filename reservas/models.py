@@ -1,7 +1,6 @@
 from django.db import models
 from django.db.models import Q, F
 from clientes.models import Cliente
-from decimal import Decimal
 
 
 class Beneficio(models.Model):
@@ -139,6 +138,7 @@ class Reserva(models.Model):
         max_digits=10, 
         decimal_places=8,
         blank=True,
+        null=True
     )
     data_reserva = models.DateTimeField(
         'Data de criação da reserva', 
@@ -148,6 +148,9 @@ class Reserva(models.Model):
     )
 
     def __str__(self) -> str:
+        if not hasattr(self, 'quarto'):
+            return f'{self.__class__.__name__} {self.pk}'
+        
         room_class = self.quarto.classe
         room_num = self.quarto.numero
         client = self.cliente.complete_name 
@@ -156,16 +159,6 @@ class Reserva(models.Model):
         price = self.custo
         string = f'{client} Quarto: nº {room_num} classe {room_class} {in_}-{out} | R${price:.2f}'
         return string
-
-    def calculate_reservation_price(self):
-        daily_price = self.quarto.preco_diaria 
-        stayed_days = (self.checkout - self.check_in).days
-        stayed_days = Decimal(str(stayed_days))
-        return stayed_days * daily_price
-    
-    def save(self, *args, **kwargs) -> None:
-        self.custo = self.calculate_reservation_price()
-        super().save(*args, **kwargs)
     
     @property
     def formatted_price(self):
@@ -176,14 +169,18 @@ class Reserva(models.Model):
         constraints = [
             models.CheckConstraint(
                 check=Q(check_in__gte=F('checkout')), 
-                name='chk_checkin_gte_checkout'
+                name='chk_checkin_gte_checkout',
+                violation_error_message='A data de Check-in é maior ou igual a de Check-out'
             ),
             models.CheckConstraint(
-                check=Q(qtd_adultos__gte=0), 
-                name='chk_qtd_adultos_gte_0'
+                check=Q(qtd_adultos__gte=1), 
+                name='chk_qtd_adultos_gte_1',
+                violation_error_message='Número de adultos inválido.'
             ),
             models.CheckConstraint(
                 check=Q(qtd_criancas__gte=0), 
-                name='chk_qtd_criancas_gte_0'
+                name='chk_qtd_criancas_gte_0',
+                violation_error_message='A quantidade de crianças não pode ser menor que 0.'
             ),
         ]
+    

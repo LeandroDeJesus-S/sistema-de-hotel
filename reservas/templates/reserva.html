@@ -3,29 +3,30 @@
 
 {% block content %}
     <div class="container">
-        <form action="{% url 'reserva' %}" method="post" class="reservas-form row g-3">
+        <form action="{% url 'pre_reserva' %}" method="post" class="reservas-form row g-3">
             {% csrf_token %}
+            {% include "partials/_messages.html" %}
 
             <div class="col-md-12">
-                <input type="text" required class="form-control" name="cliente-nome" id="cliente-nome" placeholder="Nome completo" aria-label="Nome completo">
+                <input type="text" required class="form-control" value="{{req.POST.cliente_nome}}" name="cliente_nome" id="cliente_nome" placeholder="Nome completo" aria-label="Nome completo">
             </div>
     
             <div class="col-md-6">
                 <label for="checkin" class="form-label">Check-in</label>
-                <input required type="datetime-local" class="form-control" name="checkin">
+                <input required type="date" class="form-control" name="checkin">
             </div>
     
             <div class="col-md-6">
                 <label for="checkout" class="form-label">Check-out</label>
-                <input required type="datetime-local" class="form-control" name="checkout">
+                <input required type="date" class="form-control" name="checkout">
             </div>
     
             <div class="col-md-12 d-flex justify-content-center mt-4">
                 <label for="quarto" class="form-label"></label>
                 <select name="quarto" id="quarto" class="form-select mt-2">
-                    <option value="" selected>Quarto</option>
+                    <option value="0" {% if request.POST.quarto == "0" %} selected {% endif %}>Quarto</option>
                     {% for room_class in room_classes %}
-                        <option value="{{room_class.pk}}" >{{room_class.nome}}</option>
+                        <option value="{{room_class.id}}" {% if request.POST.quarto == room_class.pk %} selected {% endif %}>{{room_class.nome}}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -37,7 +38,7 @@
     
             <div class="col-md-6">
                 <label for="criancas" class="form-label">Qtd. Crianças</label>
-                <input required type="number" class="form-control" name="criancas" id="criancas" value="0">
+                <input required type="number" class="form-control" name="criancas" id="criancas" value="{% firstof {{request.POST.criancas}},0 %}">
             </div>
     
             <div class="col-md-6">

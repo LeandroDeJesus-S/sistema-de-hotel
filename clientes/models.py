@@ -1,27 +1,29 @@
 from django.utils.timezone import now
 from django.db import models
 from django.core.validators import validate_email
-from .validators import validate_phone_number
+from .validators import validate_phone_number, ValidateFieldLength
 from functools import reduce
 
 
 class Cliente(models.Model):
     nome = models.CharField(
         'Nome', 
-        max_length=45, 
+        max_length=25, 
         blank=False, 
-        null=False
+        null=False,
+        validators=[ValidateFieldLength('Nome', 2, 25)]
     )
     sobrenome = models.CharField(
         'Sobrenome', 
-        max_length=100, 
+        max_length=50, 
         blank=False, 
-        null=False
+        null=False,
+        validators=[ValidateFieldLength('Sobrenome', 2, 50)]
     )
     nascimento = models.DateField(
         'Data de nascimento', 
-        blank=False, 
-        null=False
+        blank=True, 
+        null=True
     )
 
     def __str__(self) -> str:
@@ -33,7 +35,17 @@ class Cliente(models.Model):
     
     @property
     def age(self):
-        return now().year - self.nascimento.year
+        if self.nascimento:
+            return now().year - self.nascimento.year
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nome', 'sobrenome', 'nascimento'],
+                name='unique_client',
+                violation_error_message='Cliente já existe.'
+            )
+        ]
 
 
 class Contato(models.Model):
