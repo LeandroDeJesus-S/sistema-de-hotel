@@ -5,6 +5,7 @@ from datetime import datetime
 from django.urls import reverse
 from django.contrib import messages
 from django.views import View
+from django.views.generic.list import ListView
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
@@ -19,7 +20,7 @@ class PreReserva(View):
         self.context = {
             'room_classes': Classe.objects.all(),
         }
-        self.template_name = 'reserva.html'
+        self.template_name = 'prereserva.html'
 
     def get(self, *args, **kwargs):
         return render(self.request, self.template_name, self.context)
@@ -79,6 +80,7 @@ class PreReserva(View):
             checkout=CHECKOUT, 
             qtd_adultos=QTD_ADULTS,
             qtd_criancas=QTD_CHILDREN,
+            cliente=client
         )
         if (error_msg := validate_model(reservation)):
             {messages.error(self.request, msg) for msg in error_msg}
@@ -93,9 +95,20 @@ class PreReserva(View):
         )
 
 
+class ListRooms(ListView):
+    model = Quarto
+    template_name = 'reserva.html'
+    context_object_name = 'rooms_available'
+    
+
 class Reservas(View):
-    def get(self, request, client_id, reservation_id, room_class_id, *args, **kwargs):
-        return HttpResponse(f'cliente={client_id}, reserva={reservation_id}, room={room_class_id}, {kwargs}')
+    def setup(self, *args, **kwargs):
+        super().setup(*args, **kwargs)
+        self.template_name = 'reserva.html'
+        self.context = {}
+
+    def get(self, request):#, client_id, reservation_id, room_class_id, *args, **kwargs):
+        return render(request, self.template_name, self.context)
     
     def post(self, *args, **kwargs):
         return HttpResponse('')

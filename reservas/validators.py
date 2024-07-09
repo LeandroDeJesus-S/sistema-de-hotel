@@ -8,3 +8,4 @@ def validate_model(model):
         model.validate_unique()
     except ValidationError as error:
         return error.messages
+

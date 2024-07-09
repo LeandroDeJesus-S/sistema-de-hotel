@@ -1,6 +1,7 @@
 from django.db import models
 from django.db.models import Q, F
 from clientes.models import Cliente
+from django.core.validators import FileExtensionValidator, RegexValidator
 
 
 class Beneficio(models.Model):
@@ -37,7 +38,7 @@ class Classe(models.Model):
 
     def __str__(self) -> str:
         return self.nome
-    
+
 
 class Quarto(models.Model):
     classe = models.ForeignKey(
@@ -80,6 +81,16 @@ class Quarto(models.Model):
         null=False,
         default=True
     )
+    image = models.ImageField(
+        'Imagem', 
+        upload_to='media/%Y-%m', 
+        validators=[
+            FileExtensionValidator(['jpg', 'png'], 'Somete jpg ou png'),
+            RegexValidator(r'^\w+\.(png|jpg)$')
+        ],
+        blank=True,
+        null=True
+    )
 
     class Meta:
         ordering = ['-disponivel']
@@ -118,15 +129,17 @@ class Reserva(models.Model):
     )
     cliente = models.ForeignKey(
         Cliente, 
-        on_delete=models.DO_NOTHING, 
+        on_delete=models.SET_NULL, 
         related_name='reservas', 
-        related_query_name='reserva'
+        related_query_name='reserva',
+        null=True
     )
     quarto = models.ForeignKey(
         Quarto, 
-        on_delete=models.DO_NOTHING, 
+        on_delete=models.SET_NULL, 
         related_name='quartos', 
-        related_query_name='quarto'
+        related_query_name='quarto',
+        null=True
     )
     observacoes = models.TextField(
         'Observações', 
@@ -148,7 +161,7 @@ class Reserva(models.Model):
     )
 
     def __str__(self) -> str:
-        if not hasattr(self, 'quarto'):
+        if not hasattr(self, 'quarto') or self.quarto is None:
             return f'{self.__class__.__name__} {self.pk}'
         
         room_class = self.quarto.classe
@@ -168,8 +181,8 @@ class Reserva(models.Model):
         ordering = ['-data_reserva']
         constraints = [
             models.CheckConstraint(
-                check=Q(check_in__gte=F('checkout')), 
-                name='chk_checkin_gte_checkout',
+                check=Q(check_in__lte=F('checkout')), 
+                name='chk_checkin_lt_checkout',
                 violation_error_message='A data de Check-in é maior ou igual a de Check-out'
             ),
             models.CheckConstraint(

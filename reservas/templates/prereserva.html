@@ -1,0 +1,60 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="prereserva-container container">
+        <form action="{% url 'pre_reserva' %}" method="post" class="reservas-form row g-3">
+            {% csrf_token %}
+            {% include "partials/_messages.html" %}
+
+            <div class="col-md-12">
+                <input type="text" required class="form-control" value="{{req.POST.cliente_nome}}" name="cliente_nome" id="cliente_nome" placeholder="Nome completo" aria-label="Nome completo">
+            </div>
+    
+            <div class="col-md-6">
+                <label for="checkin" class="form-label">Check-in</label>
+                <input required type="date" class="form-control" name="checkin">
+            </div>
+    
+            <div class="col-md-6">
+                <label for="checkout" class="form-label">Check-out</label>
+                <input required type="date" class="form-control" name="checkout">
+            </div>
+    
+            <div class="col-md-12 d-flex justify-content-center mt-4">
+                <label for="quarto" class="form-label"></label>
+                <select name="quarto" id="quarto" class="form-select mt-2">
+                    <option value="0" {% if request.POST.quarto == 0 %} selected {% endif %}>Quarto</option>
+                    {% for room_class in room_classes %}
+                        <option value="{{room_class.pk}}" {% if request.POST.quarto == room_class.pk %} selected {% endif %}>{{room_class.nome}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label for="adultos" class="form-label">Qtd. Adultos</label>
+                <input required type="number" class="form-control" name="adultos" id="adultos" value="{% if request.POST.adultos %}{{request.POST.adultos}}{% else %}1{% endif %}">
+            </div>
+    
+            <div class="col-md-6">
+                <label for="criancas" class="form-label">Qtd. Crianças</label>
+                <input required type="number" class="form-control" name="criancas" id="criancas" value="{% if request.POST.criancas %}{{request.POST.criancas}}{% else %}0{% endif %}">
+            </div>
+    
+            <div class="col-md-6">
+                <label for="telefone" class="form-label">Telefone</label>
+                <input required maxlength="11" type="text" class="form-control" name="telefone" id="telefone" placeholder="apenas números" value="{% if request.POST.telefone %}{{request.POST.telefone}}{% endif %}">
+            </div>
+
+            <div class="col-md-6">
+                <label for="email" class="form-label">E-mail</label>
+                <input required type="email" class="form-control" name="email" id="email" placeholder="Informe seu email" value="{% if request.POST.email %}{{request.POST.email}}{% endif %}">
+            </div>
+
+            <div class="col-md-12 d-flex justify-content-center mt-3">
+                    <button type="submit" class="reserva-btn btn">Enviar</button>
+            </div>
+    
+        </form>
+    </div>
+{% endblock content %}
