@@ -1,54 +1,60 @@
 {% extends "base.html" %}
-
+{% load static %}
+{% load customfilters %}
 
 {% block content %}
 
 <div class="rooms container py-5">
-
     <div class="row">
 
-        <div class="col-md-4 mb-2">
-            <div class="card">
 
-                <img class="card-img-top" src="https://placehold.co/400x360
-                " alt="rom_img">
-                <div class="card-body">
-                    <h5 class="card-title">Title</h5>
-                    <p class="card-text">text</p>
-                    <a href="" class="btn btn-primary">btn</a>
+        {% for room in rooms_available %}
+            <div class="col-md-12 mb-2">
+                <!--card init-->
+                <div class="card room-card">
+
+                    <div class="row no-gutters">
+                        <div class="col-md-4 d-flex justify-content-center">
+                            {% if room.image %}
+                                <img class="card-img-top" src="{{ room.image.url }}" alt="{{ room.image.name }}">
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-8 ">
+                            <div class="card-body">
+                                <h5 class="card-title">{{room.classe}}</h5>
+                                <span >Para até {{room.capacidade|pluralized_capacity}}</span></p>
+                                <p class="card-text">
+                                    <div class="row">
+                                        
+                                        {% for beneficio in benefits %}
+                                            <div class="col-md-6 form-check">
+                                                <input class="form-check-input" type="checkbox" id="flexCheckDisabled" disabled {% if beneficio in room.beneficio.all %} checked {% endif %}>
+                                                <label class="form-check-label text-light" for="{% if beneficio in room.beneficio.all %} flexCheckCheckedDisabled {% else %} flexCheckDisabled {% endif %} ">{{beneficio}}</label>
+                                            </div>
+                                        {% endfor %}
+
+                                    </div>
+
+                                </p>
+                                <div class="col-md-12 d-flex justify-content-end">
+                                    <a href="{% if request.session.client_id %} # {% else %} {% url 'pre_reserva' %}?room={{room.pk}} {% endif %}" class="btn btn-primary btn-lg">Reservar quarto {{room.daily_price_formatted}}</a>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+
                 </div>
+                <!--card end-->
+            </div> 
+        {% empty %}
+            Não há quartos disponíveis no momento.  
+        {% endfor %}
 
-            </div>
-        </div>
-
-        <div class="col-md-4 mb-2">
-            <div class="card">
-
-                <img class="card-img-top" src="https://placehold.co/400x360" alt="rom_img">
-                <div class="card-body">
-                    <h5 class="card-title">Title</h5>
-                    <p class="card-text">text</p>
-                    <a href="" class="btn btn-primary">btn</a>
-                </div>
-
-            </div>
-        </div>
-
-        <div class="col-md-4 mb-2">
-            <div class="card">
-
-                <img class="card-img-top" src="https://placehold.co/400x360" alt="rom_img">
-                <div class="card-body">
-                    <h5 class="card-title">Title</h5>
-                    <p class="card-text">text</p>
-                    <a href="" class="btn btn-primary">btn</a>
-                </div>
-
-            </div>
-        </div>
 
     </div>
-
 </div>
 
 {% endblock content %}

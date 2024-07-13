@@ -139,3 +139,8 @@ MESSAGE_TAGS = {
     msg.ERROR: 'alert-danger',
     msg.WARNING: 'alert-warning',
 }
+
+# session
+SESSION_COOKIE_AGE = 60 * 60 * 24  # 1 day
+SESSION_SAVE_EVERY_REQUEST = False
+SESSION_COOKIE_HTTPONLY = True

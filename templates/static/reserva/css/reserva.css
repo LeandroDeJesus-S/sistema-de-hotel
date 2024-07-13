@@ -1,0 +1,7 @@
+.room-card {
+    background-color: rgb(103, 67, 138);
+    padding: 2%;
+}
+.card-body span {
+    color: antiquewhite;
+}

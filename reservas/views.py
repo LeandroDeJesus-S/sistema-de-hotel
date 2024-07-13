@@ -1,4 +1,5 @@
 from typing import Any
+from django.db.models.query import QuerySet
 from django.http import HttpRequest
 from django.shortcuts import render, HttpResponse, redirect
 from datetime import datetime
@@ -9,7 +10,7 @@ from django.views.generic.list import ListView
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
-from .models import Classe, Reserva, Quarto
+from .models import Classe, Reserva, Quarto, Beneficio
 from .validators import validate_model
 from clientes.models import Cliente, Contato
 
@@ -23,6 +24,10 @@ class PreReserva(View):
         self.template_name = 'prereserva.html'
 
     def get(self, *args, **kwargs):
+        if room_id := self.request.GET.get('room'):
+            self.request.session['room_id'] = room_id
+            self.request.session.save()
+
         return render(self.request, self.template_name, self.context)
     
     def post(self, *args, **kwargs):
@@ -32,14 +37,13 @@ class PreReserva(View):
             messages.error(self.request, 'Nome inválido')
             return render(self.request, self.template_name, self.context)
         
-        firstname, lastname = NAME
+        firstname, lastname = NAME 
         client = Cliente.objects.filter(nome__iexact=firstname, sobrenome__iexact=lastname).first()
         if client is None:
             client = Cliente(
                 nome=firstname, 
                 sobrenome=lastname,
             )
-
             if (error_msg := validate_model(client)):
                 {messages.error(self.request, msg) for msg in error_msg}
                 return render(self.request, self.template_name, self.context)
@@ -48,20 +52,18 @@ class PreReserva(View):
         
         PHONE = self.request.POST.get('telefone')
         EMAIL = self.request.POST.get('email')
-        if Contato.objects.filter(Q(email__exact=EMAIL)|Q(telefone__exact=PHONE)).exists():
-            messages.error(self.request, 'E-mail ou telefone ja existe')
-            return render(self.request, self.template_name, self.context)
+        contact = Contato.objects.filter(Q(email__exact=EMAIL)|Q(telefone__exact=PHONE)).first()
+        if contact is None:
+            contact = Contato(
+                email=EMAIL,
+                telefone=PHONE,
+                cliente=client
+            )
+            if (error_msg := validate_model(contact)):
+                {messages.error(self.request, msg) for msg in error_msg}
+                return render(self.request, self.template_name, self.context)
         
-        contact = Contato(
-            email=EMAIL,
-            telefone=PHONE,
-            cliente=client
-        )
-        if (error_msg := validate_model(contact)):
-            {messages.error(self.request, msg) for msg in error_msg}
-            return render(self.request, self.template_name, self.context)
-        
-        contact.save()
+            contact.save()
 
         CHECK_IN = datetime.strptime(self.request.POST.get('checkin', '0000-00-00'), '%Y-%m-%d')
         CHECKOUT = datetime.strptime(self.request.POST.get('checkout', '0000-00-00'), '%Y-%m-%d')
@@ -72,7 +74,7 @@ class PreReserva(View):
         ROOM_CLASS_ID = self.request.POST.get('quarto', 0)
         room_class = Classe.objects.filter(pk__exact=int(ROOM_CLASS_ID)).first()
         if room_class is None:
-            messages.error(self.request, 'Por favor, escolha um quarto.')
+            messages.error(self.request, 'Por favor, escolha um quarto válido.')
             return render(self.request, self.template_name, self.context)
 
         reservation = Reserva(
@@ -82,33 +84,48 @@ class PreReserva(View):
             qtd_criancas=QTD_CHILDREN,
             cliente=client
         )
+
         if (error_msg := validate_model(reservation)):
             {messages.error(self.request, msg) for msg in error_msg}
             return render(self.request, self.template_name, self.context)
+        
+        if room_id := self.request.session.get('room'):
+            reservation.quarto = Quarto.objects.get(pk=room_id)
+            reservation.save()
+            self.request.session.update(dict(
+                client_id=client.pk,
+                reservation_id=reservation.pk, 
+                room_class_id=room_class.pk
+            ))
+            self.request.session.save()
+            return HttpResponse('pagina de pagamento')  # TODO: criar pagina e redirecionar
 
         reservation.save()
-        return redirect(
-            'reserva', 
+        self.request.session.update(dict(
             client_id=client.pk,
             reservation_id=reservation.pk, 
             room_class_id=room_class.pk
-        )
+        ))
+        self.request.session.save()
+        return redirect('reserva')
 
 
-class ListRooms(ListView):
+class ListaQuartos(ListView):
     model = Quarto
     template_name = 'reserva.html'
     context_object_name = 'rooms_available'
-    
+    ordering = '-preco_diaria'
 
-class Reservas(View):
-    def setup(self, *args, **kwargs):
-        super().setup(*args, **kwargs)
-        self.template_name = 'reserva.html'
-        self.context = {}
-
-    def get(self, request):#, client_id, reservation_id, room_class_id, *args, **kwargs):
-        return render(request, self.template_name, self.context)
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context['benefits'] = Beneficio.objects.all()
+        return context
     
-    def post(self, *args, **kwargs):
-        return HttpResponse('')
+    def get_queryset(self) -> QuerySet[Any]:
+        print('session:', self.request.session)
+        print(self.request.GET.dict())
+        return super().get_queryset()
+
+
+class Acomodacoes(ListaQuartos):
+    ...

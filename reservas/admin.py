@@ -20,6 +20,7 @@ class QuartoAdmin(admin.ModelAdmin):
         'capacidade',
         'daily_price_formatted',
         'disponivel',
+        'image'
     ]
     list_editable = ['disponivel']
 
@@ -31,6 +32,7 @@ class ReservaAdmin(admin.ModelAdmin):
         'checkout',
         'qtd_adultos', 
         'qtd_criancas',
+        'data_reserva',
     ]
     
 

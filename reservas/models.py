@@ -1,7 +1,9 @@
+from decimal import Decimal
 from django.db import models
 from django.db.models import Q, F
 from clientes.models import Cliente
 from django.core.validators import FileExtensionValidator, RegexValidator
+from PIL import Image
 
 
 class Beneficio(models.Model):
@@ -98,10 +100,27 @@ class Quarto(models.Model):
     def __str__(self) -> str:
         return f'Nº{self.numero} {self.classe}'
 
-    @property
     def daily_price_formatted(self):
         return f'R${self.preco_diaria:.2f}'
+    
+    daily_price_formatted.short_description = 'Preço da diária'
+    
+    @staticmethod
+    def resize_image(img_path, w, h=None):
+        img = Image.open(img_path)
+        original_w, original_h = img.size
 
+        if original_h <= h: return
+        if h is None: h = round(h * original_h / original_w)
+        
+        resized = img.resize((w, h), Image.Resampling.NEAREST)
+        resized.save(img_path, optimize=True, quality=70)
+        img.close()
+
+    def save(self, *args, **kwargs) -> None:
+        super().save(*args, **kwargs)
+        self.resize_image(self.image.path, w=560, h=420)
+    
 
 class Reserva(models.Model):
     check_in = models.DateField(
@@ -139,12 +158,14 @@ class Reserva(models.Model):
         on_delete=models.SET_NULL, 
         related_name='quartos', 
         related_query_name='quarto',
-        null=True
+        null=True,
+        blank=True
     )
     observacoes = models.TextField(
         'Observações', 
         max_length=100, 
-        blank=True
+        blank=True,
+        null=True
     )
     custo =  models.DecimalField(
         'Valor da reserva', 
@@ -155,7 +176,7 @@ class Reserva(models.Model):
     )
     data_reserva = models.DateTimeField(
         'Data de criação da reserva', 
-        auto_now=True,
+        auto_now_add=True,
         null=False,
         blank=False,
     )
@@ -173,9 +194,10 @@ class Reserva(models.Model):
         string = f'{client} Quarto: nº {room_num} classe {room_class} {in_}-{out} | R${price:.2f}'
         return string
     
-    @property
     def formatted_price(self):
         return f'R${self.custo:.2f}'
+    
+    formatted_price.short_description = 'Valor da reserva'
 
     class Meta:
         ordering = ['-data_reserva']
@@ -197,3 +219,7 @@ class Reserva(models.Model):
             ),
         ]
     
+    def calc_reservation_value(self):
+        days = Decimal(str((self.checkout - self.check_in).days))
+        value = self.quarto.preco_diaria * days
+        self.custo = value
