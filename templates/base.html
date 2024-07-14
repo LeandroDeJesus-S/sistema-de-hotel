@@ -34,8 +34,9 @@
 
     </nav>
     
+        {% autoescape on %}
         {% block content %}{% endblock content %}
-
+        {% endautoescape %}
         
     <footer>
         © {% now "Y" %} Hotel. Todos os direitos reservados.

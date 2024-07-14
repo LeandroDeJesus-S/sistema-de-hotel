@@ -1,7 +1,11 @@
-from typing import Any
+from typing import Any, Tuple, List, Dict
+from pprint import pprint
+import logging as log
 from django.db.models.query import QuerySet
 from django.http import HttpRequest
 from django.shortcuts import render, HttpResponse, redirect
+from django.core.serializers.json import DjangoJSONEncoder
+from django.core.serializers import serialize, deserialize
 from datetime import datetime
 from django.urls import reverse
 from django.contrib import messages
@@ -31,25 +35,61 @@ class PreReserva(View):
         return render(self.request, self.template_name, self.context)
     
     def post(self, *args, **kwargs):
-        self.context['req'] = self.request
-        NAME = self.request.POST.get('cliente_nome').split(maxsplit=1)
-        if len(NAME) < 2:
-            messages.error(self.request, 'Nome inválido')
+        pprint(self.request.POST.dict())
+        client = self._process_client()
+        if client is None:
             return render(self.request, self.template_name, self.context)
         
-        firstname, lastname = NAME 
-        client = Cliente.objects.filter(nome__iexact=firstname, sobrenome__iexact=lastname).first()
+        contact = self._process_contact(client)
+        if contact is None:
+            return render(self.request, self.template_name, self.context)
+        
+        reservation_room = self._process_reservation()
+        if reservation_room is None:
+            return render(self.request, self.template_name, self.context)
+        
+        reservation, room_class = reservation_room
+        
+        
+        # solicitação de reserva diretamente de acomodações
+        if room_id := self.request.session.get('room'):
+            reservation.quarto = Quarto.objects.get(pk__exact=room_id)
+            data = serialize('json', [reservation, room_class])
+            self.request.session['pre_reserva'] = data
+            self.request.session.save()
+            return HttpResponse(f'Cliente {client.pk} reservou quarto {reservation.quarto}')  # TODO: criar pagina e redirecionar
+
+        data = serialize('json', [reservation, room_class])
+        self.request.session['pre_reserva'] = data
+        self.request.session.save()
+        return redirect('reserva')
+
+    def _process_client(self) -> Cliente|None:
+        NAME = self.request.POST.get('cliente_nome')
+        print('_process_client', NAME)
+        LASTNAME = self.request.POST.get('cliente_sobrenome')
+        BIRTHDAY = self.request.POST.get('cliente_nascimento')
+        
+        client = Cliente.objects.filter(
+            nome__iexact=NAME, 
+            sobrenome__iexact=LASTNAME, 
+            nascimento__exact=BIRTHDAY
+        ).first()
         if client is None:
             client = Cliente(
-                nome=firstname, 
-                sobrenome=lastname,
+                nome=NAME, 
+                sobrenome=LASTNAME,
+                nascimento=BIRTHDAY
             )
             if (error_msg := validate_model(client)):
-                {messages.error(self.request, msg) for msg in error_msg}
-                return render(self.request, self.template_name, self.context)
+                messages.error(self.request, error_msg)
+                return None
             
             client.save()
-        
+            
+        return client
+
+    def _process_contact(self, client) -> Contato|None:
         PHONE = self.request.POST.get('telefone')
         EMAIL = self.request.POST.get('email')
         contact = Contato.objects.filter(Q(email__exact=EMAIL)|Q(telefone__exact=PHONE)).first()
@@ -60,11 +100,14 @@ class PreReserva(View):
                 cliente=client
             )
             if (error_msg := validate_model(contact)):
-                {messages.error(self.request, msg) for msg in error_msg}
-                return render(self.request, self.template_name, self.context)
-        
+                messages.error(self.request, error_msg)
+                return None
+            
             contact.save()
 
+        return contact
+
+    def _process_reservation(self) -> Tuple[Reserva, Classe]|None:
         CHECK_IN = datetime.strptime(self.request.POST.get('checkin', '0000-00-00'), '%Y-%m-%d')
         CHECKOUT = datetime.strptime(self.request.POST.get('checkout', '0000-00-00'), '%Y-%m-%d')
 
@@ -75,39 +118,25 @@ class PreReserva(View):
         room_class = Classe.objects.filter(pk__exact=int(ROOM_CLASS_ID)).first()
         if room_class is None:
             messages.error(self.request, 'Por favor, escolha um quarto válido.')
-            return render(self.request, self.template_name, self.context)
+            return None
+        
+        OBS = self.request.POST.get('obs', '')
 
         reservation = Reserva(
             check_in=CHECK_IN, 
             checkout=CHECKOUT, 
             qtd_adultos=QTD_ADULTS,
             qtd_criancas=QTD_CHILDREN,
-            cliente=client
+            observacoes=OBS,
+            status='p'
         )
-
-        if (error_msg := validate_model(reservation)):
-            {messages.error(self.request, msg) for msg in error_msg}
-            return render(self.request, self.template_name, self.context)
         
-        if room_id := self.request.session.get('room'):
-            reservation.quarto = Quarto.objects.get(pk=room_id)
-            reservation.save()
-            self.request.session.update(dict(
-                client_id=client.pk,
-                reservation_id=reservation.pk, 
-                room_class_id=room_class.pk
-            ))
-            self.request.session.save()
-            return HttpResponse('pagina de pagamento')  # TODO: criar pagina e redirecionar
+        if (error_msg := validate_model(reservation, exclude=['cliente'])):
+            messages.error(self.request, error_msg)
+            log.debug(error_msg)
+            return None
 
-        reservation.save()
-        self.request.session.update(dict(
-            client_id=client.pk,
-            reservation_id=reservation.pk, 
-            room_class_id=room_class.pk
-        ))
-        self.request.session.save()
-        return redirect('reserva')
+        return reservation, room_class
 
 
 class ListaQuartos(ListView):
@@ -122,10 +151,23 @@ class ListaQuartos(ListView):
         return context
     
     def get_queryset(self) -> QuerySet[Any]:
-        print('session:', self.request.session)
-        print(self.request.GET.dict())
-        return super().get_queryset()
+        qs = super().get_queryset()
+        data = self.request.session.get('pre_reserva')
+        if data is None:
+            return qs
+        
+        _, room_class = list(deserialize('json', data))
+        return qs.filter(classe__exact=room_class.object)
 
 
 class Acomodacoes(ListaQuartos):
     ...
+
+
+class Payments(View):
+    def setup(self, *args: Any, **kwargs: Any) -> None:
+        super().setup(*args, **kwargs)
+        self.template_name = 'payments.html'
+    
+    def get(self, *args, **kwargs):
+        return render(self.request, self.template_name)

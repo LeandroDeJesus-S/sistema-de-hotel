@@ -19,6 +19,10 @@
   background-color: rgba(86, 83, 88, 0.384);
   max-width: 100%;
 }
+.reservas-form div textarea {
+  background-color: rgba(86, 83, 88, 0.384);
+  max-width: 100%;
+}
 .reservas-form div select {
   background-color: rgba(86, 83, 88, 0.384);
   max-width: 60%;

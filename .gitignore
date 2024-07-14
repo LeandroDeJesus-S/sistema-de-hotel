@@ -127,3 +127,4 @@ dmypy.json
 *.txt
 *.bak
 test*
+db.json

@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_q',
     'reservas',
     'clientes',
 ]
@@ -144,3 +145,26 @@ MESSAGE_TAGS = {
 SESSION_COOKIE_AGE = 60 * 60 * 24  # 1 day
 SESSION_SAVE_EVERY_REQUEST = False
 SESSION_COOKIE_HTTPONLY = True
+
+
+# emails
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# USE_TLS = True
+EMAIL_HOST_USERNAME = 'admin@email.com'
+EMAIL_HOST_PASSWORD = ''
+EMAIL_SUBJECT_PREFIX = '[HOTEL] '
+
+# client roles
+CLIENT_MIN_AGE = 18
+CLIENT_MAX_AGE = 120
+
+# Django Q
+Q_CLUSTER = {
+    'name': 'HOTEL',
+    'workers': 2,
+    'timeout': 30,
+    'retry': 60,
+    'orm': 'default'
+}

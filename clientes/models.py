@@ -1,8 +1,9 @@
 from django.utils.timezone import now
 from django.db import models
-from django.core.validators import validate_email
+from django.core.validators import validate_email, RegexValidator
+from django.core.exceptions import ValidationError
 from .validators import validate_phone_number, ValidateFieldLength
-from functools import reduce
+from django.conf import settings
 
 
 class Cliente(models.Model):
@@ -11,14 +12,20 @@ class Cliente(models.Model):
         max_length=25, 
         blank=False, 
         null=False,
-        validators=[ValidateFieldLength('Nome', 2, 25)]
+        validators=[
+            ValidateFieldLength('Primeiro nome', 2, 25), 
+            RegexValidator(r'[A-Za-z]{2,25}', 'O nome deve conter apenas letras')
+        ],
     )
     sobrenome = models.CharField(
         'Sobrenome', 
         max_length=50, 
         blank=False, 
         null=False,
-        validators=[ValidateFieldLength('Sobrenome', 2, 50)]
+        validators=[
+            ValidateFieldLength('Sobrenome', 2, 50), 
+            RegexValidator(r'[A-Za-z]{2,50}',  'O nome deve conter apenas letras')
+        ],
     )
     nascimento = models.DateField(
         'Data de nascimento', 
@@ -43,10 +50,21 @@ class Cliente(models.Model):
             models.UniqueConstraint(
                 fields=['nome', 'sobrenome', 'nascimento'],
                 name='unique_client',
-                violation_error_message='Cliente já existe.'
             )
         ]
 
+    def clean(self) -> None:
+        super().clean()
+        error_messages = {}
+        if not settings.CLIENT_MIN_AGE < self.age < settings.CLIENT_MAX_AGE:
+            error_messages['nascimento'] = 'Data de nascimento inválida.'
+        
+        if error_messages: raise ValidationError({})
+
+    def solicite_reservation(self, reservation, room):
+        if room.disponivel:
+            reservation.quarto = room
+        
 
 class Contato(models.Model):
     email = models.EmailField(

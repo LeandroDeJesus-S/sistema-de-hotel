@@ -124,15 +124,14 @@ class Quarto(models.Model):
 
 class Reserva(models.Model):
     check_in = models.DateField(
-        'Check-in', 
-        auto_now=True, 
+        'Check-in',
         blank=False,
-        null=False
+        null=False,
     )
     checkout = models.DateField(
         'Check-out', 
         blank=False, 
-        null=False
+        null=False,
     )
     qtd_adultos = models.PositiveIntegerField(
         'Qtd. Adultos', 
@@ -165,12 +164,12 @@ class Reserva(models.Model):
         'Observações', 
         max_length=100, 
         blank=True,
-        null=True
+        null=True,
     )
     custo =  models.DecimalField(
         'Valor da reserva', 
         max_digits=10, 
-        decimal_places=8,
+        decimal_places=2,
         blank=True,
         null=True
     )
@@ -179,6 +178,20 @@ class Reserva(models.Model):
         auto_now_add=True,
         null=False,
         blank=False,
+    )
+    STATUS_CHOICES = (
+        ('p', 'processando'),
+        ('f', 'finalizado'),
+        ('c', 'cancelado')
+    )
+    status = models.CharField(
+        'Status',
+        max_length=1,
+        choices=STATUS_CHOICES,
+        unique=False,
+        blank=False,
+        null=False,
+        default='p'
     )
 
     def __str__(self) -> str:
@@ -191,6 +204,8 @@ class Reserva(models.Model):
         in_ = self.check_in
         out = self.checkout
         price = self.custo
+        print(self.quarto, client, in_, out, price)
+
         string = f'{client} Quarto: nº {room_num} classe {room_class} {in_}-{out} | R${price:.2f}'
         return string
     
@@ -205,17 +220,14 @@ class Reserva(models.Model):
             models.CheckConstraint(
                 check=Q(check_in__lte=F('checkout')), 
                 name='chk_checkin_lt_checkout',
-                violation_error_message='A data de Check-in é maior ou igual a de Check-out'
             ),
             models.CheckConstraint(
                 check=Q(qtd_adultos__gte=1), 
                 name='chk_qtd_adultos_gte_1',
-                violation_error_message='Número de adultos inválido.'
             ),
             models.CheckConstraint(
                 check=Q(qtd_criancas__gte=0), 
                 name='chk_qtd_criancas_gte_0',
-                violation_error_message='A quantidade de crianças não pode ser menor que 0.'
             ),
         ]
     

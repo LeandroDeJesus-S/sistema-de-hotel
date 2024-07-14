@@ -38,7 +38,7 @@
 
                                 </p>
                                 <div class="col-md-12 d-flex justify-content-end">
-                                    <a href="{% if request.session.client_id %} # {% else %} {% url 'pre_reserva' %}?room={{room.pk}} {% endif %}" class="btn btn-primary btn-lg">Reservar quarto {{room.daily_price_formatted}}</a>
+                                    <a href="{% if request.session.pre_reserva %} {% url "pagamentos" %} {% else %} {% url 'pre_reserva' %}?room={{room.pk}} {% endif %}" class="btn btn-primary btn-lg">Reservar quarto {{room.daily_price_formatted}}</a>
                                 </div>
                             </div>
                         </div>
