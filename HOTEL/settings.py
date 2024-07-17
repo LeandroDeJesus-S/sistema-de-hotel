@@ -150,7 +150,6 @@ SESSION_COOKIE_AGE = 60 * 60 * 24  # 1 day
 SESSION_SAVE_EVERY_REQUEST = False
 SESSION_COOKIE_HTTPONLY = True
 
-
 # emails
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # EMAIL_HOST = 'smtp.gmail.com'
