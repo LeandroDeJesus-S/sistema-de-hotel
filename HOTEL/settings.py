@@ -12,7 +12,10 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from django.contrib.messages import constants as msg
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -21,12 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-!93*y5b2o1#bc58!_i8$lno&70(r)ou1!x9v2xm-_g2ilgeb1='
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = bool(int(os.getenv('DEBUG')))
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1']
 
 
 # Application definition
@@ -41,6 +44,7 @@ INSTALLED_APPS = [
     'django_q',
     'reservas',
     'clientes',
+    'payments',
 ]
 
 MIDDLEWARE = [
@@ -156,9 +160,6 @@ EMAIL_HOST_USERNAME = 'admin@email.com'
 EMAIL_HOST_PASSWORD = ''
 EMAIL_SUBJECT_PREFIX = '[HOTEL] '
 
-# client roles
-CLIENT_MIN_AGE = 18
-CLIENT_MAX_AGE = 120
 
 # Django Q
 Q_CLUSTER = {
@@ -167,4 +168,34 @@ Q_CLUSTER = {
     'timeout': 30,
     'retry': 60,
     'orm': 'default'
+}
+
+# stripe api
+STRIPE_API_KEY_SECRET = os.getenv('STRIPE_API_KEY_SECRET')
+STRIPE_API_KEY_PUBLIC = os.getenv('STRIPE_API_KEY_PUBLIC')
+
+# logging
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "file": {
+            "level": "DEBUG",
+            "class": "logging.FileHandler",
+            "filename": BASE_DIR / "debug.log",
+            'formatter': 'verbose',
+        },
+    },
+    "loggers": {
+        "reservasLogger": {
+            "handlers": ["file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+    },
+    'formatters': {
+        'verbose': {
+            'format': '%(msecs)d [%(levelname)s] %(pathname)s %(funcName)s.%(lineno)d | %(message)s'
+        },
+    },
 }

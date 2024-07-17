@@ -3,6 +3,7 @@ from django.db import models
 from django.db.models import Q, F
 from clientes.models import Cliente
 from django.core.validators import FileExtensionValidator, RegexValidator
+from django.core.exceptions import ValidationError
 from PIL import Image
 
 
@@ -105,6 +106,10 @@ class Quarto(models.Model):
     
     daily_price_formatted.short_description = 'Preço da diária'
     
+    @property
+    def daily_price_in_cents(self) -> int:
+        return int(self.preco_diaria * Decimal('100'))
+
     @staticmethod
     def resize_image(img_path, w, h=None):
         img = Image.open(img_path)
@@ -180,6 +185,7 @@ class Reserva(models.Model):
         blank=False,
     )
     STATUS_CHOICES = (
+        ('i', 'iniciado'),
         ('p', 'processando'),
         ('f', 'finalizado'),
         ('c', 'cancelado')
@@ -198,19 +204,21 @@ class Reserva(models.Model):
         if not hasattr(self, 'quarto') or self.quarto is None:
             return f'{self.__class__.__name__} {self.pk}'
         
-        room_class = self.quarto.classe
-        room_num = self.quarto.numero
-        client = self.cliente.complete_name 
+        room = self.quarto
+        client = self.cliente
         in_ = self.check_in
         out = self.checkout
         price = self.custo
-        print(self.quarto, client, in_, out, price)
 
-        string = f'{client} Quarto: nº {room_num} classe {room_class} {in_}-{out} | R${price:.2f}'
+        string = f'{self.pk} | {client} Quarto:{room} {in_}-{out}'
+        if price is not None:
+            string += f'| R${price:.2f}'
         return string
     
     def formatted_price(self):
-        return f'R${self.custo:.2f}'
+        if self.custo:
+            return f'R${self.custo:.2f}'
+        raise AttributeError('Custo não foi persistido.')
     
     formatted_price.short_description = 'Valor da reserva'
 
@@ -231,7 +239,39 @@ class Reserva(models.Model):
             ),
         ]
     
-    def calc_reservation_value(self):
+    def calc_reservation_value(self) -> int:
+        """"calcula o valor da reserva atribuindo a model e retorna o valor 
+        em centavos."""
         days = Decimal(str((self.checkout - self.check_in).days))
         value = self.quarto.preco_diaria * days
-        self.custo = value
+        return value
+    
+    def reserve(self, client, room=None):
+        if not self.quarto and room:
+            self.quarto = room
+            self.quarto.disponivel = False
+
+        if not self.cliente:
+            self.cliente = client
+        
+        if self.custo is None:
+            self.custo = self.calc_reservation_value()
+    
+    @property
+    def coast_in_cents(self):
+        return int(self.custo * Decimal('100'))
+
+    @property
+    def reservation_days(self) -> int:
+        return (self.checkout - self.check_in).days
+    
+    def clean(self) -> None:
+        super().clean()
+        error_messages = {}
+
+        if self.quarto and not self.quarto.disponivel:
+            error_messages['quarto'] = 'Este quarto não esta disponível'
+
+        if error_messages:
+            raise ValidationError(error_messages)
+

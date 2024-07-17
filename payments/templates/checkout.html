@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+{% load customfilters %}
+
+{% block head %}<link rel="stylesheet" href={% static "/payments/css/checkout.css" %}>{% endblock head %}
+
+
+{% block content %}
+
+<section>
+  <form action="{% url 'payment' request.session.room_id request.session.client_id %}" method="POST">
+    {% csrf_token %}
+    <div class="product d-flex justify-content-center">
+      <div class="row">
+        <div class="col-12">
+
+          <div class="card">
+    
+            <div class="card-img d-flex justify-content-center">
+              <img src="{{ reservation.quarto.image.url }}" alt="{{reservation.quarto.image.name}}" class="card-img expand">
+            </div>
+    
+            <div class="card-body">
+              <h5 class="card-title text-center fs-2">{{reservation.quarto.classe}}</h5>
+              <div class="row">
+                <div class="col-md-6">
+                  <p class="card-text text-center "><span class="">👨‍👩‍👧‍👦</span> : {{reservation.quarto.capacidade|pluralized_capacity}}</p>
+                </div>
+                <div class="col-md-6">
+                  <p class="card-text text-center "><span class="">📐</span>: {{reservation.quarto.tamanho}}m²</p>
+                </div>
+              </div>
+              <p class="card-text text-center fs-3">{{reservation.formatted_price}}</p>
+            </div>
+    
+            <div class="col-12 d-flex justify-content-center">
+              <button class="btn btn-secondary btn-lg" type="submit" id="checkout-button">Confirmar</button>
+            </div>
+          </div>
+        </div>
+
+
+      </div>
+
+      </form>
+    </div>
+</section>
+
+{% endblock content %}
+ 

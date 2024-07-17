@@ -1,5 +1,10 @@
 
 {% extends 'base.html' %}
+{% load static %}
+
+{% block head %}
+    <link rel="stylesheet" href={% static "/reserva/css/prereserva.css" %}>
+{% endblock head %}
 
 {% block content %}
     <div class="prereserva-container container">
@@ -32,7 +37,7 @@
 
             <div class="col-md-6">
                 <label for="adultos" class="form-label">Qtd. Adultos</label>
-                <input required type="number" class="form-control" name="adultos" id="adultos" value="{% if request.POST.adultos %}{{request.POST.adultos}}{% else %}1{% endif %}">
+                <input min="1" max=5 required type="number" class="form-control" name="adultos" id="adultos" value="{% if request.POST.adultos %}{{request.POST.adultos}}{% else %}1{% endif %}">
             </div>
     
             <div class="col-md-6">
@@ -50,15 +55,17 @@
                 <input required type="email" class="form-control" name="email" id="email" placeholder="Informe seu email" value="{% if request.POST.email %}{{request.POST.email}}{% endif %}">
             </div>
 
-            <div class="col-md-12 d-flex justify-content-center mt-4">
-                <label for="quarto" class="form-label"></label>
-                <select name="quarto" id="quarto" class="form-select mt-2">
-                    <option value="0" {% if request.POST.quarto == 0 %} selected {% endif %}>Quarto</option>
-                    {% for room_class in room_classes %}
-                        <option value="{{room_class.pk}}" {% if request.POST.quarto == room_class.pk %} selected {% endif %}>{{room_class.nome}}</option>
-                    {% endfor %}
-                </select>
-            </div>
+            {% if not request.session.room_id %}
+                <div class="col-md-12 d-flex justify-content-center mt-4">
+                    <label for="quarto" class="form-label"></label>
+                    <select name="quarto" id="quarto" class="form-select mt-2">
+                        <option value="0" {% if request.POST.quarto == 0 %} selected {% endif %}>Quarto</option>
+                        {% for room_class in room_classes %}
+                            <option value="{{room_class.pk}}" {% if request.POST.quarto == room_class.pk %} selected {% endif %}>{{room_class.nome}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
 
             <div class="col-md-12">
                 <label for="obs" class="form-label">Observações</label>

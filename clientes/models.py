@@ -54,16 +54,16 @@ class Cliente(models.Model):
         ]
 
     def clean(self) -> None:
+        CLIENT_MIN_AGE = 18
+        CLIENT_MAX_AGE = 120
+
         super().clean()
         error_messages = {}
-        if not settings.CLIENT_MIN_AGE < self.age < settings.CLIENT_MAX_AGE:
+
+        if not CLIENT_MIN_AGE < self.age < CLIENT_MAX_AGE:
             error_messages['nascimento'] = 'Data de nascimento inválida.'
         
-        if error_messages: raise ValidationError({})
-
-    def solicite_reservation(self, reservation, room):
-        if room.disponivel:
-            reservation.quarto = room
+        if error_messages: raise ValidationError(error_messages)
         
 
 class Contato(models.Model):
@@ -94,7 +94,7 @@ class Contato(models.Model):
     )
 
     def __str__(self) -> str:
-        return f'{self.cliente.nome} telefone: {self.telefone} e-mail: {self.email}'
+        return f'{self.cliente} telefone: {self.telefone} e-mail: {self.email}'
     
     @staticmethod
     def _create_mask(value, start, end, maskchar='*'):

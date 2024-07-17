@@ -2,11 +2,14 @@
 {% load static %}
 {% load customfilters %}
 
+{% block head %}<link rel="stylesheet" href={% static "/reserva/css/reserva.css" %}>{% endblock head %}
+
 {% block content %}
 
 <div class="rooms container py-5">
     <div class="row">
-
+        r{{request.session.room_id}}
+        c{{request.session.client_id}}
 
         {% for room in rooms_available %}
             <div class="col-md-12 mb-2">
@@ -38,7 +41,10 @@
 
                                 </p>
                                 <div class="col-md-12 d-flex justify-content-end">
-                                    <a href="{% if request.session.pre_reserva %} {% url "pagamentos" %} {% else %} {% url 'pre_reserva' %}?room={{room.pk}} {% endif %}" class="btn btn-primary btn-lg">Reservar quarto {{room.daily_price_formatted}}</a>
+                                    {% comment "" %}{% if not request.session.room_id or request.session.room_id and not request.session.client_id %} {% endif %}{% endcomment %}
+
+                                    
+                                    <a href="{% if request.session.client_id and request.session.room_id %} {% url "payment" request.session.room_id request.session.client_id %} {% else %} {% url "pre_reserva" %}?room_id={{room.pk}} {% endif %}" class="btn btn-primary btn-lg">Reservar quarto {{room.daily_price_formatted}}</a>
                                 </div>
                             </div>
                         </div>

@@ -33,6 +33,7 @@ class ReservaAdmin(admin.ModelAdmin):
         'qtd_adultos', 
         'qtd_criancas',
         'data_reserva',
+        'status',
     ]
     
 
