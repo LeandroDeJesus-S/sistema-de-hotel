@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Reserva, Quarto, Beneficio, Classe
+from .models import Beneficio, Classe, Quarto, Reserva
 
 
 class BeneficioAdmin(admin.ModelAdmin):
@@ -8,21 +8,25 @@ class BeneficioAdmin(admin.ModelAdmin):
         'descricao_curta',
     ]
 
+
 class ClasseAdmin(admin.ModelAdmin):
     list_display = [
         'nome',
     ]
 
+
 class QuartoAdmin(admin.ModelAdmin):
     list_display = [
         'classe',
         'numero',
-        'capacidade',
+        'capacidade_adultos',
+        'capacidade_criancas',
         'daily_price_formatted',
         'disponivel',
         'image'
     ]
     list_editable = ['disponivel']
+
 
 class ReservaAdmin(admin.ModelAdmin):
     list_display = [
@@ -32,11 +36,9 @@ class ReservaAdmin(admin.ModelAdmin):
         'checkout',
         'qtd_adultos', 
         'qtd_criancas',
-        'data_reserva',
-        'status',
+        'ativa',
     ]
     
-
 admin.site.register(Beneficio, BeneficioAdmin)
 admin.site.register(Classe, ClasseAdmin)
 admin.site.register(Quarto, QuartoAdmin)

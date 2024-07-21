@@ -41,9 +41,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_q',
-    'reservas',
+    'fontawesomefree',
+    # 'django_q',
     'clientes',
+    'reservas',
     'payments',
 ]
 
@@ -56,6 +57,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+AUTHENTICATION_BACKENDS = ['clientes.authenticator.UserEmailAuthBackend']
 
 ROOT_URLCONF = 'HOTEL.urls'
 
@@ -107,6 +110,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# user ath model
+AUTH_USER_MODEL = 'clientes.Cliente'
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
@@ -155,19 +161,19 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # EMAIL_HOST = 'smtp.gmail.com'
 # EMAIL_PORT = 587
 # USE_TLS = True
-EMAIL_HOST_USERNAME = 'admin@email.com'
+DEFAULT_FROM_EMAIL = 'HOTEL@email.com'
 EMAIL_HOST_PASSWORD = ''
 EMAIL_SUBJECT_PREFIX = '[HOTEL] '
 
 
 # Django Q
-Q_CLUSTER = {
-    'name': 'HOTEL',
-    'workers': 2,
-    'timeout': 30,
-    'retry': 60,
-    'orm': 'default'
-}
+# Q_CLUSTER = {
+#     'name': 'HOTEL',
+#     'workers': 2,
+#     'timeout': 30,
+#     'retry': 60,
+#     'orm': 'default'
+# }
 
 # stripe api
 STRIPE_API_KEY_SECRET = os.getenv('STRIPE_API_KEY_SECRET')
@@ -186,7 +192,7 @@ LOGGING = {
         },
     },
     "loggers": {
-        "reservasLogger": {
+        "djangoLogger": {
             "handlers": ["file"],
             "level": "DEBUG",
             "propagate": False,
@@ -194,7 +200,7 @@ LOGGING = {
     },
     'formatters': {
         'verbose': {
-            'format': '%(msecs)d [%(levelname)s] %(pathname)s %(funcName)s.%(lineno)d | %(message)s'
+            'format': '%(asctime)s [%(levelname)s] %(pathname)s %(funcName)s.%(lineno)d | %(message)s'
         },
     },
 }

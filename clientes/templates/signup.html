@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+<div class="container signup-container vh-100">
+
+            <form action="{% url 'signup' %}" method="post" class="signup-form g-0">
+                {% csrf_token %}
+                {% include "partials/_messages.html" %}
+        
+                    <div class="form-floating col-md-12 mb-2">
+                        <input required type="text" required class="form-control" value="{% if request.POST.nome %}{{request.POST.username}}{% endif %}" name="username" id="username" placeholder="Username" aria-label="Username">
+                        <label for="username">Nome de usuário</label>
+                    </div>
+                    
+                    <div class="form-floating col-md-12 mb-2">
+                        <input  required type="password" required class="form-control" value="{% if request.POST.password %}{{request.POST.password}}{% endif %}" name="password" id="password" placeholder="password" aria-label="password">
+                        <label for="password">Senha</label>
+                    </div>
+        
+                    <div class="form-floating col mb-2">
+                        <input required type="text" required class="form-control" value="{% if request.POST.nome %}{{request.POST.nome}}{% endif %}" name="nome" id="nome" placeholder="Nome" aria-label="Nome">
+                        <label for="nome">Nome</label>
+                    </div>
+                    
+                    <div class="form-floating col mb-2">
+                        <input required type="text" required class="form-control" value="{% if request.POST.sobrenome %}{{request.POST.sobrenome}}{% endif %}" name="sobrenome" id="sobrenome" placeholder="Sobrenome" aria-label="Sobrenome">
+                        <label for="sobrenome">Sobrenome</label>
+                    </div>
+        
+                    <div class="form-group col-md-12 mb-2">
+                        <label for="cliente_nascimento" class="form-label">Nascimento</label>
+                        <input required type="date" required class="form-control" value="{% if request.POST.nascimento %}{{request.POST.nascimento}}{% endif %}" name="nascimento" id="nascimento">
+                    </div>
+                    
+                    <div class="form-floating col-md-12 mb-2">
+                        <label for="telefone" class="form-label">Telefone</label>
+                        <input required required maxlength="11" type="text" class="form-control" name="telefone" id="telefone" placeholder="apenas números" value="{% if request.POST.telefone %}{{request.POST.telefone}}{% endif %}">
+                    </div>
+                    
+                    <div class="form-floating col-md-12 mb-2">
+                        <label for="email" class="form-label">E-mail</label>
+                        <input required required type="email" class="form-control" name="email" id="email" placeholder="Informe seu email" value="{% if request.POST.email %}{{request.POST.email}}{% endif %}">
+                    </div>
+        
+                
+                <div class="col-md-12 d-flex justify-content-center">
+                    <button type="submit" class="reserva-btn btn btn-sm btn-primary">Enviar</button>
+                </div>
+                
+            </form>
+
+</div>
+
+{% endblock content %}

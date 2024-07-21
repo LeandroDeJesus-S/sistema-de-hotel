@@ -1,3 +1,13 @@
 from django.contrib import admin
+from .models import Pagamento
 
-# Register your models here.
+
+class PagamentosAdmin(admin.ModelAdmin):
+    list_display = [
+        'cliente',
+        'reserva',
+        'data',
+    ]
+
+
+admin.site.register(Pagamento, PagamentosAdmin)

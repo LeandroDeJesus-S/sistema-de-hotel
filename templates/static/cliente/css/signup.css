@@ -1,0 +1,14 @@
+.signup-container {
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.signup-form {
+    background-color: blueviolet;
+    padding: 2%;
+    border-radius: 15px;
+    margin-bottom: 5%;
+    width: 40%;
+
+}

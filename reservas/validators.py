@@ -1,7 +1,4 @@
-import re
-from datetime import datetime, timedelta
-
-from django.conf import settings
+from datetime import datetime
 from django.core.exceptions import ValidationError
 
 
@@ -17,4 +14,3 @@ def convert_date(value: str):
         return datetime.strptime(value, '%Y-%m-%d').date()
     except ValueError:
         return datetime(1,1,1).date()
-

@@ -6,10 +6,14 @@
 
 {% block content %}
 
+{% for message in messages %}
+    {% if message.tags == 'success' %}
+        {{message}}
+    {% endif %}
+{% endfor %}
+
 <div class="rooms container py-5">
     <div class="row">
-        r{{request.session.room_id}}
-        c{{request.session.client_id}}
 
         {% for room in rooms_available %}
             <div class="col-md-12 mb-2">
@@ -17,16 +21,17 @@
                 <div class="card room-card">
 
                     <div class="row no-gutters">
-                        <div class="col-md-4 d-flex justify-content-center">
+                        <div class="col-md-6 d-flex justify-content-center">
                             {% if room.image %}
                                 <img class="card-img-top" src="{{ room.image.url }}" alt="{{ room.image.name }}">
                             {% endif %}
                         </div>
 
-                        <div class="col-md-8 ">
+                        <div class="col-md-6">
                             <div class="card-body">
-                                <h5 class="card-title">{{room.classe}}</h5>
-                                <span >Para até {{room.capacidade|pluralized_capacity}}</span></p>
+                                <h5 class="card-title fs-3">{{room.classe}}</h5>
+                                <span><i class="fa-solid fa-person fs-5 text-light"></i> {{room.capacidade_adultos}}</span>
+                                <span ><i class="fa-solid fa-child"></i> {{room.capacidade_criancas}}</span>
                                 <p class="card-text">
                                     <div class="row">
                                         
@@ -40,11 +45,9 @@
                                     </div>
 
                                 </p>
-                                <div class="col-md-12 d-flex justify-content-end">
-                                    {% comment "" %}{% if not request.session.room_id or request.session.room_id and not request.session.client_id %} {% endif %}{% endcomment %}
-
-                                    
-                                    <a href="{% if request.session.client_id and request.session.room_id %} {% url "payment" request.session.room_id request.session.client_id %} {% else %} {% url "pre_reserva" %}?room_id={{room.pk}} {% endif %}" class="btn btn-primary btn-lg">Reservar quarto {{room.daily_price_formatted}}</a>
+                                <div class="col-md-12 d-flex justify-content-end">                                 
+                                    {% comment %} <a href="{% if request.session.reservation_id %} {% url "payment" room.pk %} {% else %} {% url "pre_reserva" %}?room_id={{room.pk}} {% endif %}" class="btn btn-primary btn-lg">Reservar quarto {{room.daily_price_formatted}}</a> {% endcomment %}
+                                    <a href="#" class="btn btn-primary btn-lg">Reservar quarto {{room.daily_price_formatted}}</a>
                                 </div>
                             </div>
                         </div>

@@ -1,9 +1,10 @@
 from django.contrib import admin
-from .models import Cliente, Contato
+from .models import Cliente
 
 
 class ClienteAdmin(admin.ModelAdmin):
     list_display = [
+        'username',
         'nome',
         'sobrenome',
         'nascimento',
@@ -11,4 +12,3 @@ class ClienteAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Cliente, ClienteAdmin)
-admin.site.register(Contato)

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% load customfilters %}
+{% load payment_customtags %}
 
 {% block head %}<link rel="stylesheet" href={% static "/payments/css/checkout.css" %}>{% endblock head %}
 
@@ -8,7 +8,7 @@
 {% block content %}
 
 <section>
-  <form action="{% url 'payment' request.session.room_id request.session.client_id %}" method="POST">
+  <form action="{% url 'payment' request.session.room_id %}" method="POST">
     {% csrf_token %}
     <div class="product d-flex justify-content-center">
       <div class="row">
@@ -17,20 +17,23 @@
           <div class="card">
     
             <div class="card-img d-flex justify-content-center">
-              <img src="{{ reservation.quarto.image.url }}" alt="{{reservation.quarto.image.name}}" class="card-img expand">
+              <img src="{{ room.image.url }}" alt="{{room.image.name}}" class="card-img expand">
             </div>
     
             <div class="card-body">
-              <h5 class="card-title text-center fs-2">{{reservation.quarto.classe}}</h5>
+              <h5 class="card-title text-center fs-2">{{room.classe}}</h5>
               <div class="row">
                 <div class="col-md-6">
-                  <p class="card-text text-center "><span class="">👨‍👩‍👧‍👦</span> : {{reservation.quarto.capacidade|pluralized_capacity}}</p>
+                  <p class="card-text text-center ">
+                    <span class=""><i class="fa-solid fa-child"></i> {{room.capacidade_criancas}}</span>
+                    <span class=""><i class="fa-solid fa-person fs-5 text-light"></i> {{room.capacidade_adultos}}</span>
+                  </p>
                 </div>
                 <div class="col-md-6">
-                  <p class="card-text text-center "><span class="">📐</span>: {{reservation.quarto.tamanho}}m²</p>
+                  <p class="card-text text-center "><span class="">📐</span>: {{room.tamanho}}m²</p>
                 </div>
               </div>
-              <p class="card-text text-center fs-3">{{reservation.formatted_price}}</p>
+              <p class="card-text text-center fs-3">{{reservation_value|money}}</p>
             </div>
     
             <div class="col-12 d-flex justify-content-center">
