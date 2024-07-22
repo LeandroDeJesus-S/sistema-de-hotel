@@ -12,3 +12,6 @@
     width: 40%;
 
 }
+.input-group-text {
+    background-color: rgba(188, 128, 196, 0.027);
+}

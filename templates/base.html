@@ -7,7 +7,7 @@
     
     <title>Hotel {% block title %}{% endblock title %}</title>
 </head>
-<body class="vh-100">
+<body>
 
     <div>
         <nav class="navbar sticky-top expand-lg mb-2">
@@ -20,11 +20,12 @@
     
                 <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                     <ul class="navbar-nav">
-                        <li class="navbar-item"><a href="#" class="nav-link">Acomodações</a></li>
+                        <li class="navbar-item"><a href="{% url "quartos" %}" class="nav-link">Acomodações</a></li>
                         <li class="navbar-item"><a href="#" class="nav-link">Serviços</a></li>
                         <li class="navbar-item"><a href="#" class="nav-link">Restaurantes</a></li>
                         <li class="navbar-item"><a href="#" class="nav-link">Reservar</a></li>
                         <li class="navbar-item"><a href="#" class="nav-link">Contato</a></li>
+                        <li class="navbar-item"><a href="{% url "logout" %}" class="nav-link">Sair</a></li>
                     </ul>
                 </div>
     
@@ -39,12 +40,16 @@
         {% endautoescape %}
     </main>
 
-    <footer class="footer fixed-bottom mt-2">
-        © {% now "Y" %} Hotel. Todos os direitos reservados.
-    </footer>
+
+        <footer class="footer mt-2">
+            © {% now "Y" %} Hotel. Todos os direitos reservados.
+        </footer>
+
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="{% static '/payments/js/checkout.js'%}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
 </body>
 </html>

@@ -264,6 +264,20 @@ class Reserva(models.Model):
         blank=False,
         default=True,
     )
+    STATUS_CHOICES = (
+        ('I', 'iniciada'),
+        ('P', 'processando'),
+        ('C', 'concluída'),
+        ('F', 'finalizada')
+    )
+    status = models.CharField(
+        'Status',
+        max_length=2,
+        null=False,
+        blank=False,
+        choices=STATUS_CHOICES,
+        default='I'
+    )
 
     def __str__(self) -> str:
         return f'< {self.__class__.__name__}: {self.pk} >'
