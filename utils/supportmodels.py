@@ -120,3 +120,7 @@ class ReservaErrorMessages:
 
 class PaymentRules:
     ALLOWED_METHODS = ['card', 'boleto']
+
+
+class PaymentErrorMessages:
+    INVALID_PAYMENT_VALUE = 'Valor de pagamento inválido'

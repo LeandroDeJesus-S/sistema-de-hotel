@@ -4,6 +4,7 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.http import HttpRequest
 from django.shortcuts import (
     redirect,
@@ -65,6 +66,7 @@ class Reservar(LoginRequiredMixin, View):
         self.context['quarto_pk'] = quarto_pk
         return render(request, self.template_name, self.context)
     
+    @transaction.atomic
     def post(self, request: HttpRequest, quarto_pk: int):
         self.context['quarto_pk'] = quarto_pk
 

@@ -1,23 +1,25 @@
 import logging
 # from typing import Any
-# from django.conf import settings
-from django.http import HttpRequest, HttpResponse
+from django.conf import settings
+from django.http import HttpRequest, HttpResponse, HttpResponseServerError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views import View
-# import stripe.stripe_object
 from reservas.models import Reserva, Quarto
+import stripe
+from stripe.checkout import Session
+from utils.supportviews import PaymentMessages
+from utils.supportmodels import SessionKeys
+from django.contrib import messages
 # from clientes.models import Cliente
 # from django.core.serializers import deserialize
-# from stripe.checkout import Session
 # from datetime import datetime
-# from utils.supportclass import SessionKeys
 # from utils.support import clear_session_keys
-# from .models import Pagamentos
-# from django.db import transaction
+from .models import Pagamento
+from django.db import transaction
 
 
-class Payment(View):  # TODO: retirar argumentos da url de check-in
+class Payment(View):
     def setup(self, request: HttpRequest, *args, **kwargs) -> None:
         super().setup(request, *args, **kwargs)
         self.logger = logging.getLogger('reservasLogger')
@@ -28,92 +30,86 @@ class Payment(View):  # TODO: retirar argumentos da url de check-in
         self.logger.debug('renderizando checkout.html')
         return render(request, self.template, {'reservation': reservation})
 
-#     @transaction.atomic
-#     def post(self, *args, **kwargs):
-#         stripe.api_key = settings.STRIPE_API_KEY_SECRET
-
-#         reservation_id = self.request.session.get(SessionKeys.RESERVATION_ID)
-#         room_id = self.request.session.get(SessionKeys.ROOM_ID)
-
-#         if not all((reservation_id, room_id)):
-#             self.logger.error('id da reserva ou quarto não esta na sessão')
-#             return redirect('pre_reserva')
+    @transaction.atomic
+    def post(self, request: HttpRequest, reservation_pk: int, *args, **kwargs):
+        stripe.api_key = settings.STRIPE_API_KEY_SECRET
         
-#         reservation = get_object_or_404(Reserva, pk=int(reservation_id))  # processing
-#         room = get_object_or_404(Quarto, pk=int(room_id))  # processing
+        reservation = get_object_or_404(Reserva, pk=reservation_pk)
+        reservation.status = 'P'
+        reservation.save()
+
+        payment = Pagamento(reserva=reservation, valor=reservation.custo, status='p')
+        payment.save()
+
+        request.session[SessionKeys.RESERVATION_ID] = reservation.pk
+        request.session.save()
+
+        baseurl = f'http://{self.request.get_host()}'
+        success_url = baseurl + reverse('payment_success', args=(reservation.pk,))
+        cancel_url = baseurl + reverse('payment_cancel', args=(reservation.pk,))
+
+        self.logger.debug(f'success callback url: {success_url}')
+        self.logger.debug(f'cancel callback url: {cancel_url}')
+
+        prod_name = f'Reserva: Quarto Nº{reservation.quarto.numero}, classe {reservation.quarto.classe}.'
+        params = {
+                'mode': 'payment',
+                'success_url': success_url,
+                'cancel_url': cancel_url,
+                'line_items': [
+                    {
+                        'adjustable_quantity': {
+                            'enabled': False,
+                        },
+                        'price_data': {
+                            'currency': 'brl',
+                            'product_data': {
+                                'name': prod_name,
+                            }, 
+                            'unit_amount': reservation.quarto.daily_price_in_cents, 
+                        },
+                        'quantity': reservation.reservation_days
+                    }
+                ]
+            }
         
-#         self.logger.debug(f'reserva a ser paga: {reservation} :: quarto a ser pago: {room}')
-
-#         reservation.reserve(room)
-
-#         baseurl = f'http://{self.request.get_host()}'
-#         success_url = baseurl + reverse('payment_success')
-#         cancel_url = baseurl + reverse('payment_cancel')
-
-#         self.logger.debug(f'success callback url: {success_url}')
-#         self.logger.debug(f'cancel callback url: {cancel_url}')
-
-#         params = {
-#                 'mode': 'payment',
-#                 'success_url': success_url,
-#                 'cancel_url': cancel_url,
-#                 'line_items': [
-#                     {
-#                         'adjustable_quantity': {
-#                             'enabled': False,
-#                         },
-#                         'price_data': {
-#                             'currency': 'brl',
-#                             'product_data': {
-#                                 'name': reservation.__str__(),
-#                             }, 
-#                             'unit_amount': reservation.quarto.daily_price_in_cents, 
-#                         },
-#                         'quantity': reservation.reservation_days
-#                     }
-#                 ]
-#             }
+        try:
+            stripe_session = Session.create(**params)
+        except Exception as e:
+            messages.error(request, PaymentMessages.PAYMENT_FAIL)
+            return HttpResponse(str(e))
         
-#         try:
-#             stripe_session = Session.create(**params)
-#         except Exception as e:
-#             return HttpResponse(str(e))
-        
-#         return redirect(stripe_session.url)
+        return redirect(stripe_session.url)
 
 
-# @transaction.atomic
-# def payment_success(request: HttpRequest):
-#     logger = logging.getLogger('reservasLogger')
+def payment_success(request: HttpRequest, reservation_pk: int):
+    logger = logging.getLogger('reservasLogger')
+    logger.info(f'reserva {reservation_pk} recebida para sucesso de pagamento')
 
-#     reservation_id = request.session.get(SessionKeys.RESERVATION_ID)
-#     reservation = Reserva.objects.get(pk__exact=int(reservation_id))
-
-#     reservation.quarto 
-#     payment = Pagamentos.objects.create(
-#         status='f',
-#         valor=reservation.custo,
-#         cliente=reservation.cliente,
-#         reserva=reservation
-#     )
+    payment = Pagamento.objects.get(reserva__pk=reservation_pk)
+    payment.reserva.status = 'F'
+    payment.reserva.ativa = True
+    payment.reserva.save()
     
-#     log = clear_session_keys(SessionKeys.all_keys())
-#     if log:
-#         logger.info('session limpa com sucesso')
-#     else:
-#         logger.error('erro ao limpar a session')
+    payment.status = 'f'
+    payment.save()
 
-#     return render(request, 'success.html', {'payment': payment})
+    logger.debug(f'renderizando pagina de sucesso com pagamento: {payment}')
+    return render(request, 'success.html', {'payment': payment})
 
 
-# def payment_cancel(request):
-#     logger = logging.getLogger('reservasLogger')
+def payment_cancel(request: HttpRequest, reservation_pk: int):
+    logger = logging.getLogger('reservasLogger')
+    logger.info(f'reserva {reservation_pk} recebida para cancelamento')
 
-#     reservation_id = request.session.get(SessionKeys.RESERVATION_ID)
-#     reservation = Reserva.objects.get(pk__exact=int(reservation_id))
-#     logger.info(f'pagamento da reserva {reservation} cancelado')
+    payment = Pagamento.objects.get(reserva__pk=reservation_pk)
+    payment.reserva.status = 'C'
+    payment.reserva.ativa = False
+    payment.reserva.quarto.disponivel = False
+    payment.reserva.save()
 
-#     reservation.quarto.disponivel = True
-#     reservation.quarto.save()
-#     logger.info(f'quarto {reservation.quarto} disponivel novamente')
-#     return render(request, 'cancel.html')
+    payment.status = 'c'
+    payment.save()
+
+    logger.info(f'pagamento {payment} para a reserva {payment.reserva} cancelado')
+    return render(request, 'cancel.html')

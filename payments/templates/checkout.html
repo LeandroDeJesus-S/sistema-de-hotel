@@ -22,11 +22,12 @@
     
             <div class="card-body">
               <h5 class="card-title text-center fs-2">{{reservation.quarto.classe}}</h5>
+              <h6 class="card-title text-center fs-5">Nº{{reservation.quarto.numero}}</h6>
               <div class="row">
                 <div class="col-md-6">
                   <p class="card-text text-center ">
+                    <span class=""><i class="fa-solid fa-person fs-5"></i> {{reservation.quarto.capacidade_adultos}}</span>
                     <span class=""><i class="fa-solid fa-child"></i> {{reservation.quarto.capacidade_criancas}}</span>
-                    <span class=""><i class="fa-solid fa-person fs-5 text-light"></i> {{reservation.quarto.capacidade_adultos}}</span>
                   </p>
                 </div>
                 <div class="col-md-6">
@@ -37,7 +38,7 @@
             </div>
     
             <div class="col-12 d-flex justify-content-center">
-              <button class="btn btn-secondary btn-lg" type="submit" id="checkout-button">Confirmar</button>
+              <button class="btn btn-success btn-lg" type="submit" id="checkout-button">Confirmar</button>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from reservas.models import Reserva
+from utils.supportmodels import PaymentErrorMessages
 
 
 class Pagamento(models.Model):
@@ -34,14 +35,14 @@ class Pagamento(models.Model):
     )
     
     def __str__(self) -> str:
-        return f'{self.cliente} - {self.reserva}'
+        return f'< {self.__class__.__name__}: {self.pk} >'
 
     def clean(self) -> None:
         super().clean()
         error_messages = {}
 
         if self.valor != self.reserva.custo:
-            error_messages['valor'] = 'Valor do pagamento inválido'        
+            error_messages['valor'] = PaymentErrorMessages.INVALID_PAYMENT_VALUE     
 
         if error_messages:
             raise ValidationError(error_messages)

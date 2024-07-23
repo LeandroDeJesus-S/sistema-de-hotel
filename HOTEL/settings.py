@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'fontawesomefree',
-    # 'django_q',
+    'django_q',
     'clientes',
     'reservas',
     'payments',
@@ -167,13 +167,13 @@ EMAIL_SUBJECT_PREFIX = '[HOTEL] '
 
 
 # Django Q
-# Q_CLUSTER = {
-#     'name': 'HOTEL',
-#     'workers': 2,
-#     'timeout': 30,
-#     'retry': 60,
-#     'orm': 'default'
-# }
+Q_CLUSTER = {
+    'name': 'HOTEL',
+    'workers': 2,
+    'timeout': 30,
+    'retry': 60,
+    'orm': 'default'
+}
 
 # stripe api
 STRIPE_API_KEY_SECRET = os.getenv('STRIPE_API_KEY_SECRET')

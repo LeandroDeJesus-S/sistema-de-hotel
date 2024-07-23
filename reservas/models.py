@@ -246,7 +246,7 @@ class Reserva(models.Model):
     STATUS_CHOICES = (
         ('I', 'iniciada'),
         ('P', 'processando'),
-        ('C', 'concluída'),
+        ('C', 'cancelada'),
         ('F', 'finalizada')
     )
     status = models.CharField(
@@ -276,9 +276,10 @@ class Reserva(models.Model):
         return value
     
     def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)  
-        self.quarto.disponivel = False
-        self.quarto.save()
+        super().save(*args, **kwargs)
+        if self.quarto.disponivel:
+            self.quarto.disponivel = False
+            self.quarto.save()
 
     def clean(self) -> None:
         super().clean()
