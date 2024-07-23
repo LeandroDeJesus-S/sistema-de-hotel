@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     # 'django_q',
     'clientes',
     'reservas',
-    # 'payments',
+    'payments',
 ]
 
 MIDDLEWARE = [

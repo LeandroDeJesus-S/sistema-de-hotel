@@ -1,6 +1,5 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from clientes.models import Cliente
 from reservas.models import Reserva
 
 
@@ -25,13 +24,6 @@ class Pagamento(models.Model):
         'Valor',
         max_digits=10,
         decimal_places=2
-    )
-    cliente = models.ForeignKey(
-        Cliente,
-        on_delete=models.CASCADE,
-        related_name='pagamento_clientes',
-        related_query_name='pagamento_cliente',
-        verbose_name='Cliente'
     )
     reserva = models.OneToOneField(
         Reserva,

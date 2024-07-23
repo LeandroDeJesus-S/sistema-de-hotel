@@ -34,8 +34,6 @@ class ReservaAdmin(admin.ModelAdmin):
         'quarto',
         'check_in',
         'checkout',
-        'qtd_adultos', 
-        'qtd_criancas',
         'ativa',
     ]
     

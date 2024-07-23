@@ -1,15 +1,15 @@
+import logging
 # from typing import Any
 # from django.conf import settings
-# from django.http import HttpRequest, HttpResponse
-# from django.shortcuts import render, redirect, get_object_or_404
-# from django.urls import reverse
-# from django.views import View
+from django.http import HttpRequest, HttpResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.views import View
 # import stripe.stripe_object
-# from reservas.models import Reserva, Quarto
+from reservas.models import Reserva, Quarto
 # from clientes.models import Cliente
 # from django.core.serializers import deserialize
 # from stripe.checkout import Session
-# import logging
 # from datetime import datetime
 # from utils.supportclass import SessionKeys
 # from utils.support import clear_session_keys
@@ -17,33 +17,16 @@
 # from django.db import transaction
 
 
-# class Payment(View):  # TODO: retirar argumentos da url de check-in
-#     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
-#         super().setup(request, *args, **kwargs)
-#         self.default_return = redirect(reverse('reserva'))
-#         self.logger = logging.getLogger('reservasLogger')
+class Payment(View):  # TODO: retirar argumentos da url de check-in
+    def setup(self, request: HttpRequest, *args, **kwargs) -> None:
+        super().setup(request, *args, **kwargs)
+        self.logger = logging.getLogger('reservasLogger')
+        self.template = 'checkout.html'
     
-#     def get(self, _, room_id, *args, **kwargs):
-#         if self.request.session.get(SessionKeys.ROOM_ID) is None:
-#             self.request.session[SessionKeys.ROOM_ID] = room_id
-
-#         reservation_id = self.request.session.get(SessionKeys.RESERVATION_ID)
-
-#         self.logger.debug(
-#             f'quarto recebido: {room_id} :: reserva recebida: {reservation_id}'
-#         )
-        
-#         if not (reservation_id and room_id):
-#             self.logger.warning('nao pode fazer checkout. redirecionando para reserva!')
-#             return self.default_return
-        
-#         reservation = get_object_or_404(Reserva, pk__exact=int(reservation_id))
-#         room = get_object_or_404(Quarto, pk__exact=int(room_id))
-
-#         reservation_value = room.daily_price_in_cents * reservation.reservation_days / 100
-
-#         self.logger.debug('renderizando checkout.html')
-#         return render(self.request, 'checkout.html', {'reservation_value': reservation_value, 'room': room})
+    def get(self, request:HttpRequest, reservation_pk: int, *args, **kwargs):
+        reservation = get_object_or_404(Reserva, pk__exact=reservation_pk)
+        self.logger.debug('renderizando checkout.html')
+        return render(request, self.template, {'reservation': reservation})
 
 #     @transaction.atomic
 #     def post(self, *args, **kwargs):

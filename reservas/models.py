@@ -10,7 +10,6 @@ from django.core.validators import (
     validate_image_file_extension,
 )
 from django.db import models
-from django.db.models import Q, F
 from django.core.exceptions import ValidationError
 from PIL import Image
 
@@ -203,26 +202,6 @@ class Reserva(models.Model):
         blank=False, 
         null=False,
     )
-    qtd_adultos = models.PositiveIntegerField(
-        'Qtd. Adultos', 
-        blank=False,
-        null=False,
-        default=1,
-        validators=[
-            MaxValueValidator(QuartoRules.MAX_ADULTS, QuartoErrorMessages.ADULTS_EXCEEDED),
-            MinValueValidator(QuartoRules.MIN_ADULTS, QuartoErrorMessages.ADULTS_INSUFFICIENT),
-        ]
-    )
-    qtd_criancas = models.PositiveIntegerField(
-        'Qtd. Crianças',
-        blank=False,
-        null=False,
-        default=1,
-        validators=[
-            MaxValueValidator(QuartoRules.MAX_CHILDREN, QuartoErrorMessages.CHILD_EXCEEDED),
-            MinValueValidator(QuartoRules.MIN_CHILDREN, QuartoErrorMessages.CHILD_INSUFFICIENT),
-        ]
-    )
     cliente = models.ForeignKey(
         Cliente, 
         on_delete=models.SET_NULL, 
@@ -262,7 +241,7 @@ class Reserva(models.Model):
         'ativa',
         null=False,
         blank=False,
-        default=True,
+        default=False,
     )
     STATUS_CHOICES = (
         ('I', 'iniciada'),
@@ -330,12 +309,6 @@ class Reserva(models.Model):
         if self.quarto:
             if not self.quarto.disponivel:
                 self.error_messages['quarto'] = ReservaErrorMessages.UNAVAILABLE_ROOM
-        
-            if self.quarto.capacidade_adultos < self.qtd_adultos:
-                self.error_messages['quarto'] = QuartoErrorMessages.ADULTS_EXCEEDED
-            
-            elif self.quarto.capacidade_criancas < self.qtd_criancas:
-                self.error_messages['quarto'] = QuartoErrorMessages.CHILD_EXCEEDED
 
     @property
     def reservation_days(self) -> int:

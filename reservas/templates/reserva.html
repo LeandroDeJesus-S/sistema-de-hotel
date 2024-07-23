@@ -22,16 +22,6 @@
                 <input required type="date" class="form-control" name="checkout" value="{% if request.POST.checkout %}{{request.POST.checkout}}{% endif %}">
             </div>
 
-            <div class="col-md-6">
-                <label for="adultos" class="form-label">Qtd. Adultos</label>
-                <input min="1" max=5 required type="number" class="form-control" name="adultos" id="adultos" value="{% if request.POST.adultos %}{{request.POST.adultos}}{% else %}1{% endif %}">
-            </div>
-    
-            <div class="col-md-6">
-                <label for="criancas" class="form-label">Qtd. Crianças</label>
-                <input required type="number" class="form-control" name="criancas" id="criancas" value="{% if request.POST.criancas %}{{request.POST.criancas}}{% else %}0{% endif %}">
-            </div>
-
             <div class="col-md-12">
                 <label for="obs" class="form-label">Observações</label>
                 <textarea maxlength="100" rows="3" class="form-control" name="obs" id="obs" placeholder="Ex.: Decoração de casal" value="{% if request.POST.obs %}{{request.POST.obs}}{% endif %}"></textarea>

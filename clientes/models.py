@@ -1,12 +1,10 @@
-import re
-from datetime import date, datetime
 from django.utils.timezone import now
 from django.db import models
 from django.core.validators import validate_email, RegexValidator, MaxLengthValidator, MinLengthValidator
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.exceptions import ValidationError
-from .validators import validate_phone_number, ValidateFieldLength
-from utils.supportmodels import ClienteRules, ClienteErrorMessages, ReservaErrorMessages
+from .validators import validate_phone_number
+from utils.supportmodels import ClienteRules, ClienteErrorMessages
 from django.contrib.auth.models import AbstractUser
 
 
@@ -31,12 +29,9 @@ class Cliente(AbstractUser):
         blank=False, 
         null=False,
         validators=[
-            ValidateFieldLength(
-                'Nome', 
-                ClienteRules.MIN_FIRSTNAME_CHARS, 
-                ClienteRules.MAX_FIRSTNAME_CHARS
-            ), 
-            RegexValidator(r'[A-Za-z]{2,25}', ClienteErrorMessages.INVALID_NAME_LETTERS)
+            RegexValidator(r'[A-Za-z]{2,25}', ClienteErrorMessages.INVALID_NAME_LETTERS),
+            MaxLengthValidator(ClienteRules.MAX_FIRSTNAME_CHARS, ClienteErrorMessages.INVALID_NAME_MAX_LENGTH),
+            MinLengthValidator(ClienteRules.MIN_FIRSTNAME_CHARS, ClienteErrorMessages.INVALID_NAME_MIN_LENGTH)
         ],
     )
     last_name = models.CharField(
@@ -46,12 +41,9 @@ class Cliente(AbstractUser):
         blank=False, 
         null=False,
         validators=[
-            ValidateFieldLength(
-                'Sobrenome', 
-                ClienteRules.MIN_SURNAME_CHARS, 
-                ClienteRules.MAX_SURNAME_CHARS
-            ), 
-            RegexValidator(r'[A-Za-z]{2,50}',  ClienteErrorMessages.INVALID_SURNAME_LETTERS)
+            RegexValidator(r'[A-Za-z]{2,50}',  ClienteErrorMessages.INVALID_SURNAME_LETTERS),
+            MinLengthValidator(ClienteRules.MIN_SURNAME_CHARS, ClienteErrorMessages.INVALID_SURNAME_MIN_LENGTH),
+            MaxLengthValidator(ClienteRules.MAX_SURNAME_CHARS, ClienteErrorMessages.INVALID_SURNAME_MAX_LENGTH),
         ],
     )
     birthdate = models.DateField(

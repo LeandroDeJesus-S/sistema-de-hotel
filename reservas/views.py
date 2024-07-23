@@ -49,7 +49,7 @@ class QuartoDetail(DetailView):
         return context
 
 
-class Reservar(LoginRequiredMixin, View):  # TODO: TESTAR E CRIAR URL PARA CHECKOUT
+class Reservar(LoginRequiredMixin, View):
     login_url = reverse_lazy('signin')
     permission_denied_message = 'Você não tem permissão para prosseguir.'
 
@@ -66,19 +66,16 @@ class Reservar(LoginRequiredMixin, View):  # TODO: TESTAR E CRIAR URL PARA CHECK
         return render(request, self.template_name, self.context)
     
     def post(self, request: HttpRequest, quarto_pk: int):
+        self.context['quarto_pk'] = quarto_pk
+
         CHECK_IN = convert_date(self.request.POST.get('checkin', '0001-01-01'))
         CHECKOUT = convert_date(self.request.POST.get('checkout', '0001-01-01'))
-
-        QTD_ADULTS = self.request.POST.get('adultos')
-        QTD_CHILDREN = self.request.POST.get('criancas')
 
         OBS = self.request.POST.get('obs', '')
 
         reservation = Reserva(
             check_in=CHECK_IN, 
-            checkout=CHECKOUT, 
-            qtd_adultos=QTD_ADULTS,
-            qtd_criancas=QTD_CHILDREN,
+            checkout=CHECKOUT,
             observacoes=OBS,
             cliente=self.request.user,
             quarto=Quarto.objects.get(pk__exact=quarto_pk),
@@ -87,7 +84,11 @@ class Reservar(LoginRequiredMixin, View):  # TODO: TESTAR E CRIAR URL PARA CHECK
             reservation.full_clean()
         except ValidationError as e:
             messages.error(request, e.messages[0])
+            self.logger.error(e.messages[0])
             return render(request, self.template_name, self.context)
         
+        reservation.custo = reservation.calc_reservation_value()
         reservation.save()
-        return redirect('/')  # TODO: redirecionar para checkout
+
+        self.logger.info('reserva registrada. Redirecionando para checkout')
+        return redirect(reverse_lazy('checkout', args=(reservation.pk,)))
