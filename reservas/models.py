@@ -11,6 +11,7 @@ from django.core.validators import (
 )
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from PIL import Image
 
 from clientes.models import Cliente
@@ -257,6 +258,12 @@ class Reserva(models.Model):
         choices=STATUS_CHOICES,
         default='I'
     )
+    created_at = models.DateTimeField(
+        'Criada em',
+        null=False,
+        blank=False,
+        default=timezone.now
+    )
 
     def __str__(self) -> str:
         return f'< {self.__class__.__name__}: {self.pk} >'
@@ -274,12 +281,6 @@ class Reserva(models.Model):
         days = Decimal(str((self.checkout - self.check_in).days))
         value = self.quarto.preco_diaria * days
         return value
-    
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        if self.quarto.disponivel:
-            self.quarto.disponivel = False
-            self.quarto.save()
 
     def clean(self) -> None:
         super().clean()
@@ -299,12 +300,6 @@ class Reserva(models.Model):
         
         elif not ReservaRules.MIN_RESERVATION_DAYS <= self.reservation_days <= ReservaRules.MAX_RESERVATION_DAYS:
             self.error_messages['check_in'] = ReservaErrorMessages.INVALID_STAYED_DAYS
-
-    def _validate_checkout(self):
-        same_day = self.checkout == self.check_in
-        valid_range_days = ReservaRules.MIN_RESERVATION_DAYS >= self.reservation_days >= ReservaRules.MAX_RESERVATION_DAYS
-        if same_day or not valid_range_days:
-            self.error_messages['checkout'] = ReservaErrorMessages.INVALID_STAYED_DAYS
 
     def _validate_room(self):
         if self.quarto:

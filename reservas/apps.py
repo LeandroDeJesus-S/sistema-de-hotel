@@ -1,6 +1,4 @@
 from django.apps import AppConfig
-from django.db.utils import IntegrityError
-import logging as log
 
 
 class ReservasConfig(AppConfig):
@@ -8,15 +6,12 @@ class ReservasConfig(AppConfig):
     name = 'reservas'
 
     def ready(self) -> None:
-        if hasattr(self, '__task'): return
+        from django_q.models import Schedule
 
-        from django_q.tasks import async_task
-        from .tasks import check_reservation_dates
-
-        try:
-            async_task(
-                check_reservation_dates, 
-                task_name='check_reservation_dates',
+        if not Schedule.objects.filter(name='checar finalização das reservas').exists():
+            Schedule.objects.create(
+                func='reservas.tasks.check_reservation_dates',
+                schedule_type=Schedule.MINUTES,
+                minutes=5,
+                name='checar finalização das reservas',
             )
-        except IntegrityError as e:
-            log.warning(str(e))

@@ -3,16 +3,20 @@ from django.utils.timezone import now
 from django.core.mail import send_mass_mail
 from django.conf import settings
 from clientes.models import Cliente
-from reservas.models import Reserva
+from reservas.models import Reserva, Quarto
+from payments.models import Pagamento
 
 
 def check_reservation_dates():
     for reservation in Reserva.objects.filter(ativa=True):
-        if reservation.checkout >= now().date():
-            reservation.quarto.disponivel = True
+        if reservation.checkout <= now().date():
             reservation.ativa = False
-            reservation.quarto.save()
             reservation.save()
+
+            quarto = Quarto.objects.get(pk=reservation.quarto.pk)
+            quarto.disponivel = True
+            quarto.save()
+
             print(f'{reservation} encerrada. Quarto {reservation.quarto} liberado para novas reservas.')
             message1 = (
                 "Vencimento da reserva",
@@ -30,3 +34,13 @@ def check_reservation_dates():
                 admin_emails
             )
             send_mass_mail((message1, message2), fail_silently=False)
+
+
+def release_room(reservation_pk):
+    reservation = Reserva.objects.get(pk=reservation_pk)
+    payment = Pagamento.objects.filter(reserva=reservation).first()
+    if payment is None or payment.status != 'f':
+        room = Quarto.objects.get(pk=reservation.quarto.pk)
+        room.disponivel = True
+        room.save()
+        print(f'quarto {room} da reserva {reservation} esta disponível novamente.')
