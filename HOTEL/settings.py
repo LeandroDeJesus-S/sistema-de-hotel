@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(int(os.getenv('DEBUG')))
 
-ALLOWED_HOSTS = ['0.0.0.0', '192.168.42.19']
+ALLOWED_HOSTS = ['127.0.0.1']
 
 # Application definition
 
@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
     'fontawesomefree',
     'django_q',
     'clientes',
@@ -203,3 +204,7 @@ LOGGING = {
         },
     },
 }
+
+# website
+SITE_LOGO_ICON = STATICFILES_DIRS[0] / 'home/img/favicon_32x32.png'
+SITE_NAME = 'HOTEL'

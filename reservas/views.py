@@ -28,6 +28,7 @@ from .models import (
 from .validators import convert_date
 from utils.supportviews import ReservaMessages, ReservaSupport
 
+
 class Quartos(ListView):
     logger = logging.getLogger('djangoLogger')
 
@@ -58,10 +59,11 @@ class QuartoDetail(DetailView):
         return context
 
 
-class Reservar(LoginRequiredMixin, View):
+class LoginRequired(LoginRequiredMixin):
     login_url = reverse_lazy('signin')
-    permission_denied_message = 'Você não tem permissão para prosseguir.'
 
+
+class Reservar(LoginRequired, View):
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
         super().setup(request, *args, **kwargs)
         self.logger = logging.getLogger('djangoLogger')
@@ -74,7 +76,6 @@ class Reservar(LoginRequiredMixin, View):
         self.context['quarto_pk'] = quarto_pk
         return render(request, self.template_name, self.context)
 
-    @transaction.atomic
     def post(self, request: HttpRequest, quarto_pk: int):
         self.context['quarto_pk'] = quarto_pk
 
@@ -83,17 +84,19 @@ class Reservar(LoginRequiredMixin, View):
         OBS = self.request.POST.get('obs', '')
         
         try:
-            reservation = Reserva(
-                check_in=CHECK_IN, 
-                checkout=CHECKOUT,
-                observacoes=OBS,
-                cliente=self.request.user,
-                quarto=Quarto.objects.get(pk__exact=quarto_pk),
-            )
-            
-            reservation.custo = reservation.calc_reservation_value()
-            reservation.full_clean()
-            reservation.save()
+            with transaction.atomic():
+                reservation = Reserva(
+                    check_in=CHECK_IN, 
+                    checkout=CHECKOUT,
+                    observacoes=OBS,
+                    cliente=self.request.user,
+                    quarto=Quarto.objects.get(pk__exact=quarto_pk),
+                )
+                
+                reservation.custo = reservation.calc_reservation_value()
+                reservation.full_clean()
+                reservation.save()
+
             schedule(
                 'reservas.tasks.release_room', 
                 reservation.pk,
@@ -109,8 +112,25 @@ class Reservar(LoginRequiredMixin, View):
             self.logger.error(e.messages[0])
             return render(request, self.template_name, self.context)
         
-        except Exception as e:  # TODO: testar
+        except Exception as e:
             messages.error(request, ReservaMessages.RESERVATION_FAIL)
             room_url = reverse_lazy('quarto', args=(quarto_pk,))
             redirect_url = request.META.get('HTTP_REFERER', room_url)
             return redirect(redirect_url)
+
+
+class HistoricoReservas(LoginRequired, ListView):
+    model = Reserva
+    template_name = 'historico_reservas.html'
+    context_object_name = 'reservas'
+    ordering = '-id'
+
+    def get_queryset(self) -> QuerySet[Any]:
+        qs = super().get_queryset()
+        return qs.filter(cliente__exact=self.request.user)
+
+
+class HistoricoReserva(LoginRequired, DetailView):
+    model = Reserva
+    context_object_name = 'reserva'
+    template_name = 'historico_reserva.html'

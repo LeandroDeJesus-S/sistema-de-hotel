@@ -14,7 +14,9 @@ from django.contrib import messages
 from .models import Pagamento
 from django.db import transaction
 from sqlite3 import OperationalError
+from .tasks import create_payment_pdf
 from utils.supportviews import ReservaSupport
+from django_q.tasks import async_task, Task
 
 
 class Payment(View):
@@ -33,16 +35,6 @@ class Payment(View):
         try:
             stripe.api_key = settings.STRIPE_API_KEY_SECRET
             reservation = get_object_or_404(Reserva, pk=reservation_pk)
-            reservation._validate_room()
-
-            reservation.quarto.disponivel = False
-            reservation.status = 'P'
-
-            payment = Pagamento(reserva=reservation, valor=reservation.custo, status='p')
-
-            reservation.quarto.save()
-            reservation.save()
-            payment.save()
 
             baseurl = f'http://{self.request.get_host()}'
             success_url = baseurl + reverse('payment_success', args=(reservation.pk,))
@@ -76,6 +68,17 @@ class Payment(View):
                 }
         
             stripe_session = Session.create(**params)
+
+            reservation._validate_room()
+
+            reservation.quarto.disponivel = False
+            reservation.status = 'P'
+
+            payment = Pagamento(reserva=reservation, valor=reservation.custo, status='p')
+
+            reservation.quarto.save()
+            reservation.save()
+            payment.save()
             return redirect(stripe_session.url)
         
         except OperationalError:
@@ -96,12 +99,17 @@ def payment_success(request: HttpRequest, reservation_pk: int):
     logger.info(f'reserva {reservation_pk} recebida para sucesso de pagamento')
 
     payment = get_object_or_404(Pagamento, reserva__pk=reservation_pk)
-    payment.reserva.status = 'F'
-    payment.reserva.ativa = True
-    payment.reserva.save()
-    
-    payment.status = 'f'
-    payment.save()
+    if payment.status != 'f':
+        payment.reserva.status = 'A'
+        payment.reserva.ativa = True
+        payment.reserva.save()
+        
+        payment.status = 'f'
+        payment.save()
+
+    task_name = f'create_payment_pdf_{payment.pk}'
+    if not Task.objects.filter(name=task_name).exists():
+        async_task(create_payment_pdf, payment, task_name=task_name)
 
     logger.debug(f'renderizando pagina de sucesso com pagamento: {payment}')
     return render(request, 'success.html', {'payment': payment})
@@ -112,13 +120,17 @@ def payment_cancel(request: HttpRequest, reservation_pk: int):
     logger.info(f'reserva {reservation_pk} recebida para cancelamento')
     try:
         payment = Pagamento.objects.get(reserva__pk=reservation_pk)
-        payment.reserva.status = 'C'
-        payment.reserva.ativa = False
-        payment.reserva.quarto.disponivel = False
-        payment.reserva.save()
+        if payment.status != 'c':
+            payment.reserva.status = 'C'
+            payment.reserva.ativa = False
+            payment.reserva.quarto.disponivel = True
+            payment.reserva.quarto.save()
+            payment.reserva.save()
+            payment.reserva.save()
 
-        payment.status = 'c'
-        payment.save()
+            payment.status = 'c'
+            payment.save()
+            
     except Exception as e:
         logger.critical(f'nao foi possivel reverter o pagamento {payment} para a reserva {payment.reserva} : {str(e)}')
 

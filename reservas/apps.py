@@ -11,7 +11,6 @@ class ReservasConfig(AppConfig):
         if not Schedule.objects.filter(name='checar finalização das reservas').exists():
             Schedule.objects.create(
                 func='reservas.tasks.check_reservation_dates',
-                schedule_type=Schedule.MINUTES,
-                minutes=5,
+                schedule_type=Schedule.DAILY,
                 name='checar finalização das reservas',
             )

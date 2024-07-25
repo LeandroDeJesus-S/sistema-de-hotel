@@ -247,6 +247,7 @@ class Reserva(models.Model):
     STATUS_CHOICES = (
         ('I', 'iniciada'),
         ('P', 'processando'),
+        ('A', 'ativa'),
         ('C', 'cancelada'),
         ('F', 'finalizada')
     )

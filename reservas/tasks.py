@@ -37,10 +37,14 @@ def check_reservation_dates():
 
 
 def release_room(reservation_pk):
-    reservation = Reserva.objects.get(pk=reservation_pk)
-    payment = Pagamento.objects.filter(reserva=reservation).first()
-    if payment is None or payment.status != 'f':
-        room = Quarto.objects.get(pk=reservation.quarto.pk)
-        room.disponivel = True
-        room.save()
-        print(f'quarto {room} da reserva {reservation} esta disponível novamente.')
+    try:
+        reservation = Reserva.objects.get(pk=reservation_pk)
+        payment = Pagamento.objects.filter(reserva=reservation).first()
+        if payment is None or payment.status != 'f':
+            room = Quarto.objects.get(pk=reservation.quarto.pk)
+            room.disponivel = True
+            room.save()
+            print(f'quarto {room} da reserva {reservation} esta disponível novamente.')
+    
+    except Reserva.DoesNotExist:
+        pass
