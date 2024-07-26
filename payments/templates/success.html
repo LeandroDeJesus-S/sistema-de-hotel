@@ -2,14 +2,18 @@
 
 
 {% block content %}
-<p>
-    Reserva efetuada com sucesso.
-    <p>{{payment.data}}</p>
-    <p>{{payment.get_status_display}}</p>
-    <p>{{payment.reserva.cliente.complete_name}}</p>
-    <p>de {{payment.reserva.check_in}} a {{payment.reserva.checkout}}</p>
-    <p>Classe {{payment.reserva.quarto.classe}}</p>
-    <p>Nº{{payment.reserva.quarto.numero}}</p>
-    <p>{{payment.reserva.formatted_price}}</p>
-</p>
+<div class="row">
+
+    <div class="col-md-12 d-flex flex-column justify-content-center align-items-center mt-5">
+        <h5>Reserva efetuada com sucesso.</h5>
+        <p>Data de pagamento: {{payment.data}}</p>
+        <p>Status: {{payment.get_status_display|title}}</p>
+        <p>Pagador: {{payment.reserva.cliente.complete_name}}</p>
+        <p>de {{payment.reserva.check_in}} a {{payment.reserva.checkout}}</p>
+        <p>Classe {{payment.reserva.quarto.classe}}</p>
+        <p>Nº{{payment.reserva.quarto.numero}}</p>
+        <p>Total: {{payment.reserva.formatted_price}}</p>
+    </div>
+
+</div>
 {% endblock content %}

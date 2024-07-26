@@ -34,6 +34,11 @@
                     <input required type="text" required class="form-control" value="{% if request.POST.sobrenome %}{{request.POST.sobrenome}}{% endif %}" name="sobrenome" id="sobrenome" placeholder="Sobrenome" aria-label="Sobrenome">
                     <label for="sobrenome">Sobrenome</label>
                 </div>
+                
+                <div class="form-floating col mb-2">
+                    <input required type="text" required class="form-control" value="{% if request.POST.cpf %}{{request.POST.cpf}}{% endif %}" name="cpf" id="cpf" placeholder="Apenas digitos" aria-label="cpf">
+                    <label for="cpf">CPF</label>
+                </div>
     
                 <div class="input-group col-md-12 mb-2">
                     <span for="cliente_nascimento" class="input-group-text text-light" id="basic-addon1">Data de nascimento</span>

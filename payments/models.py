@@ -19,7 +19,8 @@ class Pagamento(models.Model):
     status = models.CharField(
         'Status',
         max_length=2,
-        default='p'
+        default='p',
+        choices=STATUS,
     )
     valor = models.DecimalField(
         'Valor',

@@ -2,7 +2,11 @@
 
 
 {% block content %}
-<p>
-    Reserva cancelada.
-</p>
+
+<div class="row">
+    <div class="col-md-12 d-flex flex-column justify-content-center align-items-center">
+        <p class="fs-4">Pagamento de reserva cancelado. Clique <a href="{% url 'quartos' %}">aqui</a> para voltar ao quartos</p>
+    </div>
+</div>
+
 {% endblock content %}

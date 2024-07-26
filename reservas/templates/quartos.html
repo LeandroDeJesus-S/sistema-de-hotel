@@ -11,40 +11,49 @@
     <div class="row">
         {% include "partials/_messages.html" %}
 
-        {% for room in rooms_available %}
+        {% for quarto in quartos %}
             <div class="col-md-12 mb-2">
                 <!--card init-->
                 <div class="card room-card">
 
                     <div class="row no-gutters">
                         <div class="col-md-6 d-flex justify-content-center">
-                            {% if room.image %}
-                                <a href="{% url "quarto" room.pk %}">
-                                    <img class="card-img-top" src="{{ room.image.url }}" alt="{{ room.image.name }}">
+                            {% if quarto.image %}
+                                <a href="{% url "quarto" quarto.pk %}">
+                                    <img class="card-img-top" src="{{ quarto.image.url }}" alt="{{ quarto.image.name }}">
                                 </a>
                             {% endif %}
                         </div>
 
                         <div class="col-md-6">
                             <div class="card-body">
-                                <h5 class="card-title fs-3">{{room.classe}}</h5>
-                                <span><i class="fa-solid fa-person fs-5 text-light"></i> {{room.capacidade_adultos}}</span>
-                                <span ><i class="fa-solid fa-child"></i> {{room.capacidade_criancas}}</span>
+                                <h5 class="card-title fs-3">{{quarto.classe}} nº<small>{{quarto.numero}}</small></h5>
+                                
+                                <span><i class="fa-solid fa-person fs-5 text-light"></i> {{quarto.capacidade_adultos}}</span>
+                                <span ><i class="fa-solid fa-child"></i> {{quarto.capacidade_criancas}}</span>
                                 <p class="card-text">
                                     <div class="row">
                                         
                                         {% for beneficio in benefits %}
                                             <div class="col-md-6 form-check">
-                                                <input class="form-check-input" type="checkbox" id="flexCheckDisabled" disabled {% if beneficio in room.beneficio.all %} checked {% endif %}>
-                                                <label class="form-check-label text-light" for="{% if beneficio in room.beneficio.all %} flexCheckCheckedDisabled {% else %} flexCheckDisabled {% endif %} ">{{beneficio}}</label>
+                                                <input class="form-check-input" type="checkbox" id="flexCheckDisabled" disabled {% if beneficio in quarto.beneficio.all %} checked {% endif %}>
+                                                <label class="form-check-label text-light" for="{% if beneficio in quarto.beneficio.all %} flexCheckCheckedDisabled {% else %} flexCheckDisabled {% endif %} ">{{beneficio}}</label>
                                             </div>
                                         {% endfor %}
 
                                     </div>
 
                                 </p>
-                                <div class="col-md-12 d-flex justify-content-end">                                 
-                                    <a href="{% url "reserva" room.pk %}" class="btn btn-primary btn-lg">Reservar {{room.daily_price_formatted}}</a>
+                                <div class="whatsappLink col-md-12 d-flex justify-content-end mt-5">                                 
+                                    
+                                    {% if quarto.disponivel %}
+                                        <a href="{% url "reserva" quarto.pk %}" class="btn btn-success btn-lg">Reservar {{quarto.daily_price_formatted}}</a>
+                                    {% else %}
+                                        <a href="{{hotel_contact.whatsapp}}" class="btn btn-success btn-lg mt-2">
+                                            <i class="fa-brands fa-whatsapp"></i> 
+                                            Agendar {{quarto.daily_price_formatted}}
+                                        </a>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

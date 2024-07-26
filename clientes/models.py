@@ -6,8 +6,9 @@ from django.core.exceptions import ValidationError
 from .validators import validate_phone_number
 from utils.supportmodels import ClienteRules, ClienteErrorMessages
 from django.contrib.auth.models import AbstractUser
+from .validators import CpfValidator
 
-# TODO: criar campo de cpf
+
 class Cliente(AbstractUser):
     username = models.CharField(
         max_length=ClienteRules.USERNAME_MAX_SIZE,
@@ -75,6 +76,16 @@ class Cliente(AbstractUser):
         validators=[
             validate_phone_number,
         ]
+    )
+    cpf = models.CharField(
+        'CPF',
+        max_length=11,
+        unique=True,
+        blank=False,
+        null=False,
+        validators=[
+            CpfValidator(),
+        ],
     )
 
     def clean(self) -> None:

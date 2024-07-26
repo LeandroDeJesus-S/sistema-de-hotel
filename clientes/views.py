@@ -34,12 +34,12 @@ class SignUp(View):
         telefone = self.request.POST.get('telefone')
         email = self.request.POST.get('email')
         nascimento = self.request.POST.get('nascimento')
+        cpf = self.request.POST.get('cpf')
 
-        if not all((username,password,nome,sobrenome, telefone, email, nascimento)):
+        if not all((username,password,nome,sobrenome, telefone, email, nascimento, cpf)):
             messages.error(request, SignUpMessages.MISSING)
             self.logger.error(SignUpMessages.MISSING)
             return render(request, self.template_name)
-
         
         client = Cliente(
             username=username,
@@ -48,7 +48,8 @@ class SignUp(View):
             sobrenome=sobrenome,
             telefone=telefone,
             nascimento=nascimento,
-            email=email
+            email=email,
+            cpf=cpf,
         )
 
         try:

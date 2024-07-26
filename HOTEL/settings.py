@@ -43,8 +43,11 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'fontawesomefree',
     'django_q',
+    'home',
+    'restaurantes',
     'clientes',
     'reservas',
+    'agendamentos',
     'payments',
 ]
 
@@ -73,6 +76,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'home.context_processors.hotel'
             ],
         },
     },
@@ -206,5 +210,5 @@ LOGGING = {
 }
 
 # website
-SITE_LOGO_ICON = STATICFILES_DIRS[0] / 'home/img/favicon_32x32.png'
+SITE_LOGO_ICON = STATICFILES_DIRS[0] / 'home/img/favicon_transparent_32x32.png'
 SITE_NAME = 'HOTEL'

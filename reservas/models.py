@@ -15,6 +15,7 @@ from django.utils import timezone
 from PIL import Image
 
 from clientes.models import Cliente
+from home.models import Hotel
 from utils.supportmodels import ReservaRules, ReservaErrorMessages, QuartoRules, ClasseErrorMessages, QuartoErrorMessages
 
 
@@ -33,9 +34,34 @@ class Beneficio(models.Model):
         null=False, 
         unique=True,
     )
+    icon = models.ImageField(
+        'Ícone',
+        blank=True,
+        null=True,
+        unique=False
+    )
+    displayable_on_homepage = models.BooleanField(
+        'Visível na página inicial',
+        default=False,
+        null=False,
+        blank=False
+    )
 
     class Meta:
         verbose_name = 'Benefício'
+
+    def clean(self) -> None:
+        super().clean()
+        self.error_messages = {}
+        self._validate_icon_size()
+        
+        if self.error_messages:
+            raise ValidationError(self.error_messages)            
+
+    def _validate_icon_size(self):
+        if self.icon:
+            if self.icon.width > 64 or self.icon.height > 64:
+                self.error_messages['icon'] = 'O ícone deve ter tamanho 64x64.'
 
     def __str__(self) -> str:
         return self.nome
@@ -68,13 +94,14 @@ class Quarto(models.Model):
         'Número',
         blank=False,
         null=False,
+        unique=True,
         max_length=4,
         validators=[
             RegexValidator(r"^\d{3}[A-Z]?$")
         ]
     )
     capacidade_adultos = models.PositiveSmallIntegerField(
-        'Capacidade adultos', 
+        'Capacidade adultos',
         blank=False, 
         null=False, 
         default=1,
@@ -147,6 +174,12 @@ class Quarto(models.Model):
         max_length=1000,
         null=True,
         blank=True
+    )
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.CASCADE,
+        related_name='hotel_quartos',
+        related_query_name='hotel_quarto'
     )
 
     class Meta:
@@ -304,7 +337,7 @@ class Reserva(models.Model):
 
     def _validate_room(self):
         if self.quarto:
-            if not self.quarto.disponivel:
+            if not self.quarto.disponivel and self.status == 'I':
                 self.error_messages['quarto'] = ReservaErrorMessages.UNAVAILABLE_ROOM
 
     @property

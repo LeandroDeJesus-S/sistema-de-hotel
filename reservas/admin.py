@@ -6,6 +6,10 @@ class BeneficioAdmin(admin.ModelAdmin):
     list_display = [
         'nome',
         'descricao_curta',
+        'displayable_on_homepage',
+    ]
+    list_editable = [
+        'displayable_on_homepage',
     ]
 
 
@@ -25,8 +29,13 @@ class QuartoAdmin(admin.ModelAdmin):
         'disponivel',
         'image'
     ]
+    list_filter = ['hotel']
     list_editable = ['disponivel']
 
+
+@admin.display(description='Status')
+def status(obj):
+    return obj.get_status_display().title()
 
 class ReservaAdmin(admin.ModelAdmin):
     list_display = [
@@ -35,6 +44,7 @@ class ReservaAdmin(admin.ModelAdmin):
         'check_in',
         'checkout',
         'ativa',
+        status,
     ]
     
 admin.site.register(Beneficio, BeneficioAdmin)

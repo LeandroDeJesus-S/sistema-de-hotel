@@ -34,7 +34,7 @@ class Quartos(ListView):
 
     model = Quarto
     template_name = 'quartos.html'
-    context_object_name = 'rooms_available'
+    context_object_name = 'quartos'
     ordering = '-preco_diaria'
 
     def get_context_data(self, **kwargs):
@@ -42,10 +42,6 @@ class Quartos(ListView):
         context['benefits'] = Beneficio.objects.all()
         self.logger.debug('add benefits para o context')
         return context
-
-    def get_queryset(self) -> QuerySet[Any]:
-        qs = super().get_queryset()
-        return qs.filter(disponivel=True)
 
 
 class QuartoDetail(DetailView):
