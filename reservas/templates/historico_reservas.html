@@ -9,7 +9,7 @@
             <a href="{% url "historico_reserva" reserva.pk %}" class="list-group-item list-group-item-action {% if reserva.ativa %}active{% endif %} mb-2" aria-current="true">
             <div class="d-flex w-100 justify-content-between">
                 <h5 class="mb-1">Quarto Nº{{reserva.quarto.numero}} - {{reserva.quarto.classe}}</h5>
-                <small>{{reserva.created_at|naturalday}}</small>
+                <small>{{reserva.get_status_display}} | {{reserva.created_at|naturalday}}</small>
             </div>
             <p class="mb-1">{{reserva.check_in}} - {{reserva.checkout}}</p>
             <small>{{reserva.formatted_price}}</small>

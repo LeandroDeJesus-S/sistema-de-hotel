@@ -11,6 +11,7 @@ def check_reservation_dates():
     for reservation in Reserva.objects.filter(ativa=True):
         if reservation.checkout <= now().date():
             reservation.ativa = False
+            reservation.status = 'F'
             reservation.save()
 
             quarto = Quarto.objects.get(pk=reservation.quarto.pk)

@@ -1,7 +1,5 @@
 import logging
-from datetime import datetime, timedelta
 
-from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest
 from django.http.response import HttpResponse
@@ -9,15 +7,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.views import View
 from reservas.models import Reserva
-import stripe
-from stripe.checkout import Session
 from utils.supportviews import PaymentMessages
 from django.contrib import messages
 from .models import Pagamento
 from django.db import transaction
 from sqlite3 import OperationalError
 from .tasks import create_payment_pdf
-from utils.supportviews import ReservaSupport
+from utils.support import ReservationStripePaymentCreator
 from django_q.tasks import async_task, Task
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -40,46 +36,16 @@ class Payment(LoginRequiredMixin, View):
     @transaction.atomic
     def post(self, request: HttpRequest, reservation_pk: int, *args, **kwargs):
         try:
-            stripe.api_key = settings.STRIPE_API_KEY_SECRET
             reservation = get_object_or_404(Reserva, pk=reservation_pk)
-
-            baseurl = f"http://{self.request.get_host()}"
-            success_url = baseurl + reverse("payment_success", args=(reservation.pk,))
-            cancel_url = baseurl + reverse("payment_cancel", args=(reservation.pk,))
-            expires_at = int(
-                (
-                    datetime.now()
-                    + timedelta(minutes=ReservaSupport.RESERVATION_PATIENCE_MINUTES)
-                ).timestamp()
+            reservation_payment = ReservationStripePaymentCreator(
+                request=request, 
+                reservation=reservation, 
+                success_url_name='payment_success',
+                cancel_url_name='payment_cancel'
             )
 
-            self.logger.debug(f"success callback url: {success_url}")
-            self.logger.debug(f"cancel callback url: {cancel_url}")
-
-            prod_name = f"Reserva: Quarto Nº{reservation.quarto.numero}, classe {reservation.quarto.classe}."
-            params = {
-                "mode": "payment",
-                "success_url": success_url,
-                "cancel_url": cancel_url,
-                "expires_at": expires_at,
-                "line_items": [
-                    {
-                        "adjustable_quantity": {
-                            "enabled": False,
-                        },
-                        "price_data": {
-                            "currency": "brl",
-                            "product_data": {
-                                "name": prod_name,
-                            },
-                            "unit_amount": reservation.quarto.daily_price_in_cents,
-                        },
-                        "quantity": reservation.reservation_days,
-                    }
-                ],
-            }
-
-            stripe_session = Session.create(**params)
+            self.logger.debug(f"success callback url: {reservation_payment.success_url}")
+            self.logger.debug(f"cancel callback url: {reservation_payment.cancel_url}")
 
             reservation._validate_room()
 
@@ -89,11 +55,12 @@ class Payment(LoginRequiredMixin, View):
             payment = Pagamento(
                 reserva=reservation, valor=reservation.custo, status="p"
             )
+            payment.full_clean()
 
             reservation.quarto.save()
             reservation.save()
             payment.save()
-            return redirect(stripe_session.url)
+            return redirect(reservation_payment.session.url)
 
         except OperationalError as exc:
             messages.info(request, PaymentMessages.TRANSACTION_BLOCKING)
@@ -121,7 +88,7 @@ def payment_success(request: HttpRequest, reservation_pk: int):
     logger.info(f"reserva {reservation_pk} recebida para sucesso de pagamento")
 
     payment = get_object_or_404(Pagamento, reserva__pk=reservation_pk)
-    if payment.status != "f":
+    if payment.status == "p":
         payment.reserva.status = "A"
         payment.reserva.ativa = True
         payment.reserva.save()

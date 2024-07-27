@@ -282,7 +282,8 @@ class Reserva(models.Model):
         ('P', 'processando'),
         ('A', 'ativa'),
         ('C', 'cancelada'),
-        ('F', 'finalizada')
+        ('F', 'finalizada'),
+        ('S', 'agendada')
     )
     status = models.CharField(
         'Status',
@@ -319,8 +320,9 @@ class Reserva(models.Model):
     def clean(self) -> None:
         super().clean()
         self.error_messages = {}
-        self._validate_check_in()
-        self._validate_room()
+        if self.status == 'I':
+            self._validate_check_in()
+            self._validate_room()
         
         if self.error_messages:
             raise ValidationError(self.error_messages)
@@ -337,7 +339,7 @@ class Reserva(models.Model):
 
     def _validate_room(self):
         if self.quarto:
-            if not self.quarto.disponivel and self.status == 'I':
+            if not self.quarto.disponivel:
                 self.error_messages['quarto'] = ReservaErrorMessages.UNAVAILABLE_ROOM
 
     @property

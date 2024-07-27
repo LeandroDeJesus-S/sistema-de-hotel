@@ -25,8 +25,6 @@
                     <ul class="navbar-nav">
                         <li class="navbar-item"><a href="{% url "quartos" %}" class="nav-link">Acomodações</a></li>
                         <li class="navbar-item"><a href="#" class="nav-link">Serviços</a></li>
-                        <li class="navbar-item"><a href="#" class="nav-link">Restaurantes</a></li>
-                        <li class="navbar-item"><a href="#" class="nav-link">Reservar</a></li>
                         <li class="navbar-item"><a href="{% url "historico" %}" class="nav-link">Minhas reservas</a></li>
                         
                         <li class="nav-item dropdown">
@@ -41,7 +39,7 @@
                           </li>
 
                         {% if request.user.is_authenticated %}
-                            <li class="navbar-item"><a href="{% url "logout" %}" class="nav-link">({{request.user.username}})Sair</a></li>
+                            <li class="navbar-item"><a href="{% url "logout" %}" class="nav-link">Sair</a></li>
                         {% else %}
                             <li class="navbar-item"><a href="{% url "signin" %}" class="nav-link">Entrar</a></li>
                             <li class="navbar-item"><a href="{% url "signup" %}" class="nav-link">Criar conta</a></li>

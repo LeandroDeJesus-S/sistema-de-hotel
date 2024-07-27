@@ -2,9 +2,10 @@ from django.db import models
 from clientes.models import Cliente
 from reservas.models import Reserva
 from django.core.exceptions import ValidationError
+from django.db.models.aggregates import Max
 
 
-class Agendamento(models.Model):
+class Agendamento(models.Model):  # TODO: criar testes
     """
     Ao solicitar um reserva o cliente preenche os dados, os dados são validados
     o cliente sera solicitado para efetuar o pagamento e se tudo estiver de 
@@ -24,10 +25,13 @@ class Agendamento(models.Model):
             raise ValidationError(self.error_messages)
     
     def _validate_reserving_an_occupied_room(self):
-        if not self.reserva.ativa:
+        if not Reserva.objects.filter(quarto=self.reserva.quarto, ativa=True).exists():
             self.error_messages['reserva'] = 'Não é possível agendar um quarto que não esta ocupado.'
     
     def _validate_availability_date(self):
-        active_for_room = Reserva.objects.get(quarto=self.reserva.quarto, ativa=True)
-        if self.reserva.check_in <= active_for_room.checkout:
-            self.error_messages['reserva'] = f'Data de check-in indisponível, deve ser maior que {active_for_room.checkout}'
+        reservation = Reserva.objects.filter(quarto=self.reserva.quarto, status__in=['A', 'S']).latest('checkout')
+        if reservation and  self.reserva.check_in < reservation.checkout:
+            self.error_messages['reserva'] = f'Data de check-in indisponível, deve ser a partir de {reservation.checkout}'
+
+    def __str__(self):
+        return f'{self.cliente} {self.reserva}'

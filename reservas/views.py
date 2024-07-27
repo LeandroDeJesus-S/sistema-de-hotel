@@ -3,7 +3,6 @@ from datetime import timedelta
 import logging
 
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models.query import QuerySet
@@ -19,6 +18,7 @@ from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 from django_q.tasks import schedule
 
+from .mixins import LoginRequired
 from .models import (
     Beneficio,
     Classe,
@@ -55,11 +55,7 @@ class QuartoDetail(DetailView):
         return context
 
 
-class LoginRequired(LoginRequiredMixin):
-    login_url = reverse_lazy('signin')
-
-
-class Reservar(LoginRequired, View):
+class Reservar(LoginRequired, View):  # TODO: validar cliente não pode fazer mais de uma reserva
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
         super().setup(request, *args, **kwargs)
         self.logger = logging.getLogger('djangoLogger')
@@ -69,6 +65,10 @@ class Reservar(LoginRequired, View):
         self.template_name = 'reserva.html'
 
     def get(self, request: HttpRequest, quarto_pk: int):
+        if Reserva.objects.filter(cliente=request.user, status__in=['A', 'S']).exists():
+            messages.info(request, 'Você já possui uma reserva ativa ou agendada')
+            return redirect('quartos')
+
         self.context['quarto_pk'] = quarto_pk
         return render(request, self.template_name, self.context)
 

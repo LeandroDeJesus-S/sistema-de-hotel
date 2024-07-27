@@ -10,7 +10,7 @@
 <div class="rooms container py-5">
     <div class="row">
         {% include "partials/_messages.html" %}
-
+        
         {% for quarto in quartos %}
             <div class="col-md-12 mb-2">
                 <!--card init-->
@@ -49,10 +49,29 @@
                                     {% if quarto.disponivel %}
                                         <a href="{% url "reserva" quarto.pk %}" class="btn btn-success btn-lg">Reservar {{quarto.daily_price_formatted}}</a>
                                     {% else %}
-                                        <a href="{{hotel_contact.whatsapp}}" class="btn btn-success btn-lg mt-2">
-                                            <i class="fa-brands fa-whatsapp"></i> 
-                                            Agendar {{quarto.daily_price_formatted}}
-                                        </a>
+
+                                        {% for reserva in request.user.reserva_clientes.all %}
+                                            {% if reserva.quarto == quarto %}
+
+                                                {% if reserva.status in 'AS' %}
+                                                    <a href="{% url "historico_reserva" reserva.pk %}" class="btn btn-info btn-lg mt-2">
+                                                        Reservado
+                                                    </a>
+                                                {% else %}
+                                                    <a href="{% url "agendar" quarto.pk %}" class="btn btn-success btn-lg mt-2">
+                                                        <i class="fa-brands fa-whatsapp"></i> 
+                                                        Agendar {{quarto.daily_price_formatted}}
+                                                    </a>
+                                                {% endif %}
+
+                                            {% endif %}
+                                        {% empty %}
+                                            <a href="{% url "agendar" quarto.pk %}" class="btn btn-success btn-lg mt-2">
+                                                <i class="fa-brands fa-whatsapp"></i> 
+                                                Agendar {{quarto.daily_price_formatted}}
+                                            </a>
+                                        {% endfor %}
+                                        
                                     {% endif %}
                                 </div>
                             </div>
