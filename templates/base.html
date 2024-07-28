@@ -39,6 +39,7 @@
                           </li>
 
                         {% if request.user.is_authenticated %}
+                            <li class="navbar-item"><a href="{% url "perfil" request.user.pk %}" class="nav-link">Perfil</a></li>
                             <li class="navbar-item"><a href="{% url "logout" %}" class="nav-link">Sair</a></li>
                         {% else %}
                             <li class="navbar-item"><a href="{% url "signin" %}" class="nav-link">Entrar</a></li>

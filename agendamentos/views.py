@@ -29,9 +29,6 @@ class Agendar(LoginRequired, View):  # TODO: criar testes
     
     def get(self, request, quarto_pk, *args, **kwargs):
         self.context['quarto_pk'] = quarto_pk
-        reserva = Reserva.objects.filter(quarto__pk=quarto_pk, status__in=['A', 'S']).latest('checkout')
-
-        messages.info(request, f'Disponível a partir de {reserva.checkout}')
         return render(self.request, 'agendamentos.html', self.context)
 
     @transaction.atomic
@@ -42,22 +39,28 @@ class Agendar(LoginRequired, View):  # TODO: criar testes
         OBS = self.request.POST.get('obs', '')
         
         try:
-            reserva = Reserva(
-                check_in=CHECK_IN, 
-                checkout=CHECKOUT,
-                observacoes=OBS,
+            reservation_exists = Reserva.objects.filter(
                 cliente=self.request.user,
-                quarto=get_object_or_404(Quarto, pk__exact=quarto_pk),
-            )
-            reserva.custo = reserva.calc_reservation_value()
+                check_in=CHECK_IN,
+                checkout=CHECKOUT
+            ).exists()
+            if not reservation_exists:
+                reserva = Reserva(
+                    check_in=CHECK_IN, 
+                    checkout=CHECKOUT,
+                    observacoes=OBS,
+                    cliente=self.request.user,
+                    quarto=get_object_or_404(Quarto, pk__exact=quarto_pk),
+                )
+                reserva.custo = reserva.calc_reservation_value()
 
-            reserva.error_messages = {}
-            reserva._validate_check_in()
-            if reserva.error_messages:
-                raise ValidationError(reserva.error_messages)
-            
-            reserva.clean_fields()
-            reserva.save()
+                reserva.error_messages = {}
+                reserva._validate_check_in()
+                if reserva.error_messages:
+                    raise ValidationError(reserva.error_messages)
+                
+                reserva.clean_fields()
+                reserva.save()
 
             stripe_payment = ReservationStripePaymentCreator(
                 request=self.request,
@@ -120,9 +123,10 @@ def agendamento_success(request: HttpRequest, reservation_pk: int):
     if not Schedule.objects.filter(name=schedule_name).exists():
         Schedule.objects.create(
             func='agendamentos.tasks.schedule_reservation',
+            args=str(agendamento.reserva.pk),
             next_run=payment.reserva.check_in,
             repeats=1,
-            name=schedule_name
+            name=schedule_name,
         )
 
     task_name = f"create_payment_pdf_{payment.pk}"

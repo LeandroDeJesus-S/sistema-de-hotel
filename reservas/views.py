@@ -5,7 +5,7 @@ import logging
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models.query import QuerySet
+from django.db.models.query import QuerySet, Q
 from django.http import HttpRequest
 from django.shortcuts import (
     redirect,
@@ -28,6 +28,12 @@ from .models import (
 from .validators import convert_date
 from utils.supportviews import ReservaMessages, ReservaSupport
 
+def get_reserva_on(request, context):
+    if request.user.is_authenticated:
+        reserva_on = request.user.reserva_clientes.filter(status__in=['A', 'S']).first()
+        if reserva_on is not None:
+            context['reserva_on'] = reserva_on
+
 
 class Quartos(ListView):
     logger = logging.getLogger('djangoLogger')
@@ -41,6 +47,8 @@ class Quartos(ListView):
         context = super().get_context_data(**kwargs)
         context['benefits'] = Beneficio.objects.all()
         self.logger.debug('add benefits para o context')
+
+        get_reserva_on(self.request, context)
         return context
 
 
@@ -52,6 +60,7 @@ class QuartoDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['benefits'] = Beneficio.objects.all()
+        get_reserva_on(self.request, context)
         return context
 
 

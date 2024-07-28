@@ -48,31 +48,17 @@
                                     
                                     {% if quarto.disponivel %}
                                         <a href="{% url "reserva" quarto.pk %}" class="btn btn-success btn-lg">Reservar {{quarto.daily_price_formatted}}</a>
+                                    {% elif reserva_on and quarto.pk == reserva_on.quarto.pk %}
+                                        <a href="{% url "historico_reserva" reserva_on.pk %}" class="btn btn-info btn-lg mt-2">
+                                            Ver reserva
+                                        </a>
                                     {% else %}
-
-                                        {% for reserva in request.user.reserva_clientes.all %}
-                                            {% if reserva.quarto == quarto %}
-
-                                                {% if reserva.status in 'AS' %}
-                                                    <a href="{% url "historico_reserva" reserva.pk %}" class="btn btn-info btn-lg mt-2">
-                                                        Reservado
-                                                    </a>
-                                                {% else %}
-                                                    <a href="{% url "agendar" quarto.pk %}" class="btn btn-success btn-lg mt-2">
-                                                        <i class="fa-brands fa-whatsapp"></i> 
-                                                        Agendar {{quarto.daily_price_formatted}}
-                                                    </a>
-                                                {% endif %}
-
-                                            {% endif %}
-                                        {% empty %}
-                                            <a href="{% url "agendar" quarto.pk %}" class="btn btn-success btn-lg mt-2">
-                                                <i class="fa-brands fa-whatsapp"></i> 
-                                                Agendar {{quarto.daily_price_formatted}}
-                                            </a>
-                                        {% endfor %}
-                                        
+                                        <a href="{% url "agendar" quarto.pk %}" class="btn btn-success btn-lg mt-2">
+                                            <i class="fa-brands fa-whatsapp"></i> 
+                                            Agendar {{quarto.daily_price_formatted}}
+                                        </a>
                                     {% endif %}
+
                                 </div>
                             </div>
                         </div>

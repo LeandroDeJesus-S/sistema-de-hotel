@@ -321,11 +321,42 @@ class Reserva(models.Model):
         super().clean()
         self.error_messages = {}
         if self.status == 'I':
+            self._validate_date_availability()
             self._validate_check_in()
             self._validate_room()
         
         if self.error_messages:
             raise ValidationError(self.error_messages)
+    
+    @staticmethod
+    def available_dates(room):
+        reservas = Reserva.objects.filter(
+            quarto=room,
+            status__in=['A', 'S']
+        )
+        dates = []
+        lst = None
+        for reserva in reservas:
+            if lst is None:
+                lst = reserva
+                continue 
+
+            if (reserva.check_in - lst.checkout).days >= 1:
+                dates.append(f'{lst.checkout} a {reserva.check_in - timezone.timedelta(days=1)}')
+            
+            lst = reserva
+        dates.append(f'{reserva.checkout}++')
+        return ', '.join(dates)
+    
+    def _validate_date_availability(self):
+        reserva = Reserva.objects.filter(
+            quarto=self.quarto, 
+            checkout__gt=self.check_in,
+            check_in__lte=self.checkout,
+            status__in=['A', 'S']
+        )
+        if reserva.exists():
+            self.error_messages['check_in'] = 'Data de reserva indisponível'
     
     def _validate_check_in(self):
         if self.check_in < datetime.now().date():

@@ -33,7 +33,9 @@
 <br>
 <section class="mt-2">
     <article>
-        <h2 class="text-center fs-3 mb-2">QUARTOS MAIS PROCURADOS</h2>
+        {% if quartos %}
+            <h2 class="text-center fs-3 mb-2">QUARTOS MAIS PROCURADOS</h2>
+        {% endif %}
         <div class="row d-flex justify-content-center align-items-center">
             {% for quarto in quartos %}
         

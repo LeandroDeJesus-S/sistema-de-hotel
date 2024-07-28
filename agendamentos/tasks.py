@@ -1,13 +1,12 @@
 from .models import Agendamento
-from django.utils.timezone import now
 from django.core.mail import send_mass_mail
 from django.conf import settings
 from clientes.models import Cliente
 from reservas.models import Reserva, Quarto
 
 
-def schedule_reservation(schedule: Agendamento):
-    reserva = Reserva.objects.get(pk=schedule.reserva.pk)
+def schedule_reservation(reservation_id):
+    reserva = Reserva.objects.get(pk=int(reservation_id))
     reserva.ativa = True
     reserva.status = 'A'
     reserva.save()
@@ -22,16 +21,16 @@ def schedule_reservation(schedule: Agendamento):
     send_mass_mail(
         datatuple=[
             (
-            "Agendamento de reserva",
-            "Olá, passando pra avisar que a sua reserva agendada ativou!",
-            settings.DEFAULT_FROM_EMAIL,
-            [schedule.cliente.email],
+                "Agendamento de reserva",
+                "Olá, passando pra avisar que a sua reserva agendada ativou!",
+                settings.DEFAULT_FROM_EMAIL,
+                [reserva.cliente.email],
             ),
             (
-            "Agendamento de reserva",
-            f"Olá, passando pra avisar que a reserva agendada de {schedule.cliente.complete_name} foi ativada!",
-            settings.DEFAULT_FROM_EMAIL,
-            [admin_emails],
+                "Agendamento de reserva",
+                f"Olá, passando pra avisar que a reserva agendada de {reserva.cliente.complete_name} foi ativada!",
+                settings.DEFAULT_FROM_EMAIL,
+                [admin_emails],
             ),
         ],
         fail_silently=False

@@ -1,16 +1,23 @@
 import logging
 from typing import Any
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import render, HttpResponse, redirect
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.db.models import Q
 from django.http import HttpRequest
 from django.core.exceptions import ValidationError
 from django.views import View
+from django.views.generic.edit import UpdateView
+from django.views.generic.detail import DetailView
 from clientes.models import Cliente
 from utils.supportviews import SignUpMessages, SignInMessages
 from utils.supportmodels import ClienteErrorMessages
 from django.contrib.auth import login, authenticate, logout
+from reservas.mixins import LoginRequired
+from django_q.tasks import async_task, Task
+from secrets import token_hex
+from datetime import datetime, timedelta
 
 
 class SignUp(View):
@@ -112,3 +119,60 @@ def logout_user(request: HttpRequest):
     if request.user.is_authenticated:
         logout(request)
     return redirect('signin')
+
+
+def _check_perfil_ownership(request, received_pk):
+    if request.user.pk != received_pk:
+        raise PermissionDenied
+    
+
+class Perfil(LoginRequired, DetailView):
+    model = Cliente
+    template_name = 'perfil.html'
+
+    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        _check_perfil_ownership(request, kwargs.get('pk'))
+        return super().dispatch(request, *args, **kwargs)
+
+
+class PerfilUpdate(LoginRequired, UpdateView):
+    model = Cliente
+    fields = (
+        'username',
+        'nome',
+        'sobrenome',
+        'nascimento'
+    )
+    template_name = 'perfil_update.html'
+
+    def get_success_url(self) -> str:
+        return reverse_lazy('perfil', args=(self.object.pk,))
+    
+    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        _check_perfil_ownership(request, kwargs.get('pk'))
+        return super().dispatch(request, *args, **kwargs)
+
+
+class PerfilChangePassword(LoginRequired, View):   
+    def get(self, *args, **kwargs):        
+        return render(self.request, 'perfil_update_password.html')
+    
+    def post(self, *args, **kwargs):
+        new_pass = self.request.POST.get('new_password')
+        pass_repeat = self.request.POST.get('password_repeat')
+
+        if new_pass == pass_repeat:
+            self.request.user.set_password(new_pass)
+            self.request.user.save()
+            messages.success(self.request, 'Senha alterada com sucesso.')
+            login(self.request, self.request.user)
+            return redirect(reverse('perfil', args=(self.request.user.pk,)))
+        
+        messages.error(self.request, 'As senhas não são iguais')
+        redirect_url = self.request.META.get('HTTP_REFERER', reverse('perfil', args=(self.request.user.pk,)))
+        return redirect(redirect_url)
+    
+    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        _check_perfil_ownership(request, kwargs.get('pk'))        
+        return super().dispatch(request, *args, **kwargs)
+    

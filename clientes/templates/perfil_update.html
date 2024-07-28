@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    p {
+        display: flex;
+        justify-content: space-between;
+    }
+    input {
+        background-color: rgba(188, 145, 228, 0.507);
+    }
+    form{
+        margin: 10%;
+        background-color: blueviolet;
+        padding: 2%;
+        border-radius: 15px;
+    }
+</style>
+
+<div class="container d-flex justify-content-center align-items-center">
+    <form class="form" method="post">{% csrf_token %}
+        <div class="row p-3">
+            <div class="col-md-12">
+                <table>
+                    {{ form.as_p }}
+                </table>
+            </div>
+            <div class="col-md-12 d-flex justify-content-center mt-3">
+                <input class="btn btn-outline-light" type="submit" value="Salvar">
+            </div>
+            
+        </div>
+    </form>
+
+</div>
+{% endblock content %}

@@ -126,9 +126,11 @@ LANGUAGE_CODE = 'pt-BR'
 TIME_ZONE = 'America/Sao_Paulo'
 
 USE_I18N = True
-
 USE_TZ = True
 
+DATE_FORMAT = 'd/m/Y'
+DATETIME_FORMAT = 'd/m/Y H:i:s'
+SHORT_DATE_FORMAT = 'd/m/Y'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
