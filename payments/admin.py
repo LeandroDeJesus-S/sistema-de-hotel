@@ -1,14 +1,14 @@
 from django.contrib import admin
-from .models import Pagamento
+from .models import Payment
 
 
-class PagamentosAdmin(admin.ModelAdmin):
+class PaymentAdmin(admin.ModelAdmin):
     list_display = [
-        'reserva',
-        'data',
-        'valor',
+        'reservation',
+        'date',
+        'amount',
         'status'
     ]
 
 
-admin.site.register(Pagamento, PagamentosAdmin)
+admin.site.register(Payment, PaymentAdmin)

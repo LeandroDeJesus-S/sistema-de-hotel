@@ -18,24 +18,24 @@
           <div class="card">
     
             <div class="card-img d-flex justify-content-center">
-              <img src="{{ reservation.quarto.image.url }}" alt="{{reservation.quarto.image.name}}" class="card-img expand">
+              <img src="{{ reservation.room.image.url }}" alt="{{reservation.room.image.name}}" class="card-img expand">
             </div>
     
             <div class="card-body">
-              <h5 class="card-title text-center fs-2">{{reservation.quarto.classe}}</h5>
-              <h6 class="card-title text-center fs-5">Nº{{reservation.quarto.numero}}</h6>
+              <h5 class="card-title text-center fs-2">{{reservation.room.room_class}}</h5>
+              <h6 class="card-title text-center fs-5">Nº{{reservation.room.number}}</h6>
               <div class="row">
                 <div class="col-md-6">
                   <p class="card-text text-center ">
-                    <span class=""><i class="fa-solid fa-person fs-5"></i> {{reservation.quarto.capacidade_adultos}}</span>
-                    <span class=""><i class="fa-solid fa-child"></i> {{reservation.quarto.capacidade_criancas}}</span>
+                    <span class=""><i class="fa-solid fa-person fs-5"></i> {{reservation.room.adult_capacity}}</span>
+                    <span class=""><i class="fa-solid fa-child"></i> {{reservation.room.child_capacity}}</span>
                   </p>
                 </div>
                 <div class="col-md-6">
-                  <p class="card-text text-center "><span class="">📐</span>: {{reservation.quarto.tamanho}}m²</p>
+                  <p class="card-text text-center "><span class="">📐</span>: {{reservation.room.size}}m²</p>
                 </div>
               </div>
-              <p class="card-text text-center fs-3">{{reservation.custo|money}}</p>
+              <p class="card-text text-center fs-3">{{reservation.amount|money}}</p>
             </div>
     
             <div class="col-12 d-flex justify-content-center">

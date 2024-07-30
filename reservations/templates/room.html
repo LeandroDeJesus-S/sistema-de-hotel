@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+<div class="container mt-5 vh-100">
+    <div class="row ">
+        <div class="col-md-6">
+            <img src="{{ room.image.url }}" class="img-thumbnail" alt="{{ room.image.name }}">
+        </div>
+        <div class="col-md-6">
+            <h1>Quarto {{ room.room_class }}</h1>
+            {% if room.available %}
+                <a href="{% url "reserve" room.pk %}" class="btn btn-success btn-sm my-2">Reservar {{room.daily_price_formatted}}</a>
+            {% elif reservation_on and room.pk == reservation_on.room.pk %}
+                <a href="{% url "reservation_history" reservation_on.pk %}" class="btn btn-info btn-sm my-2">
+                    Ver reserva
+                </a>
+            {% else %}
+                <a href="{% url "schedule" room.pk %}" class="btn btn-success btn-sm my-2">
+                    <i class="fa-brands fa-whatsapp"></i> 
+                    Agendar {{room.daily_price_formatted}}
+                </a>
+            {% endif %}
+            <p>{{ room.short_desc }}</p>
+            <div class="row">
+                                        
+                {% for benefit in benefits %}
+                    <div class="col-md-6 form-check">
+                        <input class="form-check-input" type="checkbox" id="flexCheckDisabled" disabled {% if benefit in room.benefit.all %} checked {% endif %}>
+                        <label class="form-check-label text-light" for="{% if benefit in room.benefit.all %} flexCheckCheckedDisabled {% else %} flexCheckDisabled {% endif %} ">{{benefit}}</label>
+                    </div>
+                {% endfor %}
+
+            </div>
+
+        </div>
+        <div class="col-md-12 my-3">
+            <p class="text-dark">{{room.long_desc}}</p>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}

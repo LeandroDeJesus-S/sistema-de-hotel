@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+
+<div class="container">
+    <div class="list-group d-flex justify-content-center">
+        {% for reservation in reservations %}
+            <a href="{% url "reservation_history" reservation.pk %}" class="list-group-item list-group-item-action {% if reservation.active %}active{% endif %} mb-2" aria-current="true">
+            <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">Quarto Nº{{reservation.room.number}} - {{reservation.room.room_class}}</h5>
+                <small>{{reservation.get_status_display}} | {{reservation.created_at|naturalday}}</small>
+            </div>
+            <p class="mb-1">{{reservation.checkin}} - {{reservation.checkout}}</p>
+            <small>{{reservation.formatted_price}}</small>
+            </a>
+        {% empty %}
+            <div class="d-flex justify-content-center mt-5">
+                <p class="fs-4">Você ainda não possui reservas. Dê um olhada em nossos <a href="{% url "rooms" %}">quartos.</a></p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock content %}

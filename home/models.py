@@ -32,6 +32,9 @@ class Hotel(models.Model):
 
     def __str__(self) -> str:
         return self.name
+    
+    class Meta:
+        verbose_name_plural = 'Hotéis'
 
 
 class Contact(models.Model):
@@ -81,3 +84,7 @@ class Contact(models.Model):
 
     def __str__(self) -> str:
         return f'<{self.__class__.__name__}: {self.pk}>'
+
+    class Meta:
+        verbose_name = 'Contato'
+        verbose_name_plural = 'Contatos'

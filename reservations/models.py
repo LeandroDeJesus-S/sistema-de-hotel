@@ -1,0 +1,401 @@
+from datetime import datetime
+from decimal import Decimal
+import re
+
+from django.core.validators import (
+    FileExtensionValidator, 
+    MaxValueValidator,
+    MinValueValidator,
+    RegexValidator, 
+    validate_image_file_extension,
+)
+from django.db import models
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from PIL import Image
+
+from clients.models import Client
+from home.models import Hotel
+from utils.supportmodels import ReservaRules, ReservaErrorMessages, QuartoRules, ClasseErrorMessages, QuartoErrorMessages
+
+
+class Benefit(models.Model):
+    name = models.CharField(
+        'Nome', 
+        max_length=45, 
+        blank=False, 
+        null=False, 
+        unique=True,
+    )
+    short_desc = models.CharField(
+        'Descrição curta', 
+        max_length=100, 
+        blank=False, 
+        null=False, 
+        unique=True,
+    )
+    icon = models.ImageField(
+        'Ícone',
+        blank=True,
+        null=True,
+        unique=False,
+        help_text='ícone com tamanho 32x32',
+        upload_to='benefits/icon'
+    )
+    displayable_on_homepage = models.BooleanField(
+        'Visível na página inicial',
+        default=False,
+        null=False,
+        blank=False
+    )
+
+    class Meta:
+        verbose_name = 'Benefício'
+        verbose_name_plural = 'Benefícios'
+
+    def clean(self) -> None:
+        super().clean()
+        self.error_messages = {}
+        self._validate_icon_size()
+        
+        if self.error_messages:
+            raise ValidationError(self.error_messages)            
+
+    def _validate_icon_size(self):
+        if self.icon:
+            if self.icon.width > 64 or self.icon.height > 64:
+                self.error_messages['icon'] = 'O ícone deve ter tamanho 64x64.'
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Class(models.Model):
+    name = models.CharField(
+        'Classe', 
+        max_length=15, 
+        blank=False, 
+        null=False, 
+        unique=True,
+        validators=[
+            RegexValidator(r'^[\w ]+$', ClasseErrorMessages.INVALID_NAME)
+        ]
+    )
+
+    def __str__(self) -> str:
+        return self.name
+
+    class Meta:
+        verbose_name = 'Classe'
+        verbose_name_plural = 'Classes'
+
+
+class Room(models.Model):
+    room_class = models.ForeignKey(
+        Class,
+        on_delete=models.DO_NOTHING,
+        related_name='class_quartos',
+        related_query_name='class_room'
+    )
+    number = models.CharField(
+        'Número',
+        blank=False,
+        null=False,
+        unique=True,
+        max_length=4,
+        validators=[
+            RegexValidator(r"^\d{3}[A-Z]?$")
+        ]
+    )
+    adult_capacity = models.PositiveSmallIntegerField(
+        'Capacidade de adultos',
+        blank=False, 
+        null=False, 
+        default=1,
+        validators=[
+            MaxValueValidator(QuartoRules.MAX_ADULTS, QuartoErrorMessages.ADULTS_EXCEEDED),
+            MinValueValidator(QuartoRules.MIN_ADULTS, QuartoErrorMessages.ADULTS_INSUFFICIENT),
+        ]
+    )
+    child_capacity = models.PositiveSmallIntegerField(
+        'Capacidade crianças', 
+        blank=False, 
+        null=False, 
+        default=1,
+        validators=[
+            MaxValueValidator(QuartoRules.MAX_CHILDREN, QuartoErrorMessages.CHILD_EXCEEDED),
+            MinValueValidator(QuartoRules.MIN_CHILDREN, QuartoErrorMessages.CHILD_INSUFFICIENT),
+        ]
+    )
+    size = models.FloatField(
+        'Tamanho m²', 
+        blank=False, 
+        null=False,
+        validators=[
+            MinValueValidator(QuartoRules.MIN_SIZE, QuartoErrorMessages.SIZE_INSUFFICIENT),
+            MaxValueValidator(QuartoRules.MAX_SIZE, QuartoErrorMessages.SIZE_EXCEEDED),
+        ]
+    )
+    daily_price = models.DecimalField(
+        'Diária', 
+        max_digits=10, 
+        decimal_places=2, 
+        blank=False, 
+        null=False,
+        validators=[
+            MinValueValidator(QuartoRules.MIN_DAILY_PRICE, QuartoErrorMessages.PRICE_INSUFFICIENT),
+            MaxValueValidator(QuartoRules.MAX_DAILY_PRICE, QuartoErrorMessages.PRICE_EXCEEDED),
+        ]
+    )
+    benefit = models.ManyToManyField(
+        Benefit, 
+        related_name='room_benefits', 
+        related_query_name='room_benefit',
+        verbose_name='Benefícios'
+    )
+    available = models.BooleanField(
+        'Disponível',
+        blank=False,
+        null=False,
+        default=True
+    )
+    image = models.ImageField(
+        'Imagem', 
+        upload_to='%Y-%m', 
+        validators=[
+            FileExtensionValidator(['jpg', 'png'], 'Somete jpg ou png'),
+            validate_image_file_extension
+        ],
+        blank=True,
+        null=True
+    )
+    short_desc = models.CharField(
+        'Descrição curta',
+        max_length=255,
+        blank=False,
+        null=False,
+        unique=True,
+    )
+    long_desc = models.TextField(
+        'Descrição longa',
+        max_length=1000,
+        null=True,
+        blank=True
+    )
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.CASCADE,
+        related_name='hotel_rooms',
+        related_query_name='hotel_room'
+    )
+
+    class Meta:
+        verbose_name = 'Quarto'
+        verbose_name_plural = 'Quartos'
+        ordering = ['-available']
+
+    def clean(self) -> None:
+        super().clean()
+        error_messages = {}
+        if self.image and not re.match(r'^(\w+/?-?)+\.(jpg|png)$', self.image.name):
+            error_messages['image'] = QuartoErrorMessages.IMAGE_INVALID_NAME
+            
+        if error_messages: raise ValidationError(error_messages)
+
+    def __str__(self) -> str:
+        return f'Nº{self.number} {self.room_class}'
+
+    def daily_price_formatted(self):
+        return f'R${self.daily_price:.2f}'
+    
+    daily_price_formatted.short_description = 'Preço da diária'
+    
+    @property
+    def daily_price_in_cents(self) -> int:
+        return int(self.daily_price * Decimal('100'))
+
+    @staticmethod
+    def resize_image(img_path, w, h=None):
+        img = Image.open(img_path)
+        original_w, original_h = img.size
+
+        if h is None: h = round(w * original_h / original_w)
+        if original_h <= h: return
+        
+        resized = img.resize((w, h), Image.Resampling.NEAREST)
+        resized.save(img_path, optimize=True, quality=70)
+
+        resized.close()
+        img.close()
+
+    def save(self, *args, **kwargs) -> None:
+        super().save(*args, **kwargs)
+        if self.image:
+            self.resize_image(self.image.path, *QuartoRules.IMAGE_SIZE)
+
+
+class Reservation(models.Model):
+    checkin = models.DateField(
+        'Check-in',
+        blank=False,
+        null=False,
+    )
+    checkout = models.DateField(
+        'Check-out', 
+        blank=False, 
+        null=False,
+    )
+    client = models.ForeignKey(
+        Client, 
+        on_delete=models.SET_NULL, 
+        related_name='reservation_clients', 
+        related_query_name='reservation_client',
+        null=True
+    )
+    room = models.ForeignKey(
+        Room, 
+        on_delete=models.SET_NULL, 
+        related_name='reservation_rooms', 
+        related_query_name='reservation_room',
+        null=True,
+        blank=True
+    )
+    observations = models.TextField(
+        'Observações', 
+        max_length=100, 
+        blank=True,
+        null=True,
+        validators=[
+            RegexValidator(r'[\w\s]*'),
+        ]
+    )
+    amount =  models.DecimalField(
+        'Valor total da reserva', 
+        max_digits=10, 
+        decimal_places=2,
+        blank=True,
+        null=True,
+        validators=[
+            MinValueValidator(QuartoRules.MIN_DAILY_PRICE),
+        ]
+    )
+    active = models.BooleanField(
+        'Ativa',
+        null=False,
+        blank=False,
+        default=False,
+    )
+    STATUS_CHOICES = (
+        ('I', 'iniciada'),
+        ('P', 'processando'),
+        ('A', 'ativa'),
+        ('C', 'cancelada'),
+        ('F', 'finalizada'),
+        ('S', 'agendada')
+    )
+    status = models.CharField(
+        'Status',
+        max_length=2,
+        null=False,
+        blank=False,
+        choices=STATUS_CHOICES,
+        default='I'
+    )
+    created_at = models.DateTimeField(
+        'Criada em',
+        null=False,
+        blank=False,
+        default=timezone.now
+    )
+
+    def __str__(self) -> str:
+        return f'<{self.__class__.__name__}: {self.pk}>'
+    
+    def formatted_price(self):
+        if isinstance(self.amount, int|float|Decimal):
+            return f'R${self.amount:.2f}'
+        raise AttributeError('Custo não foi persistido.')
+    
+    formatted_price.short_description = 'Valor total da reserva'
+    
+    def calc_reservation_value(self) -> Decimal:
+        """"calcula o valor da reserva atribuindo a model e retorna o valor 
+        em centavos."""
+        days = Decimal(str((self.checkout - self.checkin).days))
+        value = self.room.daily_price * days
+        return value
+
+    def clean(self) -> None:
+        super().clean()
+        self.error_messages = {}
+        if self.status == 'I':
+            self._validate_date_availability()
+            self._validate_check_in()
+            self._validate_room()
+        
+        if self.error_messages:
+            raise ValidationError(self.error_messages)
+    
+    @classmethod
+    def get_dates(cls, reservations):
+        fmt_date = lambda d: d.strftime('%d/%m/%Y')
+        dates = []
+        lst = None
+        for reserva in reservations:
+            if lst is None:
+                lst = reserva
+                continue 
+
+            if (reserva.checkin - lst.checkout).days >= 1:
+                start, end = fmt_date(lst.checkout), fmt_date(reserva.checkin - timezone.timedelta(days=1))
+                dates.append(f'{start} a {end}')
+            
+            lst = reserva
+        dates.append(f'e {fmt_date(reserva.checkout)} para frente.')
+        return ', '.join(dates)
+
+    @classmethod
+    def available_dates(cls, room):
+        reservas = Reservation.objects.filter(
+            room=room,
+            status__in=['A', 'S']
+        )
+        return cls.get_dates(reservas)
+        
+    def _validate_date_availability(self):
+        reservations = Reservation.objects.filter(
+            room=self.room, 
+            checkout__gt=self.checkin,
+            checkin__lte=self.checkout,
+            status__in=['A', 'S']
+        )
+        if reservations.exists():
+            dates = self.get_dates(reservations)
+            self.error_messages['checkin'] = f'Data de reserva indisponível. A datas disponíveis são {dates}'
+    
+    def _validate_check_in(self):
+        if self.checkin < datetime.now().date():
+           self.error_messages['checkin'] = ReservaErrorMessages.INVALID_CHECKIN_DATE
+
+        elif self.checkin > ReservaRules.checkin_anticipation_offset():
+           self.error_messages['checkin'] = ReservaErrorMessages.INVALID_CHECKIN_ANTICIPATION
+        
+        elif not ReservaRules.MIN_RESERVATION_DAYS <= self.reservation_days <= ReservaRules.MAX_RESERVATION_DAYS:
+            self.error_messages['checkin'] = ReservaErrorMessages.INVALID_STAYED_DAYS
+
+    def _validate_room(self):
+        if self.room:
+            if not self.room.available:
+                self.error_messages['room'] = ReservaErrorMessages.UNAVAILABLE_ROOM
+
+    @property
+    def reservation_days(self) -> int:
+        return (self.checkout - self.checkin).days
+
+    @property
+    def coast_in_cents(self):
+        return int(self.amount * Decimal('100'))
+
+    class Meta:
+        verbose_name = 'Reserva'
+        verbose_name_plural = 'Reservas'

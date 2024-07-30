@@ -7,7 +7,7 @@
     
     <article>
         <h1 class="text-center">{{hotel.slogan}}</h1>
-        <p class="mx-3">
+        <p class="mx-5">
             {{hotel.presentation_text}}
         </p>
     </article>
@@ -16,15 +16,14 @@
 <br>
 <section class="mx-5 my-3">
     <article>
-        <h2 class="text-center fs-3">RESTAURANTE</h2>
+        <h2 class="text-center fs-3">{{restaurant.name|upper}}</h2>
         <div class="row align-items-center">
             <div class="col-md-4">
-                <img class="img-thumbnail p-1" src="{{restaurante.logo.url}}" alt="Placeholder Image">
+                <img class="img-thumbnail p-1" src="{{restaurant.logo.url}}" alt="Placeholder Image">
             </div>
             <div class="col-md-8">
-                <h3 class="fs-5">{{restaurante.name}}</h3>
-                <p>
-                    {{restaurante.presentation_text}}
+                <p class="mr-5">
+                    {{restaurant.presentation_text}}
                 </p>
             </div>
         </div>
@@ -33,19 +32,19 @@
 <br>
 <section class="mt-2">
     <article>
-        {% if quartos %}
+        {% if rooms %}
             <h2 class="text-center fs-3 mb-2">QUARTOS MAIS PROCURADOS</h2>
         {% endif %}
         <div class="row d-flex justify-content-center align-items-center">
-            {% for quarto in quartos %}
+            {% for room in rooms %}
         
                 <div class="col-md-3">
                     <div class="card">
-                        <img src="{{quarto.image.url}}" class="card-img-top img-thumbnail" alt="...">
+                        <img src="{{room.image.url}}" class="card-img-top img-thumbnail" alt="...">
                         <div class="card-body d-flex flex-column p-2">
-                            <h5 class="card-title">{{quarto.classe}}</h5>
-                            <p class="card-text">{{quarto.short_desc}}</p>
-                            <a href="{% url 'quarto' quarto.pk %}" class="btn btn-primary text-center">Conhecer</a>
+                            <h5 class="card-title">{{room.classe}}</h5>
+                            <p class="card-text">{{room.short_desc}}</p>
+                            <a href="{% url 'room' room.pk %}" class="btn btn-primary text-center">Conhecer</a>
                         </div>
                     </div>
                 </div>
@@ -57,20 +56,25 @@
 <br>
 <section class="mx-5 my-3 mb-5">
     <article>
-        {% comment %} <h2 class="text-center">APRESENTAÇÃO DOS BENEFÍCIOS</h2> {% endcomment %}
+        <h2 class="text-center fs-3">ALGUNS DE NOSSOS BENEFÍCIOS</h2>
 
         <ul class="list-group mb-1">
-            {% for beneficio in beneficios %}
+            {% for benefit in benefits %}
             
-                {% if beneficio.displayable_on_homepage %}
+                {% if benefit.displayable_on_homepage %}
                     <li class="list-group-item">
-                        <div class="">
-                            {% if beneficio.icon %}
-                                <img class="img-thumbnail" src="{{beneficio.icon.url}}" alt="Placeholder Image">
-                            {% endif %}
-                            <span class="ml-2">
-                                {{beneficio.descricao_curta}}
-                            </span>
+                        <div class="row d-flex align-items-center">
+                            <div class="col-md-1">
+                                {% if benefit.icon %}
+                                    <img class="img-thumbnail" src="{{benefit.icon.url}}" alt="Placeholder Image">
+                                {% endif %}
+                            </div>
+                            <div class="col-md-11">
+                                <span class="ml-5">
+                                    {{benefit.short_desc}}
+                                </span>
+                            </div>
+
                         </div>
                     </li>
 

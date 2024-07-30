@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    form{
+        background-color: blueviolet;
+        padding: 2%;
+        border-radius: 15px;
+    }
+</style>
+
+    <form class="form mx-5" method="post">{% csrf_token %}
+        <div class="container">
+            <div class="row ">
+                {% for field in form %}
+                    <div class="col-md-{% cycle 12 6 6 12 12 12 %}">
+                        <label for="{{field.id_for_label}}" class="form-label">{{field.label}}</label>
+                        {{field}}
+                        {% if field.errors %}
+                            <div class="badge bg-danger expand">{{field.errors}}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="col-md-12 d-flex justify-content-center mt-3">
+                <input class="btn btn-outline-light" type="submit">
+            </div>
+        </div>
+
+    </form>
+
+{% endblock content %}

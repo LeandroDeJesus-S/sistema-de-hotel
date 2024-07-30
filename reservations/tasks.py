@@ -1,0 +1,53 @@
+from django.utils.timezone import now
+import logging
+from django.core.mail import send_mass_mail
+from django.conf import settings
+from clients.models import Client
+from reservations.models import Reservation, Room
+from payments.models import Payment
+
+
+def check_reservation_dates():
+    for reservation in Reservation.objects.filter(active=True):
+        if reservation.checkout <= now().date():
+            reservation.active = False
+            reservation.status = 'F'
+            reservation.save()
+
+            room = Room.objects.get(pk=reservation.room.pk)
+            room.available = True
+            room.save()
+
+            print(f'{reservation} encerrada. Quarto {reservation.room} liberado para novas reservas.')
+            message1 = (
+                "Vencimento da reserva",
+                "Olá, passando pra avisar que a sua reserva expirou!",
+                settings.DEFAULT_FROM_EMAIL,
+                [reservation.client.email],
+            )
+
+            admin_users = Client.objects.filter(is_staff=True)
+            admin_emails = [adm.email for adm in admin_users if adm.email]
+            message2 = (
+                'Vencimento da reserva',
+                f'Reserva de {reservation.client.complete_name} para o quarto Nº{reservation.room.number} expirou!',
+                settings.DEFAULT_FROM_EMAIL,
+                admin_emails
+            )
+            send_mass_mail((message1, message2), fail_silently=False)
+
+
+def release_room(reservation_pk):
+    logger = logging.getLogger('djangoLogger')
+    try:
+        reservation = Reservation.objects.get(pk=reservation_pk)
+        payment = Payment.objects.filter(reservation=reservation).first()
+        if payment is None or payment.status != 'f':
+            logger.info(f'room {reservation.room} of the reservation {reservation_pk} released')
+            room = Room.objects.get(pk=reservation.room.pk)
+            room.available = True
+            room.save()
+            print(f'quarto {room} da reserva {reservation} esta disponível novamente.')
+    
+    except Reservation.DoesNotExist:
+        pass

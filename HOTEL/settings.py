@@ -44,10 +44,10 @@ INSTALLED_APPS = [
     'fontawesomefree',
     'django_q',
     'home',
-    'restaurantes',
-    'clientes',
-    'reservas',
-    'agendamentos',
+    'restaurants',
+    'clients',
+    'reservations',
+    'schedules',
     'payments',
 ]
 
@@ -61,7 +61,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-AUTHENTICATION_BACKENDS = ['clientes.authenticator.UserEmailAuthBackend']
+AUTHENTICATION_BACKENDS = ['clients.authenticator.UserEmailAuthBackend']
 
 ROOT_URLCONF = 'HOTEL.urls'
 
@@ -115,7 +115,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # user ath model
-AUTH_USER_MODEL = 'clientes.Cliente'
+AUTH_USER_MODEL = 'clients.Client'
 
 
 # Internationalization

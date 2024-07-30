@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+<style>
+    form{
+        margin: 1%;
+        background-color: blueviolet;
+        padding: 2%;
+        border-radius: 15px;
+    }
+</style>
+
+    <div class="container d-flex justify-content-center">
+        <form action="{% url 'update_perfil' request.user.pk %}" method="get">
+            {% include "partials/_messages.html" %}
+            
+            <div class="row d-flex justify-content-center">
+                <div class="col-md-12">
+                    <label class="form-label" for="username">Usuário: </label>
+                    <input name="username" class="form-control" type="text" disabled value="{{object.username}}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="firstname">Nome: </label>
+                    <input name="firstname" class="form-control" type="text" disabled value="{{object.first_name}}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="lastname">Sobrenome: </label>
+                    <input name="lastname" class="form-control" type="text" disabled value="{{object.last_name}}">
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label" for="birthdate">Nascimento: </label>
+                    <input class="form-control" name="birthdate" type="text" disabled value="{{object.birthdate}}">
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label" for="cpf">CPF: </label>
+                    <input class="form-control" name="cpf" type="text" disabled value="{{object.cpf}}">
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label" for="email">E-mail: </label>
+                    <input class="form-control" name="email" type="email" disabled value="{{object.email}}">
+                </div>
+                <div class="col-md-12 d-flex justify-content-center mt-3">
+                    <button class="btn btn-outline-light" type="submit">Editar</button>
+                </div>
+                <div>
+                    <div class="row d-flex">
+                        <div class="col-md-6">
+                            <a href="{% url 'update_perfil_password' request.user.pk %}" class="btn btn-secondary">
+                                Alterar senha
+                            </a>
+                        </div>
+                        <div class="col-md-6 d-flex justify-content-end">
+                            <a href="{% url 'delete_perfil' request.user.pk %}" class="btn btn-danger">
+                                Deletar conta
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+{% endblock content %}

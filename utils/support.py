@@ -1,7 +1,7 @@
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from secrets import token_hex
-from payments.models import Pagamento
+from payments.models import Payment
 from django.conf import settings
 import io
 from django.core.mail import EmailMessage
@@ -11,12 +11,15 @@ from django.utils.timezone import now, timedelta
 import stripe
 from stripe.checkout import Session
 from typing import Any
+from home.models import Hotel, Contact
 
 RESERVATION_PATIENCE_MINUTES = 30  # dependent of stipe :(
 
 
 class PaymentPDFHandler:
-    def __init__(self, payment: Pagamento) -> None:
+    """Cria o pdf com dados do pagamento e envia para o cliente via email.
+    """
+    def __init__(self, payment: Payment, hotel_id=1) -> None:
         self.payment = payment
         self._pdf_suffix = token_hex(16)
         self.pdf_name = f'comprovante_de_pagamento_{self.payment.pk}.pdf'
@@ -25,6 +28,8 @@ class PaymentPDFHandler:
         self.buffer = io.BytesIO()
         self._canvas = canvas.Canvas(self.buffer, pagesize=self.pagesize)
         self.w, self.h = self.pagesize
+        self.hotel = Hotel.objects.get(pk=hotel_id)
+        self.hotel_contact = Contact.objects.get(hotel=self.hotel)
     
     def handle(self):
         self._draw_header()
@@ -34,23 +39,23 @@ class PaymentPDFHandler:
         
     def _rows_list(self):
         rows = [
-            f'Data de emissão: {self.payment.data.strftime("%h:%M:%S %d/%m/%Y")}',
+            f'Data de emissão: {self.payment.date.strftime("%h:%M:%S %d/%m/%Y")}',
             f'Status: {self.payment.status}',
-            f'Pagador: {self.payment.reserva.cliente.complete_name}',
+            f'Pagador: {self.payment.reservation.client.complete_name}',
             f'Recebedor: HOTEL'
-            f'Check-in: {self.payment.reserva.check_in.strftime("%d/%m/%Y")}',
-            f'Check-out: {self.payment.reserva.checkout.strftime("%d/%m/%Y")}',
-            f'Classe: {self.payment.reserva.quarto.classe}',
-            f'Quarto: Nº{self.payment.reserva.quarto.numero}',
-            f'Total: {self.payment.reserva.formatted_price()}',
+            f'Check-in: {self.payment.reservation.checkin.strftime("%d/%m/%Y")}',
+            f'Check-out: {self.payment.reservation.checkout.strftime("%d/%m/%Y")}',
+            f'Classe: {self.payment.reservation.room.room_class}',
+            f'Quarto: Nº{self.payment.reservation.room.number}',
+            f'Total: {self.payment.reservation.formatted_price()}',
         ]
         return rows
     
     def _draw_header(self):
-        self._canvas.drawInlineImage(str(settings.SITE_LOGO_ICON), 30, self.h-40)
+        self._canvas.drawInlineImage(str(self.hotel.logo.path), 30, self.h-40)
 
         self._canvas.setFontSize(30)
-        self._canvas.drawString(65, self.h-38, settings.SITE_NAME)
+        self._canvas.drawString(65, self.h-38, self.hotel.name)
 
         self._canvas.setFontSize(20)
         self._canvas.drawString(self.w-350, self.h-40, 'COMPROVANTE DE PAGAMENTO', wordSpace=0.5)
@@ -72,9 +77,9 @@ class PaymentPDFHandler:
     def _send_email(self):
         msg = EmailMessage(
             subject='Comprovante de pagamento  da reserva',
-            body=f'Seu comprovante de pagamento para a reserva do quarto Nº{self.payment.reserva.quarto.numero}',
-            to=[self.payment.reserva.cliente.email],
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            body=f'Seu comprovante de pagamento para a reserva do quarto Nº{self.payment.reservation.room.number}',
+            to=[self.payment.reservation.client.email],
+            from_email=self.hotel_contact.email,
         )
         msg.attach(self.pdf_name, self.buffer.getvalue(), 'application/pdf')
         msg.send(fail_silently=False)
@@ -104,7 +109,7 @@ class ReservationStripePaymentCreator:
         return self._session
 
     def _create_params(self) -> dict[str, Any]:
-        prod_name = f"Reserva: Quarto Nº{self.reservation.quarto.numero}, classe {self.reservation.quarto.classe}."
+        prod_name = f"Reserva: Quarto Nº{self.reservation.room.number}, classe {self.reservation.room.room_class}."
         params = {
             "mode": "payment",
             "success_url": self.success_url,
@@ -120,7 +125,7 @@ class ReservationStripePaymentCreator:
                         "product_data": {
                             "name": prod_name,
                         },
-                        "unit_amount": self.reservation.quarto.daily_price_in_cents,
+                        "unit_amount": self.reservation.room.daily_price_in_cents,
                     },
                     "quantity": self.reservation.reservation_days,
                 }
