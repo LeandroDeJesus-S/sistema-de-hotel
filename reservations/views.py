@@ -28,10 +28,17 @@ from .models import (
     Reservation
 )
 from .validators import convert_date
-from utils.supportviews import ReservaMessages, ReservaSupport
+from utils.supportviews import ReserveMessages, ReserveSupport
 
 
 def get_user_reservations_on(request, context):
+    """add ao context as reservas ativas ou agendadas de um usuário
+    com a key `reservation_on`
+
+    Args:
+        request (HttpRequest)
+        context (Any): view context
+    """
     if request.user.is_authenticated:
         reservation_on = request.user.reservation_clients.filter(status__in=['A', 'S']).first()
         if reservation_on is not None:
@@ -50,7 +57,7 @@ class Rooms(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['benefits'] = Benefit.objects.all()
-        self.logger.debug('add benefits para o context')
+        self.logger.debug('add benefits to the context')
 
         get_user_reservations_on(self.request, context)
         return context
@@ -62,10 +69,15 @@ class RoomDetail(DetailView):
     template_name = 'room.html'
     context_object_name = 'room'
 
+    def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
+        super().setup(request, *args, **kwargs)
+        self.logger = logging.getLogger('djangoLogger')
+
     def get_context_data(self, **kwargs):
         """add os benefícios ao context para manuseio no html"""
         context = super().get_context_data(**kwargs)
         context['benefits'] = Benefit.objects.all()
+        self.logger.info('add benefits to context')
         get_user_reservations_on(self.request, context)
         return context
 
@@ -85,7 +97,7 @@ class Reserve(LoginRequired, View):
         tenha uma reserva ativa ou agendada"""
         if Reservation.objects.filter(client=request.user, status__in=['A', 'S']).exists():
             self.logger.info('user already have a reservation active ou scheduled')
-            messages.info(request, 'Você já possui uma reserva ativa ou agendada')
+            messages.info(request, ReserveMessages.ALREADY_HAVE_A_RESERVATION)
             return redirect('room')
 
         self.context['room_pk'] = room_pk
@@ -119,10 +131,10 @@ class Reserve(LoginRequired, View):
                 'reservations.tasks.release_room', 
                 reservation.pk,
                 repeats=1,
-                next_run=timezone.now() + timedelta(minutes=ReservaSupport.RESERVATION_PATIENCE_MINUTES)
+                next_run=timezone.now() + timedelta(minutes=ReserveSupport.RESERVATION_PATIENCE_MINUTES)
             )
             self.logger.info(f'schedule {schd} created')
-            self.logger.info('reserva registrada. Redirecionando para checkout')
+            self.logger.info(f'reservation {reservation.pk} registered. Redirecting to checkout')
             return redirect(reverse_lazy('checkout', args=(reservation.pk,)))
 
         except ValidationError as exc:
@@ -132,7 +144,7 @@ class Reserve(LoginRequired, View):
         
         except Exception as exc:
             self.logger.error(str(exc))
-            messages.error(request, ReservaMessages.RESERVATION_FAIL)
+            messages.error(request, ReserveMessages.RESERVATION_FAIL)
             room_url = reverse_lazy('room', args=(room_pk,))
             redirect_url = request.META.get('HTTP_REFERER', room_url)
             return redirect(redirect_url)

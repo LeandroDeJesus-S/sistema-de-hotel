@@ -3,6 +3,8 @@ from django.core.validators import validate_email
 
 
 class Hotel(models.Model):
+    """classe que representa um hotel contendo as informações base
+    do site"""
     name = models.CharField(
         'Nome',
         max_length=45,
@@ -38,6 +40,7 @@ class Hotel(models.Model):
 
 
 class Contact(models.Model):
+    """representa os dados de contato de um hotel"""
     email = models.EmailField(
         'E-mail',
         max_length=155,

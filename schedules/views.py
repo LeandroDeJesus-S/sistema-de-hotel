@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 from django.http import HttpRequest
+from django.views.decorators.http import require_GET
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views import View
 from reservations.models import Reservation, Room
@@ -16,12 +17,12 @@ from reservations.mixins import LoginRequired
 from reservations.decorators import check_reservation_ownership
 from django.contrib import messages
 from sqlite3 import OperationalError
-from utils.supportviews import PaymentMessages
+from utils.supportviews import CheckoutMessages
 from django.db import transaction
 from django.core.exceptions import ValidationError
 
 
-class Schedules(LoginRequired, View):  # TODO: criar testes
+class Schedules(LoginRequired, View):
     """View responsável por gerenciar os dados de agendamentos
     e redirecionar para a página de pagamentos."""
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
@@ -47,19 +48,21 @@ class Schedules(LoginRequired, View):  # TODO: criar testes
         OBS = self.request.POST.get('obs', '')
         
         try:
+            room = get_object_or_404(Room, pk__exact=room_pk)
             reservation = Reservation.objects.filter(
                 client=self.request.user,
                 checkin=CHECK_IN,
                 checkout=CHECKOUT
             ).first()
+            self.logger.debug(f'existing reservation {reservation}')
             if reservation is None:
-                self.logger.debug('creating a new schedule')
+                self.logger.debug('creating a new reservation')
                 reservation = Reservation(
                     checkin=CHECK_IN,
                     checkout=CHECKOUT,
                     observations=OBS,
                     client=self.request.user,
-                    room=get_object_or_404(Room, pk__exact=room_pk),
+                    room=room,
                 )
                 reservation.amount = reservation.calc_reservation_value()
 
@@ -67,10 +70,12 @@ class Schedules(LoginRequired, View):  # TODO: criar testes
                 reservation._validate_date_availability()
                 reservation._validate_check_in()
                 if reservation.error_messages:
+                    self.logger.error(str(reservation.error_messages))
                     raise ValidationError(reservation.error_messages)
                 
                 reservation.clean_fields()
                 reservation.save()
+                self.logger.info(f'reservation {reservation.pk} created')
 
             stripe_payment = ReservationStripePaymentCreator(
                 request=self.request,
@@ -78,7 +83,7 @@ class Schedules(LoginRequired, View):  # TODO: criar testes
                 success_url_name='schedule_success',
                 cancel_url_name='payment_cancel',
             )
-            self.logger.debug('stripe payment created')
+            self.logger.debug(f'stripe payment created {stripe_payment}')
 
             scheduling = Scheduling(
                 client=self.request.user, 
@@ -105,18 +110,19 @@ class Schedules(LoginRequired, View):  # TODO: criar testes
             return render(request, 'schedule.html', self.context)
         
         except OperationalError as exc:
-            messages.info(request, PaymentMessages.TRANSACTION_BLOCKING)
-            self.logger.warn(f"Falha na criação do pagamento: {str(exc)}")
+            messages.info(request, CheckoutMessages.TRANSACTION_BLOCKING)
+            self.logger.warn(f"payment transaction fail: {str(exc)}")
             redirect_url = request.META.get("HTTP_REFERER", reverse("rooms"))
             return redirect(redirect_url)
 
         except Exception as exc:
-            messages.error(request, PaymentMessages.PAYMENT_FAIL)
-            self.logger.critical(f"Falha na criação do pagamento: {str(exc)}")
+            messages.error(request, CheckoutMessages.PAYMENT_FAIL)
+            self.logger.critical(f"payment unexpected fail: {str(exc)}")
             redirect_url = request.META.get("HTTP_REFERER", reverse("rooms"))
             return redirect(redirect_url)
 
 
+@require_GET
 @login_required(login_url=reverse_lazy('signin'))
 @check_reservation_ownership
 def schedule_success(request: HttpRequest, reservation_pk: int):
@@ -140,7 +146,7 @@ def schedule_success(request: HttpRequest, reservation_pk: int):
     logger.info(f'payment {payment} created')
 
     schedule = get_object_or_404(Scheduling, client=request.user, reservation=payment.reservation)
-    schedule_name = f'agendamento {schedule}-{schedule.client}-{schedule.reservation}'
+    schedule_name = f'schedule {schedule}-{schedule.client}-{schedule.reservation}'
     if not Schedule.objects.filter(name=schedule_name).exists():
         Schedule.objects.create(
             func='schedules.tasks.schedule_reservation',

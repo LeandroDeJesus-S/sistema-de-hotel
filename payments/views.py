@@ -1,13 +1,14 @@
 import logging
 
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, BadRequest
+from django.views.decorators.http import require_GET
 from django.http import HttpRequest
 from django.http.response import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.views import View
 from reservations.models import Reservation
-from utils.supportviews import PaymentMessages
+from utils.supportviews import CheckoutMessages
 from django.contrib import messages
 from .models import Payment
 from django.db import transaction
@@ -32,7 +33,7 @@ class Checkout(LoginRequiredMixin, View):
 
     def get(self, request: HttpRequest, reservation_pk: int, *args, **kwargs):
         reservation = get_object_or_404(Reservation, pk__exact=reservation_pk)
-        self.logger.debug("renderizando checkout.html")
+        self.logger.debug(f"rendering {self.template}")
         return render(request, self.template, {"reservation": reservation})
 
     @transaction.atomic
@@ -62,32 +63,35 @@ class Checkout(LoginRequiredMixin, View):
             reservation.room.save()
             reservation.save()
             payment.save()
+            self.logger.info(f'payment {payment.pk} created for reservation {reservation.pk}')
             return redirect(reservation_payment.session.url)
 
         except OperationalError as exc:
-            messages.info(request, PaymentMessages.TRANSACTION_BLOCKING)
-            self.logger.critical(f"Falha na criação do pagamento: {str(exc)}")
+            messages.info(request, CheckoutMessages.TRANSACTION_BLOCKING)
+            self.logger.critical(f"payment transaction fail: {str(exc)}")
             redirect_url = request.META.get("HTTP_REFERER", reverse("rooms"))
             return redirect(redirect_url)
 
         except Exception as exc:
-            messages.error(request, PaymentMessages.PAYMENT_FAIL)
-            self.logger.critical(f"Falha na criação do pagamento: {str(exc)}")
+            messages.error(request, CheckoutMessages.PAYMENT_FAIL)
+            self.logger.critical(f"payment unexpected fail: {str(exc)}")
             redirect_url = request.META.get("HTTP_REFERER", reverse("rooms"))
             return redirect(redirect_url)
 
     def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         reservation = get_object_or_404(Reservation, pk=kwargs.get("reservation_pk"))
         if reservation.client != request.user:
+            self.logger.warn(f'permission denied for user {request.user.pk} to access reservation {reservation.pk}')
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
 
+@require_GET
 @login_required(login_url=reverse_lazy("signin"))
 @check_reservation_ownership
 def payment_success(request: HttpRequest, reservation_pk: int):
     """renderiza a página de sucesso do pagamento, finaliza e ativa a reserva,
-    e cria um task que envia os dados de pagamento por email para o cliente"""
+    e cria um task que envia os dados de pagamento por email para o cliente"""    
     logger = logging.getLogger("djangoLogger")
     logger.info(f"reserva {reservation_pk} recebida para sucesso de pagamento")
 
@@ -102,19 +106,21 @@ def payment_success(request: HttpRequest, reservation_pk: int):
 
     task_name = f"create_payment_pdf_{payment.pk}"
     if not Task.objects.filter(name=task_name).exists():
+        logger.info(f'task {task_name} created')
         async_task(create_payment_pdf, payment, task_name=task_name)
 
-    logger.debug(f"renderizando pagina de sucesso com pagamento: {payment}")
+    logger.debug(f"rendering success page for payment: {payment.pk}")
     return render(request, "success.html", {"payment": payment})
 
 
+@require_GET
 @login_required(login_url=reverse_lazy("signin"))
 @check_reservation_ownership
 def payment_cancel(request: HttpRequest, reservation_pk: int):
     """renderia a página de cancelamento do pagamento, coloca o status
     do pagamento para cancelado e libera o quarto"""
     logger = logging.getLogger("djangoLogger")
-    logger.info(f"reserva {reservation_pk} recebida para cancelamento")
+    logger.info(f"reservation {reservation_pk} received to cancel")
     try:
         payment = Payment.objects.get(reservation__pk=reservation_pk)
         if payment.status != "C":
@@ -130,8 +136,8 @@ def payment_cancel(request: HttpRequest, reservation_pk: int):
 
     except Exception as e:
         logger.critical(
-            f"nao foi possivel reverter o pagamento {payment} para a reserva {payment.reservation} : {str(e)}"
+            f"fail to revert payment {payment.pk} for reservation {payment.reservation.pk}: {str(e)}"
         )
 
-    logger.info(f"pagamento {payment} para a reserva {payment.reservation} cancelado")
+    logger.info(f"payment {payment.pk} for {payment.reservation.pk} successfully canceled")
     return render(request, "cancel.html")

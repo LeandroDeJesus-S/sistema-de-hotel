@@ -20,6 +20,7 @@ from utils.supportmodels import ReservaRules, ReservaErrorMessages, QuartoRules,
 
 
 class Benefit(models.Model):
+    """benefícios ao qual um quarto possui"""
     name = models.CharField(
         'Nome', 
         max_length=45, 
@@ -62,6 +63,7 @@ class Benefit(models.Model):
             raise ValidationError(self.error_messages)            
 
     def _validate_icon_size(self):
+        """valida se o ícone possui dimensão maxima de até 64x64"""
         if self.icon:
             if self.icon.width > 64 or self.icon.height > 64:
                 self.error_messages['icon'] = 'O ícone deve ter tamanho 64x64.'
@@ -71,6 +73,7 @@ class Benefit(models.Model):
 
 
 class Class(models.Model):
+    """representa as classes para os quartos"""
     name = models.CharField(
         'Classe', 
         max_length=15, 
@@ -91,6 +94,7 @@ class Class(models.Model):
 
 
 class Room(models.Model):
+    """representa os quartos de um determinado hotel"""
     room_class = models.ForeignKey(
         Class,
         on_delete=models.DO_NOTHING,
@@ -206,16 +210,26 @@ class Room(models.Model):
         return f'Nº{self.number} {self.room_class}'
 
     def daily_price_formatted(self):
+        """valor da diária do quarto no formato R$xn.xx"""
         return f'R${self.daily_price:.2f}'
     
     daily_price_formatted.short_description = 'Preço da diária'
     
     @property
     def daily_price_in_cents(self) -> int:
+        """retorna o valor da diária em centavos para auxilio
+        com api do stripe"""
         return int(self.daily_price * Decimal('100'))
 
     @staticmethod
     def resize_image(img_path, w, h=None):
+        """redimensiona imagem com tamanhos expecificados
+
+        Args:
+            img_path (Any): caminho da imagem
+            w (int): largura da imagem
+            h (int, optional): altura da imagem. Defaults to None.
+        """
         img = Image.open(img_path)
         original_w, original_h = img.size
 
@@ -235,6 +249,7 @@ class Room(models.Model):
 
 
 class Reservation(models.Model):
+    """representa o registro de uma reserva"""
     checkin = models.DateField(
         'Check-in',
         blank=False,
@@ -311,7 +326,12 @@ class Reservation(models.Model):
     def __str__(self) -> str:
         return f'<{self.__class__.__name__}: {self.pk}>'
     
-    def formatted_price(self):
+    def formatted_price(self) -> str:
+        """valor total da reserva no formato R$xn.xx
+
+        Raises:
+            AttributeError: se chamado antes de `amount` ser persistido
+        """
         if isinstance(self.amount, int|float|Decimal):
             return f'R${self.amount:.2f}'
         raise AttributeError('Custo não foi persistido.')
@@ -337,7 +357,10 @@ class Reservation(models.Model):
             raise ValidationError(self.error_messages)
     
     @classmethod
-    def get_dates(cls, reservations):
+    def get_free_dates(cls, reservations) -> str:
+        """retorna as datas de reserva livres para um conjunto
+        de reservas, considerando os períodos de gap entre as datas
+        (e.g d/m/Y a d/m/Y, e d/m/Y para frente)"""
         fmt_date = lambda d: d.strftime('%d/%m/%Y')
         dates = []
         lst = None
@@ -355,14 +378,24 @@ class Reservation(models.Model):
         return ', '.join(dates)
 
     @classmethod
-    def available_dates(cls, room):
+    def available_dates(cls, room) -> str:
+        """retorna as datas de reservas disponíveis para o quarto especificado
+        considerando reserva ativa e agendamentos
+
+        Args:
+            room (reservations.models.Quarto): uma instancia da model Quarto
+
+        Returns:
+            str: string com msg de datas disponíveis (e.g d/m/Y a d/m/Y, e d/m/Y para frente)
+        """
         reservas = Reservation.objects.filter(
             room=room,
             status__in=['A', 'S']
         )
-        return cls.get_dates(reservas)
+        return cls.get_free_dates(reservas)
         
     def _validate_date_availability(self):
+        """verifica se a data da reserva sobrepõe um reserva ativa ou agendada"""
         reservations = Reservation.objects.filter(
             room=self.room, 
             checkout__gt=self.checkin,
@@ -370,10 +403,11 @@ class Reservation(models.Model):
             status__in=['A', 'S']
         )
         if reservations.exists():
-            dates = self.get_dates(reservations)
-            self.error_messages['checkin'] = f'Data de reserva indisponível. A datas disponíveis são {dates}'
+            dates = self.get_free_dates(reservations)
+            self.error_messages['checkin'] = ReservaErrorMessages.UNAVAILABLE_DATE.format_map({'dates': dates})
     
     def _validate_check_in(self):
+        """realiza as validações relacionadas ao check-in"""
         if self.checkin < datetime.now().date():
            self.error_messages['checkin'] = ReservaErrorMessages.INVALID_CHECKIN_DATE
 
@@ -384,16 +418,18 @@ class Reservation(models.Model):
             self.error_messages['checkin'] = ReservaErrorMessages.INVALID_STAYED_DAYS
 
     def _validate_room(self):
-        if self.room:
-            if not self.room.available:
-                self.error_messages['room'] = ReservaErrorMessages.UNAVAILABLE_ROOM
+        """realiza as validações relacionadas ao quarto"""
+        if not self.room.available:
+            self.error_messages['room'] = ReservaErrorMessages.UNAVAILABLE_ROOM
 
     @property
     def reservation_days(self) -> int:
+        """retorna a quantidade dias da reserva"""
         return (self.checkout - self.checkin).days
 
     @property
     def coast_in_cents(self):
+        """custo da reserva em centavos"""
         return int(self.amount * Decimal('100'))
 
     class Meta:

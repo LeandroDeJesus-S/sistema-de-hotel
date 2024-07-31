@@ -1,17 +1,17 @@
 from datetime import timedelta, datetime
 
-class SessionKeys:
-    CLIENT_ID = 'client_id'
-    ROOM_ID = 'room_id'
-    ROOM_CLASS_ID = 'room_class_id'
-    RESERVATION_ID = 'reservation_id'
+# class SessionKeys:
+#     CLIENT_ID = 'client_id'
+#     ROOM_ID = 'room_id'
+#     ROOM_CLASS_ID = 'room_class_id'
+#     RESERVATION_ID = 'reservation_id'
 
-    @staticmethod
-    def all_keys(exclude=None):
-        if exclude is None:
-            exclude = []
+#     @staticmethod
+#     def all_keys(exclude=None):
+#         if exclude is None:
+#             exclude = []
         
-        return [k for k in dir(SessionKeys) if k.isupper() if k not in exclude]
+#         return [k for k in dir(SessionKeys) if k.isupper() if k not in exclude]
 
 
 class QuartoRules:
@@ -116,6 +116,7 @@ class ReservaErrorMessages:
     INVALID_STAYED_DAYS = (f'A reserva deve ter de {ReservaRules.MIN_RESERVATION_DAYS}'
                                         f' a {ReservaRules.MAX_RESERVATION_DAYS} dias.')
     INVALID_ROOM_CHOICE = 'Por favor, escolha um quarto válido.'
+    UNAVAILABLE_DATE = 'Data de reserva indisponível. A datas disponíveis são {dates}'
 
 
 class PaymentRules:

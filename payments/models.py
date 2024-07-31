@@ -5,6 +5,7 @@ from utils.supportmodels import PaymentErrorMessages
 
 
 class Payment(models.Model):
+    """representa um registro de pagamento"""
     date = models.DateTimeField(
         'Data',
         auto_now_add=True,

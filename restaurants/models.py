@@ -4,6 +4,7 @@ from django.core.validators import RegexValidator
 
 
 class Restaurant(models.Model):
+    """restante de um determinado hotel"""
     name = models.CharField(
         'Nome',
         max_length=45,

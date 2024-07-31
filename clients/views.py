@@ -15,6 +15,7 @@ from django.contrib.auth import login, authenticate, logout
 from reservations.mixins import LoginRequired
 from .forms import UpdatePerfilForm
 
+
 class SignUp(View):
     """View responsável por realizar o registro de novos usuários"""
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
@@ -24,7 +25,7 @@ class SignUp(View):
     
     def get(self, request):
         if request.user.is_authenticated:
-            self.logger.info('usuario ja esta logado. Redirencionando para `quartos`')
+            self.logger.info('user already logged in. Redirecting to `quartos`')
             return redirect('rooms')
         
         return render(request, self.template_name)
@@ -41,7 +42,7 @@ class SignUp(View):
 
         if not all((username,password,name,surname, phone, email, birthdate, cpf)):
             messages.error(request, SignUpMessages.MISSING)
-            self.logger.error(SignUpMessages.MISSING)
+            self.logger.error('missing fields')
             return render(request, self.template_name)
         
         client = Client(
@@ -66,7 +67,7 @@ class SignUp(View):
         client.save()
 
         login(request, client)
-        self.logger.debug('redirecionado para `quartos`')
+        self.logger.debug('redirecting to `rooms`')
         return redirect('rooms')
 
 
@@ -85,10 +86,10 @@ class SignIn(View):
         self.logger.debug(f'next url: {next_url}')
 
         if request.user.is_authenticated:
-            self.logger.info('usuario ja esta logado. Redirencionando para `quartos`')
+            self.logger.info('user already logged in redirected to `rooms`')
             return redirect('rooms')
         
-        self.logger.debug('renderizando pagina de login')
+        self.logger.debug(f'rendering {self.template}')
         return render(request, self.template)
     
     def post(self, request: HttpRequest, *args, **kwargs):
@@ -108,10 +109,11 @@ class SignIn(View):
         next_url = request.session.get('next_url')
         if next_url:
             del request.session['next_url']
+            request.session.save()
         else:
             next_url = self.next_url
 
-        self.logger.info(f'usuario logado com sucesso. Redirecionando para {next_url}')
+        self.logger.info(f'user logged with success. Redirecting to {next_url}')
         return redirect(next_url)
 
 
@@ -125,6 +127,7 @@ def _check_perfil_ownership(request, received_pk):
     """função que verifica se o perfil recebido é o mesmo
     perfil que enviou o request."""
     if request.user.pk != received_pk:
+        logging.getLogger('djangoLogger').warn(f'{request.user.pk} != {received_pk}')
         raise PermissionDenied
     
 
@@ -154,8 +157,14 @@ class PerfilUpdate(LoginRequired, UpdateView):
 
 class PerfilChangePassword(LoginRequired, View):
     """view responsável por gerenciar a alteração da senha do usuário"""
-    def get(self, *args, **kwargs):        
-        return render(self.request, 'perfil_update_password.html')
+    def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
+        super().setup(request, *args, **kwargs)
+        self.logger = logging.getLogger('djangoLogger')
+        self.template = 'perfil_update_password.html'
+    
+    def get(self, *args, **kwargs):
+        self.logger.debug(f'rendering {self.template}')    
+        return render(self.request, self.template)
     
     def post(self, *args, **kwargs):
         new_pass = self.request.POST.get('new_password')
@@ -170,6 +179,7 @@ class PerfilChangePassword(LoginRequired, View):
         
         messages.error(self.request, 'As senhas não são iguais')
         redirect_url = self.request.META.get('HTTP_REFERER', reverse('perfil', args=(self.request.user.pk,)))
+        self.logger.info('unmatched passwords')
         return redirect(redirect_url)
     
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:

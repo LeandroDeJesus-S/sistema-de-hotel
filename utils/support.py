@@ -6,14 +6,12 @@ from django.conf import settings
 import io
 from django.core.mail import EmailMessage
 from django.urls import reverse
-from .supportviews import ReservaSupport
+from .supportviews import ReserveSupport
 from django.utils.timezone import now, timedelta
 import stripe
 from stripe.checkout import Session
 from typing import Any
 from home.models import Hotel, Contact
-
-RESERVATION_PATIENCE_MINUTES = 30  # dependent of stipe :(
 
 
 class PaymentPDFHandler:
@@ -96,7 +94,7 @@ class ReservationStripePaymentCreator:
         self.expires_at = int(
             (
                 now()
-                + timedelta(minutes=ReservaSupport.RESERVATION_PATIENCE_MINUTES)
+                + timedelta(minutes=ReserveSupport.RESERVATION_PATIENCE_MINUTES)
             ).timestamp()
         )
         self.reservation = reservation
@@ -135,3 +133,6 @@ class ReservationStripePaymentCreator:
     
     def _create_session(self, **params) -> Session:
         return Session.create(**params)
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}({self.__dict__})'
