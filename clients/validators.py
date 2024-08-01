@@ -1,31 +1,34 @@
 import re
 from django.core.exceptions import ValidationError
 from django.utils.deconstruct import deconstructible
-from utils.supportmodels import ContatoErrorMessages
+from utils.supportmodels import ContactErrorMessages
 
 
 def validate_phone_number(phone):
     re_match = re.match(r"^[1-9]\d{0,1}9\d{7,8}$", phone)
     if re_match is None:
-        raise ValidationError(ContatoErrorMessages.INVALID_PHONE)
+        raise ValidationError(ContactErrorMessages.INVALID_PHONE)
 
 
 @deconstructible
 class CpfValidator:
-    def __init__(self) -> None:
+    def __init__(self, message) -> None:
         self._cpf = None
         self._verified_cpf = None
+        self._message = message
     
     def __call__(self, cpf):
         self._cpf = cpf
         self._verified_cpf = self.validate()
-        return self.is_valid()
+        if not self.is_valid():
+            raise ValidationError(self._message)
 
     def __eq__(self, value: object) -> bool:
         return (
             isinstance(value, CpfValidator) and 
             value._cpf == self._cpf and 
-            self._verified_cpf == value._verified_cpf
+            self._verified_cpf == value._verified_cpf and
+            self._message == value._message
         )
     
     def calculate_first_digit(self) -> str:

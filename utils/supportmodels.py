@@ -1,18 +1,5 @@
 from datetime import timedelta, datetime
 
-# class SessionKeys:
-#     CLIENT_ID = 'client_id'
-#     ROOM_ID = 'room_id'
-#     ROOM_CLASS_ID = 'room_class_id'
-#     RESERVATION_ID = 'reservation_id'
-
-#     @staticmethod
-#     def all_keys(exclude=None):
-#         if exclude is None:
-#             exclude = []
-        
-#         return [k for k in dir(SessionKeys) if k.isupper() if k not in exclude]
-
 
 class QuartoRules:
     IMAGE_SIZE = 560, 420
@@ -21,10 +8,10 @@ class QuartoRules:
     MIN_ADULTS = 1
     MAX_CHILDREN = 3
     MIN_CHILDREN = 0
-    MIN_SIZE = 2
     MAX_SIZE = 30
-    MIN_DAILY_PRICE = 100
+    MIN_SIZE = 2
     MAX_DAILY_PRICE = 500
+    MIN_DAILY_PRICE = 100
 
 
 class QuartoErrorMessages:
@@ -47,53 +34,64 @@ class ClasseErrorMessages:
     INVALID_NAME = 'Nome da classe é inválido.'
 
 
-class ClienteRules:
-    MIN_AGE = 18
+class ClientRules:
     MAX_AGE = 122
-    MIN_FIRSTNAME_CHARS = 2
+    MIN_AGE = 18
     MAX_FIRSTNAME_CHARS = 25
-    MIN_SURNAME_CHARS = 2
+    MIN_FIRSTNAME_CHARS = 2
     MAX_SURNAME_CHARS = 50
+    MIN_SURNAME_CHARS = 2
 
     PASSWORD_SUPPORTED_SYMBOLS = "@<>();'-+*;"
     PASSWORD_MIN_SIZE = 8
 
-    PHONE_MASK_RANGE = 4, -4  # ends must be negative
+    CPF_MASK_RANGE = 2, -4
     EMAIL_MASK_RANGE = 2, -2
+    PHONE_MASK_RANGE = 4, -4  # ends must be negative
 
-    USERNAME_MIN_SIZE = 2
     USERNAME_MAX_SIZE = 150
+    USERNAME_MIN_SIZE = 2
 
 
-class ClienteErrorMessages:
+class ClientErrorMessages:
     GENERIC = 'Dados de cliente inválidos'
-    INVALID_NAME_MIN_LENGTH = 'Nome muito pequeno.'
-    INVALID_NAME_MAX_LENGTH = 'Nome muito grande.'
-    INVALID_SURNAME_MIN_LENGTH = 'Sobrenome muito pequeno.'
-    INVALID_SURNAME_MAX_LENGTH = 'Sobrenome muito grande.'
-    INVALID_BIRTHDATE = 'Data de nascimento inválida.'
-    INVALID_NAME_LETTERS = 'O nome deve conter apenas letras'
-    INVALID_SURNAME_LETTERS = 'O sobrenome deve conter apenas letras'
+    
+    DUPLICATED_CPF = 'CPF não disponível.'
     DUPLICATED_USERNAME = 'Username já existe.'
-    NOT_PROVIDED_EMAIL = 'Por favor, preencha o campo de email.'
+    
+    INVALID_BIRTHDATE = 'Data de nascimento inválida.'
+    INVALID_CPF = 'CPF inválido.'
     INVALID_EMAIL = 'E-mail inválido.'
-
+    INVALID_FIRSTNAME_MAX_LENGTH = 'Nome muito grande.'
+    INVALID_FIRSTNAME_MIN_LENGTH = 'Nome muito pequeno.'
+    INVALID_FIRSTNAME_LETTERS = 'O nome deve conter apenas letras'
+    INVALID_SURNAME_MAX_LENGTH = 'Sobrenome muito grande.'
+    INVALID_SURNAME_MIN_LENGTH = 'Sobrenome muito pequeno.'
+    INVALID_SURNAME_LETTERS = 'O sobrenome deve conter apenas letras e espaços'
     INVALID_USERNAME_CHARS = (
         'Informe um nome de usuário válido. O valor deve conter apenas letras, '
         'números e os seguintes caracteres @.+-_'
     )
     INVALID_USERNAME_LEN = (
-        f'Nome de usuário deve ter de {ClienteRules.USERNAME_MIN_SIZE} '
-        f'a {ClienteRules.USERNAME_MAX_SIZE} caracteres.'
+        f'Nome de usuário deve ter de {ClientRules.USERNAME_MIN_SIZE} '
+        f'a {ClientRules.USERNAME_MAX_SIZE} caracteres.'
     )
+    
+    NOT_PROVIDED_EMAIL = 'Por favor, preencha o campo de email.'
+    NOT_PROVIDED_USERNAME = 'Nome de usuário não pode ser vazio.'
+    NOT_PROVIDED_PHONE = 'Telefone não pode ser vazio.'
+
     PASSWORD_WEAK = (
-        f'A senha de conter no mínimo {ClienteRules.PASSWORD_MIN_SIZE} dígitos, letras,'
-        f' números e algum dos símbolos {ClienteRules.PASSWORD_SUPPORTED_SYMBOLS}'
+        f'A senha de conter no mínimo {ClientRules.PASSWORD_MIN_SIZE} dígitos, letras,'
+        f' números e algum dos símbolos {ClientRules.PASSWORD_SUPPORTED_SYMBOLS}'
     )
 
 
-class ContatoErrorMessages:
+class ContactErrorMessages:
     GENERIC = 'Dados de contato inválidos'
+    DUPLICATED_PHONE = 'Telefone não disponível.'
+    DUPLICATED_EMAIL = 'E-mail não disponível.'
+
     INVALID_PHONE = 'Número de telefone inválido.'
     INVALID_EMAIL = 'Informe um endereço de email válido.'
 

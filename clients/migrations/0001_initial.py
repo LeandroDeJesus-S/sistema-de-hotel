@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
                 ('birthdate', models.DateField(blank=True, null=True, verbose_name='Data de nascimento')),
                 ('email', models.EmailField(error_messages={'blank': 'Por favor, preencha o campo de email.', 'null': 'Por favor, preencha o campo de email.'}, max_length=255, unique=True, validators=[django.core.validators.EmailValidator()], verbose_name='E-mail')),
                 ('phone', models.CharField(max_length=11, validators=[clients.validators.validate_phone_number], verbose_name='Telefone')),
-                ('cpf', models.CharField(max_length=11, unique=True, validators=[clients.validators.CpfValidator()], verbose_name='CPF')),
+                ('cpf', models.CharField(max_length=11, unique=True, validators=[clients.validators.CpfValidator('CPF inválido.')], verbose_name='CPF')),
                 ('groups', models.ManyToManyField(blank=True, help_text='The groups this user belongs to. A user will get all permissions granted to each of their groups.', related_name='user_set', related_query_name='user', to='auth.Group', verbose_name='groups')),
                 ('user_permissions', models.ManyToManyField(blank=True, help_text='Specific permissions for this user.', related_name='user_set', related_query_name='user', to='auth.Permission', verbose_name='user permissions')),
             ],

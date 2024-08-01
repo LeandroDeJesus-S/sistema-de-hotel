@@ -22,23 +22,24 @@ class SignUp(View):
         super().setup(request, *args, **kwargs)
         self.logger = logging.getLogger('djangoLogger')
         self.template_name = 'signup.html'
+        self._redirect = redirect('rooms')
     
     def get(self, request):
         if request.user.is_authenticated:
-            self.logger.info('user already logged in. Redirecting to `quartos`')
-            return redirect('rooms')
+            self.logger.info(f'user already logged in. Redirecting to {self._redirect.url}')
+            return self._redirect
         
         return render(request, self.template_name)
     
     def post(self, request: HttpRequest):
-        username = self.request.POST.get('username')
+        username = self.request.POST.get('username', '').strip()
         password = self.request.POST.get('password')
-        name = self.request.POST.get('nome')
-        surname = self.request.POST.get('sobrenome')
-        phone = self.request.POST.get('telefone')
-        email = self.request.POST.get('email')
+        name = self.request.POST.get('nome', '').strip()
+        surname = self.request.POST.get('sobrenome', '').strip()
+        phone = self.request.POST.get('telefone', '').strip()
+        email = self.request.POST.get('email', '').strip()
         birthdate = self.request.POST.get('nascimento')
-        cpf = self.request.POST.get('cpf')
+        cpf = self.request.POST.get('cpf', '').strip()
 
         if not all((username,password,name,surname, phone, email, birthdate, cpf)):
             messages.error(request, SignUpMessages.MISSING)
@@ -67,8 +68,9 @@ class SignUp(View):
         client.save()
 
         login(request, client)
-        self.logger.debug('redirecting to `rooms`')
-        return redirect('rooms')
+        _redirect = self._redirect
+        self.logger.debug(f'redirecting to {_redirect.url}')
+        return _redirect
 
 
 class SignIn(View):
@@ -103,8 +105,6 @@ class SignIn(View):
             return render(request, self.template)
         
         login(request, user)
-        msg = SignInMessages.LOGIN_SUCCESS.format_map({'username': user.username})
-        messages.success(request, msg)
 
         next_url = request.session.get('next_url')
         if next_url:
@@ -126,7 +126,7 @@ def logout_user(request: HttpRequest):
 def _check_perfil_ownership(request, received_pk):
     """função que verifica se o perfil recebido é o mesmo
     perfil que enviou o request."""
-    if request.user.pk != received_pk:
+    if request.user.is_authenticated and request.user.pk != received_pk:
         logging.getLogger('djangoLogger').warn(f'{request.user.pk} != {received_pk}')
         raise PermissionDenied
     

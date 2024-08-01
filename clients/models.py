@@ -4,7 +4,7 @@ from django.core.validators import validate_email, RegexValidator, MaxLengthVali
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.exceptions import ValidationError
 from .validators import validate_phone_number
-from utils.supportmodels import ClienteRules, ClienteErrorMessages
+from utils.supportmodels import ClientRules, ClientErrorMessages, ContactErrorMessages
 from django.contrib.auth.models import AbstractUser
 from .validators import CpfValidator
 
@@ -12,38 +12,40 @@ from .validators import CpfValidator
 class Client(AbstractUser):
     """model que representa o usuário final"""
     username = models.CharField(
-        max_length=ClienteRules.USERNAME_MAX_SIZE,
+        max_length=ClientRules.USERNAME_MAX_SIZE,
         unique=True,
         validators=[
-            MinLengthValidator(ClienteRules.USERNAME_MIN_SIZE, ClienteErrorMessages.INVALID_USERNAME_LEN),
-            MaxLengthValidator(ClienteRules.USERNAME_MAX_SIZE, ClienteErrorMessages.INVALID_USERNAME_LEN),
+            MinLengthValidator(ClientRules.USERNAME_MIN_SIZE, ClientErrorMessages.INVALID_USERNAME_LEN),
+            MaxLengthValidator(ClientRules.USERNAME_MAX_SIZE, ClientErrorMessages.INVALID_USERNAME_LEN),
             UnicodeUsernameValidator(),
         ],
         error_messages={
-            'unique': ClienteErrorMessages.DUPLICATED_USERNAME,
-            'invalid': ClienteErrorMessages.INVALID_USERNAME_CHARS
+            'blank': ClientErrorMessages.NOT_PROVIDED_USERNAME,
+            'null': ClientErrorMessages.NOT_PROVIDED_USERNAME,
+            'unique': ClientErrorMessages.DUPLICATED_USERNAME,
+            'invalid': ClientErrorMessages.INVALID_USERNAME_CHARS,
         },
     )
     first_name = models.CharField(
         'Nome',
-        max_length=ClienteRules.MAX_FIRSTNAME_CHARS, 
+        max_length=ClientRules.MAX_FIRSTNAME_CHARS, 
         blank=False, 
         null=False,
         validators=[
-            RegexValidator(r'[A-Za-z]{2,25}', ClienteErrorMessages.INVALID_NAME_LETTERS),
-            MaxLengthValidator(ClienteRules.MAX_FIRSTNAME_CHARS, ClienteErrorMessages.INVALID_NAME_MAX_LENGTH),
-            MinLengthValidator(ClienteRules.MIN_FIRSTNAME_CHARS, ClienteErrorMessages.INVALID_NAME_MIN_LENGTH)
+            RegexValidator(r'^[A-Za-z]+$', ClientErrorMessages.INVALID_FIRSTNAME_LETTERS),
+            MaxLengthValidator(ClientRules.MAX_FIRSTNAME_CHARS, ClientErrorMessages.INVALID_FIRSTNAME_MAX_LENGTH),
+            MinLengthValidator(ClientRules.MIN_FIRSTNAME_CHARS, ClientErrorMessages.INVALID_FIRSTNAME_MIN_LENGTH)
         ],
     )
     last_name = models.CharField(
         'Sobrenome',
-        max_length=ClienteRules.MAX_SURNAME_CHARS, 
+        max_length=ClientRules.MAX_SURNAME_CHARS, 
         blank=False, 
         null=False,
         validators=[
-            RegexValidator(r'[A-Za-z]{2,50}',  ClienteErrorMessages.INVALID_SURNAME_LETTERS),
-            MinLengthValidator(ClienteRules.MIN_SURNAME_CHARS, ClienteErrorMessages.INVALID_SURNAME_MIN_LENGTH),
-            MaxLengthValidator(ClienteRules.MAX_SURNAME_CHARS, ClienteErrorMessages.INVALID_SURNAME_MAX_LENGTH),
+            RegexValidator(r'^[A-Za-z][A-Za-z ]*$',  ClientErrorMessages.INVALID_SURNAME_LETTERS),
+            MinLengthValidator(ClientRules.MIN_SURNAME_CHARS, ClientErrorMessages.INVALID_SURNAME_MIN_LENGTH),
+            MaxLengthValidator(ClientRules.MAX_SURNAME_CHARS, ClientErrorMessages.INVALID_SURNAME_MAX_LENGTH),
         ],
     )
     birthdate = models.DateField(
@@ -61,18 +63,27 @@ class Client(AbstractUser):
             validate_email,
         ],
         error_messages={
-            'null': ClienteErrorMessages.NOT_PROVIDED_EMAIL,
-            'blank': ClienteErrorMessages.NOT_PROVIDED_EMAIL,
+            'null': ClientErrorMessages.NOT_PROVIDED_EMAIL,
+            'blank': ClientErrorMessages.NOT_PROVIDED_EMAIL,
+            'unique': ContactErrorMessages.DUPLICATED_EMAIL,
+            'invalid': ContactErrorMessages.INVALID_EMAIL,
         }
     )
     phone = models.CharField(
         'Telefone',
         max_length=11, 
         null=False, 
-        blank=False, 
+        blank=False,
+        unique=True,
         validators=[
             validate_phone_number,
-        ]
+        ],
+        error_messages={
+            'blank': ClientErrorMessages.NOT_PROVIDED_PHONE,
+            'null': ClientErrorMessages.NOT_PROVIDED_PHONE,
+            'unique': ContactErrorMessages.DUPLICATED_PHONE,
+            'invalid': ContactErrorMessages.INVALID_PHONE
+        }
     )
     cpf = models.CharField(
         'CPF',
@@ -81,8 +92,11 @@ class Client(AbstractUser):
         blank=False,
         null=False,
         validators=[
-            CpfValidator(),
+            CpfValidator(message=ClientErrorMessages.INVALID_CPF),
         ],
+        error_messages={
+            'unique': ClientErrorMessages.DUPLICATED_CPF
+        }
     )
 
     def clean(self) -> None:
@@ -96,24 +110,24 @@ class Client(AbstractUser):
     
     def _validate_username(self):
         """faz todas as validações relacionadas ao username"""
-        if len(self.username) < ClienteRules.USERNAME_MIN_SIZE:
-            self.error_messages['username'] = ClienteErrorMessages.INVALID_USERNAME_LEN
+        if len(self.username) < ClientRules.USERNAME_MIN_SIZE:
+            self.error_messages['username'] = ClientErrorMessages.INVALID_USERNAME_LEN
         
         elif self.username.isnumeric():
-            self.error_messages['username'] = ClienteErrorMessages.INVALID_USERNAME_CHARS
+            self.error_messages['username'] = ClientErrorMessages.INVALID_USERNAME_CHARS
 
     def _validate_birthdate(self):
         """faz todas as validações relacionadas a data de nascimento do usuário"""
-        if not ClienteRules.MIN_AGE <= self.age <= ClienteRules.MAX_AGE:
-            self.error_messages['birthdate'] = ClienteErrorMessages.INVALID_BIRTHDATE
+        if not ClientRules.MIN_AGE <= self.age <= ClientRules.MAX_AGE:
+            self.error_messages['birthdate'] = ClientErrorMessages.INVALID_BIRTHDATE
     
     def _validate_password_strength(self):
         """valida o tamanho da senha e se não há símbolos"""
-        so_small = len(self.password) < ClienteRules.PASSWORD_MIN_SIZE
+        so_small = len(self.password) < ClientRules.PASSWORD_MIN_SIZE
         no_symbols = self.password.isnumeric() or self.password.isalnum()
 
         if so_small or no_symbols:
-            self.error_messages['password'] =  ClienteErrorMessages.PASSWORD_WEAK
+            self.error_messages['password'] =  ClientErrorMessages.PASSWORD_WEAK
 
     def __str__(self) -> str:
         return self.username
@@ -121,6 +135,7 @@ class Client(AbstractUser):
     @staticmethod
     def _create_mask(value: str, start: int, end: int, maskchar='*') -> str:
         """substitui caracteres pelo caractere especificado por `mask_char`
+        indo de start até end incluindo end
 
         Args:
             value (str): valor a ser mascarado
@@ -164,12 +179,18 @@ class Client(AbstractUser):
     @property
     def masked_phone(self) -> str:
         """retorna o telefone com dígitos mascarados"""
-        return self._create_mask(self.phone, *ClienteRules.PHONE_MASK_RANGE)
+        return self._create_mask(self.phone, *ClientRules.PHONE_MASK_RANGE)
     
     @property
     def masked_email(self) -> str:
         """retorna o email com caracteres mascarados"""
-        return self._create_mask(self.email, *ClienteRules.EMAIL_MASK_RANGE)
+        return self._create_mask(self.email, *ClientRules.EMAIL_MASK_RANGE)
+
+    @property
+    def masked_cpf(self):
+        """cpf com dígitos mascarados"""
+        masked = self._create_mask(self.cpf, *ClientRules.CPF_MASK_RANGE)
+        return masked
 
     class Meta:
         verbose_name = 'Cliente'
