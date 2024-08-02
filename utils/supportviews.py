@@ -9,6 +9,11 @@ class SignInMessages:
     LOGIN_SUCCESS = 'Olá {username}, seja bem-vindo.'
 
 
+class PerfilChangePasswordMessages:
+    PASSWORDS_DIFFERS = 'As senhas não são iguais.'
+    SUCCESS = 'Senha alterada com sucesso.'
+
+
 class CheckoutMessages:
     TRANSACTION_BLOCKING = 'Não foi possível prosseguir para o pagamento ou quarto não esta mais disponível.'
     PAYMENT_FAIL = (

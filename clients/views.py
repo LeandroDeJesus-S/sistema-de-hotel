@@ -10,7 +10,7 @@ from django.views import View
 from django.views.generic.edit import UpdateView, DeleteView
 from django.views.generic.detail import DetailView
 from clients.models import Client
-from utils.supportviews import SignUpMessages, SignInMessages
+from utils.supportviews import SignUpMessages, SignInMessages, PerfilChangePasswordMessages
 from django.contrib.auth import login, authenticate, logout
 from reservations.mixins import LoginRequired
 from .forms import UpdatePerfilForm
@@ -173,11 +173,11 @@ class PerfilChangePassword(LoginRequired, View):
         if new_pass == pass_repeat:
             self.request.user.set_password(new_pass)
             self.request.user.save()
-            messages.success(self.request, 'Senha alterada com sucesso.')
+            messages.success(self.request, PerfilChangePasswordMessages.SUCCESS)
             login(self.request, self.request.user)
             return redirect(reverse('perfil', args=(self.request.user.pk,)))
         
-        messages.error(self.request, 'As senhas não são iguais')
+        messages.error(self.request, PerfilChangePasswordMessages.PASSWORDS_DIFFERS)
         redirect_url = self.request.META.get('HTTP_REFERER', reverse('perfil', args=(self.request.user.pk,)))
         self.logger.info('unmatched passwords')
         return redirect(redirect_url)
@@ -187,9 +187,13 @@ class PerfilChangePassword(LoginRequired, View):
         return super().dispatch(request, *args, **kwargs)
 
 
-class PerfilDelete(DeleteView):
+class PerfilDelete(LoginRequired, DeleteView):
     model = Client
     template_name = 'perfil_delete.html'
 
     def get_success_url(self) -> str:
         return reverse_lazy('rooms')
+    
+    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        _check_perfil_ownership(request, kwargs.get('pk'))        
+        return super().dispatch(request, *args, **kwargs)
