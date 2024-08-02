@@ -16,7 +16,15 @@ from PIL import Image
 
 from clients.models import Client
 from home.models import Hotel
-from utils.supportmodels import ReservaRules, ReservaErrorMessages, QuartoRules, ClasseErrorMessages, QuartoErrorMessages
+from utils.supportmodels import (
+    ReservaRules, 
+    ReservaErrorMessages,
+    RoomRules,
+    ClasseErrorMessages,
+    RoomErrorMessages,
+    BenefitRules,
+    BenefitErrorMessages
+)
 
 
 class Benefit(models.Model):
@@ -65,8 +73,9 @@ class Benefit(models.Model):
     def _validate_icon_size(self):
         """valida se o ícone possui dimensão maxima de até 64x64"""
         if self.icon:
-            if self.icon.width > 64 or self.icon.height > 64:
-                self.error_messages['icon'] = 'O ícone deve ter tamanho 64x64.'
+            w, h = BenefitRules.ICON_SIZE
+            if self.icon.width > w or self.icon.height > h:
+                self.error_messages['icon'] = BenefitErrorMessages.INVALID_ICON_SIZE
 
     def __str__(self) -> str:
         return self.name
@@ -81,7 +90,7 @@ class Class(models.Model):
         null=False, 
         unique=True,
         validators=[
-            RegexValidator(r'^[\w ]+$', ClasseErrorMessages.INVALID_NAME)
+            RegexValidator(r'^\w[\w ]*$', ClasseErrorMessages.INVALID_NAME)
         ]
     )
 
@@ -108,7 +117,7 @@ class Room(models.Model):
         unique=True,
         max_length=4,
         validators=[
-            RegexValidator(r"^\d{3}[A-Z]?$")
+            RegexValidator(r"^\d{3}[A-Z]?$", )
         ]
     )
     adult_capacity = models.PositiveSmallIntegerField(
@@ -117,8 +126,8 @@ class Room(models.Model):
         null=False, 
         default=1,
         validators=[
-            MaxValueValidator(QuartoRules.MAX_ADULTS, QuartoErrorMessages.ADULTS_EXCEEDED),
-            MinValueValidator(QuartoRules.MIN_ADULTS, QuartoErrorMessages.ADULTS_INSUFFICIENT),
+            MaxValueValidator(RoomRules.MAX_ADULTS, RoomErrorMessages.ADULTS_EXCEEDED),
+            MinValueValidator(RoomRules.MIN_ADULTS, RoomErrorMessages.ADULTS_INSUFFICIENT),
         ]
     )
     child_capacity = models.PositiveSmallIntegerField(
@@ -127,8 +136,8 @@ class Room(models.Model):
         null=False, 
         default=1,
         validators=[
-            MaxValueValidator(QuartoRules.MAX_CHILDREN, QuartoErrorMessages.CHILD_EXCEEDED),
-            MinValueValidator(QuartoRules.MIN_CHILDREN, QuartoErrorMessages.CHILD_INSUFFICIENT),
+            MaxValueValidator(RoomRules.MAX_CHILDREN, RoomErrorMessages.CHILD_EXCEEDED),
+            MinValueValidator(RoomRules.MIN_CHILDREN, RoomErrorMessages.CHILD_INSUFFICIENT),
         ]
     )
     size = models.FloatField(
@@ -136,8 +145,8 @@ class Room(models.Model):
         blank=False, 
         null=False,
         validators=[
-            MinValueValidator(QuartoRules.MIN_SIZE, QuartoErrorMessages.SIZE_INSUFFICIENT),
-            MaxValueValidator(QuartoRules.MAX_SIZE, QuartoErrorMessages.SIZE_EXCEEDED),
+            MinValueValidator(RoomRules.MIN_SIZE, RoomErrorMessages.SIZE_INSUFFICIENT),
+            MaxValueValidator(RoomRules.MAX_SIZE, RoomErrorMessages.SIZE_EXCEEDED),
         ]
     )
     daily_price = models.DecimalField(
@@ -147,8 +156,8 @@ class Room(models.Model):
         blank=False, 
         null=False,
         validators=[
-            MinValueValidator(QuartoRules.MIN_DAILY_PRICE, QuartoErrorMessages.PRICE_INSUFFICIENT),
-            MaxValueValidator(QuartoRules.MAX_DAILY_PRICE, QuartoErrorMessages.PRICE_EXCEEDED),
+            MinValueValidator(RoomRules.MIN_DAILY_PRICE, RoomErrorMessages.PRICE_INSUFFICIENT),
+            MaxValueValidator(RoomRules.MAX_DAILY_PRICE, RoomErrorMessages.PRICE_EXCEEDED),
         ]
     )
     benefit = models.ManyToManyField(
@@ -202,7 +211,7 @@ class Room(models.Model):
         super().clean()
         error_messages = {}
         if self.image and not re.match(r'^(\w+/?-?)+\.(jpg|png)$', self.image.name):
-            error_messages['image'] = QuartoErrorMessages.IMAGE_INVALID_NAME
+            error_messages['image'] = RoomErrorMessages.IMAGE_INVALID_NAME
             
         if error_messages: raise ValidationError(error_messages)
 
@@ -245,7 +254,7 @@ class Room(models.Model):
     def save(self, *args, **kwargs) -> None:
         super().save(*args, **kwargs)
         if self.image:
-            self.resize_image(self.image.path, *QuartoRules.IMAGE_SIZE)
+            self.resize_image(self.image.path, *RoomRules.IMAGE_SIZE)
 
 
 class Reservation(models.Model):
@@ -291,7 +300,7 @@ class Reservation(models.Model):
         blank=True,
         null=True,
         validators=[
-            MinValueValidator(QuartoRules.MIN_DAILY_PRICE),
+            MinValueValidator(RoomRules.MIN_DAILY_PRICE),
         ]
     )
     active = models.BooleanField(
