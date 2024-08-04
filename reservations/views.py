@@ -55,6 +55,9 @@ class Rooms(ListView):
     ordering = '-daily_price'
 
     def get_context_data(self, **kwargs):
+        """retorna todos os quartos, todos os benefícios e todas as reservas
+        ativas ou agendadas do cliente, caso tenha.
+        """
         context = super().get_context_data(**kwargs)
         context['benefits'] = Benefit.objects.all()
         self.logger.debug('add benefits to the context')
@@ -74,7 +77,9 @@ class RoomDetail(DetailView):
         self.logger = logging.getLogger('djangoLogger')
 
     def get_context_data(self, **kwargs):
-        """add os benefícios ao context para manuseio no html"""
+        """add os benefícios e reservas ativas ou agendadas do cliente
+        caso tenha
+        """
         context = super().get_context_data(**kwargs)
         context['benefits'] = Benefit.objects.all()
         self.logger.info('add benefits to context')

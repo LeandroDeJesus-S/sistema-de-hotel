@@ -17,8 +17,8 @@ from PIL import Image
 from clients.models import Client
 from home.models import Hotel
 from utils.supportmodels import (
-    ReservaRules, 
-    ReservaErrorMessages,
+    ReserveRules, 
+    ReserveErrorMessages,
     RoomRules,
     ClasseErrorMessages,
     RoomErrorMessages,
@@ -368,8 +368,15 @@ class Reservation(models.Model):
     @classmethod
     def get_free_dates(cls, reservations) -> str:
         """retorna as datas de reserva livres para um conjunto
-        de reservas, considerando os períodos de gap entre as datas
-        (e.g d/m/Y a d/m/Y, e d/m/Y para frente)"""
+        de reservas, considerando os períodos de gap entre as datas com 
+        número de dias de diferença maior que 1
+        Ex.:
+        >>> reservations = Reservation.objects.filter(status__in=['A', 'S'])
+        >>> [(r.checkin.strftime('%d/%m/%Y'), r.checkout.strftime('%d/%m/%Y')) for r in reservations]
+        >>> ('01/01/2024', '02/01/2024'), ('05/01/2024', '07/01/2024')
+        >>> Reservation.get_free_dates(reservations)
+        >>> '02/01/2024 a 04/01/2024, e 07/01/2024 para frente.'
+        """
         fmt_date = lambda d: d.strftime('%d/%m/%Y')
         dates = []
         lst = None
@@ -389,7 +396,8 @@ class Reservation(models.Model):
     @classmethod
     def available_dates(cls, room) -> str:
         """retorna as datas de reservas disponíveis para o quarto especificado
-        considerando reserva ativa e agendamentos
+        considerando reserva ativa e agendamentos, chamando Reservation.get_free_dates
+        para reservas agendadas ou ativas
 
         Args:
             room (reservations.models.Quarto): uma instancia da model Quarto
@@ -413,23 +421,23 @@ class Reservation(models.Model):
         )
         if reservations.exists():
             dates = self.get_free_dates(reservations)
-            self.error_messages['checkin'] = ReservaErrorMessages.UNAVAILABLE_DATE.format_map({'dates': dates})
+            self.error_messages['checkin'] = ReserveErrorMessages.UNAVAILABLE_DATE.format_map({'dates': dates})
     
     def _validate_check_in(self):
         """realiza as validações relacionadas ao check-in"""
         if self.checkin < datetime.now().date():
-           self.error_messages['checkin'] = ReservaErrorMessages.INVALID_CHECKIN_DATE
+           self.error_messages['checkin'] = ReserveErrorMessages.INVALID_CHECKIN_DATE
 
-        elif self.checkin > ReservaRules.checkin_anticipation_offset():
-           self.error_messages['checkin'] = ReservaErrorMessages.INVALID_CHECKIN_ANTICIPATION
+        elif self.checkin > ReserveRules.checkin_anticipation_offset():
+           self.error_messages['checkin'] = ReserveErrorMessages.INVALID_CHECKIN_ANTICIPATION
         
-        elif not ReservaRules.MIN_RESERVATION_DAYS <= self.reservation_days <= ReservaRules.MAX_RESERVATION_DAYS:
-            self.error_messages['checkin'] = ReservaErrorMessages.INVALID_STAYED_DAYS
+        elif not ReserveRules.MIN_RESERVATION_DAYS <= self.reservation_days <= ReserveRules.MAX_RESERVATION_DAYS:
+            self.error_messages['checkin'] = ReserveErrorMessages.INVALID_STAYED_DAYS
 
     def _validate_room(self):
         """realiza as validações relacionadas ao quarto"""
         if not self.room.available:
-            self.error_messages['room'] = ReservaErrorMessages.UNAVAILABLE_ROOM
+            self.error_messages['room'] = ReserveErrorMessages.UNAVAILABLE_ROOM
 
     @property
     def reservation_days(self) -> int:
