@@ -29,3 +29,8 @@ class ReserveSupport:
 class ReserveMessages:
     RESERVATION_FAIL = 'Não foi possível realizar a reserva.'
     ALREADY_HAVE_A_RESERVATION = 'Você já possui uma reserva ativa ou agendada'
+
+
+class PaymentCancelMessages:
+    PAYMENT_DOES_NOT_EXISTS = 'Pagamento não existe.'
+    UNEXPECTED_ERROR = 'Tivemos um erro inesperado. Tente novamente mais tarde ou contate o desenvolvedor.'

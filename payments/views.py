@@ -1,6 +1,6 @@
 import logging
 
-from django.core.exceptions import PermissionDenied, BadRequest
+from django.core.exceptions import PermissionDenied
 from django.views.decorators.http import require_GET
 from django.http import HttpRequest
 from django.http.response import HttpResponse
@@ -8,7 +8,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.views import View
 from reservations.models import Reservation
-from utils.supportviews import CheckoutMessages
+from utils.supportviews import CheckoutMessages, PaymentCancelMessages
 from django.contrib import messages
 from .models import Payment
 from django.db import transaction
@@ -80,8 +80,10 @@ class Checkout(LoginRequiredMixin, View):
 
     def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         reservation = get_object_or_404(Reservation, pk=kwargs.get("reservation_pk"))
-        if reservation.client != request.user:
-            self.logger.warn(f'permission denied for user {request.user.pk} to access reservation {reservation.pk}')
+        if request.user.is_authenticated and reservation.client != request.user:
+            self.logger.warn(
+                f'permission denied for user {request.user.pk} to access reservation {reservation.pk}'
+            )
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
@@ -122,7 +124,7 @@ def payment_cancel(request: HttpRequest, reservation_pk: int):
     logger = logging.getLogger("djangoLogger")
     logger.info(f"reservation {reservation_pk} received to cancel")
     try:
-        payment = Payment.objects.get(reservation__pk=reservation_pk)
+        payment = get_object_or_404(Payment, reservation__pk=reservation_pk)
         if payment.status != "C":
             payment.reservation.status = "C"
             payment.reservation.active = False
@@ -133,11 +135,13 @@ def payment_cancel(request: HttpRequest, reservation_pk: int):
 
             payment.status = "C"
             payment.save()
-
-    except Exception as e:
+            logger.info(f"payment {payment.pk} for {payment.reservation.pk} successfully canceled")
+    
+    except Exception as exc:
         logger.critical(
-            f"fail to revert payment {payment.pk} for reservation {payment.reservation.pk}: {str(e)}"
+            f"unexpected error reverting reservation {reservation_pk}: {str(exc)}"
         )
+        messages.error(request, PaymentCancelMessages.UNEXPECTED_ERROR)
+        return redirect('rooms')
 
-    logger.info(f"payment {payment.pk} for {payment.reservation.pk} successfully canceled")
     return render(request, "cancel.html")
