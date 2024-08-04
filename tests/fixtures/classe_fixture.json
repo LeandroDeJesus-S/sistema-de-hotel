@@ -1,0 +1,23 @@
+[
+    {
+        "model": "reservations.class",
+        "pk": 1,
+        "fields":{
+            "name": "classe_teste1"
+        }
+    },
+    {
+        "model": "reservations.class",
+        "pk": 2,
+        "fields":{
+            "name": "classe_teste2"
+        }
+    },
+    {
+        "model": "reservations.class",
+        "pk": 3,
+        "fields":{
+            "name": "classe_teste3"
+        }
+    }
+]

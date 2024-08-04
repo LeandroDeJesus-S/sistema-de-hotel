@@ -1,0 +1,38 @@
+[
+    {
+        "model": "reservations.reservation",
+        "pk": 1,
+        "fields": {
+            "client": 1,
+            "checkin": "2024-07-24",
+            "checkout": "2024-07-24",
+            "amount": "100",
+            "observations": "",
+            "room": 1
+        }
+    },
+    {
+        "model": "reservations.reservation",
+        "pk": 2,
+        "fields": {
+            "client": 1,
+            "checkin": "2024-07-28",
+            "checkout": "2024-07-29",
+            "amount": "100",
+            "observations": "",
+            "room": 1
+        }
+    },
+    {
+        "model": "reservations.reservation",
+        "pk": 3,
+        "fields": {
+            "client": 2,
+            "checkin": "2024-07-10",
+            "checkout": "2024-07-11",
+            "amount": "120",
+            "observations": "",
+            "room": 2
+        }
+    }
+]

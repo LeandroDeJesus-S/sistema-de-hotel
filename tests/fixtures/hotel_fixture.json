@@ -1,0 +1,13 @@
+[
+    {
+        "model": "home.hotel",
+        "pk": 1,
+        "fields": {
+            "name": "hotel1",
+            "slogan": "slogan teste",
+            "logo": "",
+            "icon": "",
+            "presentation_text": ""
+        }
+    }
+]
