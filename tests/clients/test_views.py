@@ -257,7 +257,7 @@ class TestSignIn(BaseTestClient):
         para signin e completar o login o cliente é redirecionado para a pagina de
         reserva
         """
-        next_url =self.reserve_url
+        next_url = self.reserve_url
         url = reverse('signin') + f'?next={next_url}'
 
         pw = self.user.password
@@ -287,7 +287,24 @@ class TestSignIn(BaseTestClient):
 
                 self.assertTemplateUsed(response, self.signin_template)
                 self.assertEqual(msg, SignInMessages.INVALID_CREDENTIALS)
-                
+    
+    def test_next_url_e_deletado_da_session_apos_capiturado_no_post(self):
+        """testa se apos a capitura de next_url via sesion no metodo post
+        ele é retirado da session
+        """
+        next_url = self.reserve_url
+        url = self.signin_url + f'?next={next_url}'
+
+        pw = self.user.password
+        self.user.set_password(pw)
+        data = {'username': self.user.username, 'password': pw}
+
+        response = self.client.get(next_url)
+        response = response.client.post(self.signin_url, data)
+
+        result = response.client.session.has_key('next_url')
+        self.assertFalse(result)
+
 
 class TestLogout(BaseTestClient):
     def test_usuario_logado_e_deslogado(self):

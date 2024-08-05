@@ -332,6 +332,13 @@ class TestClient(TestCase):
             self.other_client.full_clean()
 
     # custom methods
+    def test_create_mask_levanta_value_error_se_parametro_end_for_positivo(self):
+        """testa se o metodo _create_mask levanta ValueError caso o parametro
+        end não seja negativo.
+        """
+        with self.assertRaisesMessage(ValueError, 'end must be a negative value'):
+            Client._create_mask('0123456789', start=2, end=6)
+    
     def test_create_mask_ofusca_digitos_corretamente(self):
         """testa se o metodo _create_mask esta criando as mascaras corretamente
         """
