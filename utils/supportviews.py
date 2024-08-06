@@ -17,8 +17,8 @@ class PerfilChangePasswordMessages:
 class CheckoutMessages:
     TRANSACTION_BLOCKING = 'Não foi possível prosseguir para o pagamento ou quarto não esta mais disponível.'
     PAYMENT_FAIL = (
-        'Não foi possível concluir o pagamento devido a um erro com o sistema de '
-        'pagamento externo, tente novamente ou contate o suporte caso o problema persista.'
+        'Não foi possível concluir o pagamento devido a um erro inesperado '
+        'tente novamente ou contate o suporte caso o problema persista.'
     )
 
 

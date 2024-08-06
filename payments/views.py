@@ -11,8 +11,7 @@ from reservations.models import Reservation
 from utils.supportviews import CheckoutMessages, PaymentCancelMessages
 from django.contrib import messages
 from .models import Payment
-from django.db import transaction
-from sqlite3 import OperationalError
+from django.db import transaction, OperationalError
 from .tasks import create_payment_pdf
 from utils.support import ReservationStripePaymentCreator
 from django_q.tasks import async_task, Task
@@ -64,6 +63,7 @@ class Checkout(LoginRequiredMixin, View):
             reservation.save()
             payment.save()
             self.logger.info(f'payment {payment.pk} created for reservation {reservation.pk}')
+            self.logger.debug(f'stripe payment session url: {reservation_payment.session.url}')
             return redirect(reservation_payment.session.url)
 
         except OperationalError as exc:

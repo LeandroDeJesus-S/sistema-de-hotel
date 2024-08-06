@@ -293,13 +293,14 @@ class TestSignIn(BaseTestClient):
         ele é retirado da session
         """
         next_url = self.reserve_url
-        url = self.signin_url + f'?next={next_url}'
 
         pw = self.user.password
         self.user.set_password(pw)
+        self.user.save()
+
         data = {'username': self.user.username, 'password': pw}
 
-        response = self.client.get(next_url)
+        response = self.client.get(next_url, follow=True)
         response = response.client.post(self.signin_url, data)
 
         result = response.client.session.has_key('next_url')

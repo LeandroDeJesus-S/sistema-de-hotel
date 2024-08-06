@@ -89,3 +89,10 @@ class TestPayment(TestCase):
 
         result = Payment.objects.last()
         self.assertEqual(result, payment)
+
+    def test_metodo_str_retorna_nome_da_classe_com_respectivo_id(self):
+        """testa se o método __str__ irá retornar o nome da Model com respectivo id
+        do objeto"""
+        result = self.payment.__str__()
+        expected = f'{Payment.__name__} {self.payment.pk}'
+        self.assertEqual(result, expected)

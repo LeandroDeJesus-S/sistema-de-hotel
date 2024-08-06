@@ -8,9 +8,12 @@ from django.http import HttpResponseForbidden
 from reservations.models import Room, Reservation
 from clients.models import Client
 from payments.models import Payment
-from utils.supportviews import PaymentCancelMessages
+from payments.views import Checkout
+from utils.supportviews import PaymentCancelMessages, CheckoutMessages
 from utils.supporttest import get_message
-
+from unittest.mock import patch
+from http import HTTPStatus
+from django.db import OperationalError
 
 class Base(TestCase):
     def setUp(self):
@@ -58,8 +61,9 @@ class TestCheckout(Base):
         
         self.url = reverse('checkout', args=(self.reservation.pk,))
         self.url_client2 = reverse('checkout', args=(self.reservation2.pk,))
+        self.rooms_url = reverse('rooms')
+        self.view = Checkout()
         
-
     def test_template(self):
         """testa se renderiza o template correto"""
         self.client.force_login(self.user)
@@ -84,6 +88,77 @@ class TestCheckout(Base):
         self.client.force_login(self.user)
         response = self.client.get(self.url_client2)
         self.assertIsInstance(response, HttpResponseForbidden)
+
+    @patch('payments.views.ReservationStripePaymentCreator.session')
+    def test_payment_created_successfully(self, fake_stripe_session):
+        """testa se redireciona para a pagina de pagamento com reserva enviada corretamente"""
+        fake_stripe_session.url = 'http://stripepayment-hostedpage.url'
+
+        self.client.force_login(self.user)
+        response = self.client.post(self.url, follow=True)
+        self.assertIn(('http://stripepayment-hostedpage.url', HTTPStatus.FOUND), response.redirect_chain)
+
+    @patch('payments.views.Payment.save', side_effect=OperationalError('Database error'))
+    def test_redireciona_para_rooms_com_msg_correta_caso_operational_error_seja_levantado(self, mock_save):
+        """testa se ao levantar OperationalError ao salvar redireciona para a url dos quartos com a
+        mensagem correta
+        """
+        self.client.force_login(self.user)
+        response = self.client.post(self.url)
+        msg = get_message(response)
+        self.assertRedirects(response, self.rooms_url)
+        self.assertEqual(CheckoutMessages.TRANSACTION_BLOCKING, msg)
+
+    @patch('payments.views.Payment.save', side_effect=Exception('unexpected exception'))
+    def test_redireciona_para_rooms_com_msg_correta_caso__seja_levantada_uma_excecao_inesperada(self, mock_save):
+        """testa se ao levantar exceção inesperada ao salvar redireciona para a url dos quartos com a
+        mensagem correta
+        """
+        self.client.force_login(self.user)
+        response = self.client.post(self.url)
+        msg = get_message(response)
+        self.assertRedirects(response, self.rooms_url)
+        self.assertEqual(CheckoutMessages.PAYMENT_FAIL, msg)
+
+    @patch('payments.views.ReservationStripePaymentCreator.session')
+    def test_status_reserva_muda_para_P_e_quarto_fica_indisponivel(self, fake_stripe_session):
+        """testa se muda o status da reserva para processando e o quarto para indisponível"""
+        fake_stripe_session.url = 'http://stripepayment-hostedpage.url'
+
+        self.client.force_login(self.user)
+        self.client.post(self.url, follow=True)
+
+        reservation = Reservation.objects.get(pk=self.reservation.pk)
+        room = Room.objects.get(pk=self.room.pk)
+
+        self.assertListEqual(
+            [reservation.status, room.available],
+            ['P', False]
+        )
+
+    @patch('payments.views.ReservationStripePaymentCreator.session')
+    def test_status_cria_pagamento_corretamente(self, fake_stripe_session):
+        """testa se o pagamento é criado corretamente no banco de dados"""
+        fake_stripe_session.url = 'http://stripepayment-hostedpage.url'
+
+        self.client.force_login(self.user)
+        self.client.post(self.url, follow=True)
+
+        payment = Payment.objects.latest('date')
+
+        self.assertListEqual(
+            [
+                payment.reservation, payment.reservation.room, payment.reservation.client,
+                payment.status, payment.reservation.status, payment.reservation.room.available
+            ],
+            [
+                self.reservation, self.room, self.user,
+                'P', 'P', False
+            ]
+        )
+    
+
+        
 
 
 class TestPayementSuccess(Base):
@@ -193,3 +268,17 @@ class TestPaymentCancel(Base):
         self.client.force_login(self.user)
         response = self.client.get(self.url2)
         self.assertIsInstance(response, HttpResponseForbidden)
+
+    def test_se_excecao_inesperada_ocorrer_redireciona_para_quartos_com_msg_correta(self):
+        """testa se ao ocorrer uma exceção inesperada redireciona para os quarto com a
+        mensagem correta.
+        """
+        with patch('payments.views.get_object_or_404') as fake_get_obj_or_404:
+            fake_get_obj_or_404.side_effect = Exception
+
+            self.client.force_login(self.user)
+            response = self.client.get(self.url)
+            msg = get_message(response)
+
+            self.assertRedirects(response, reverse('rooms'))
+            self.assertEqual(msg, PaymentCancelMessages.UNEXPECTED_ERROR)

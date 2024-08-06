@@ -15,7 +15,9 @@ from utils.supportmodels import (
 )
 from django.core.exceptions import ValidationError
 from PIL import Image
-
+import tempfile
+import os
+from secrets import token_hex
 
 class TestBenefit(TestCase):
     def setUp(self):
@@ -108,6 +110,17 @@ class TestRoom(BaseTestReservations):
             long_desc=None,
             hotel=self.hotel
         )
+
+        tmp_dir = tempfile.gettempdir()
+        self.tmp_file = os.path.join(tmp_dir, f'{token_hex(8)}.jpg')
+        img_path = 'media/test/room_test.jpg'
+        self.tmp_img = Image.open(img_path)
+    
+    def tearDown(self) -> None:
+        if os.path.exists(self.tmp_file):
+            os.remove(self.tmp_file)
+        
+        self.tmp_img.close()
     
     def test_criado_com_dados_validos(self):
         """testa se o quarto é salvo corretamente na BD se
@@ -261,6 +274,44 @@ class TestRoom(BaseTestReservations):
         result = self.valid_room.daily_price_in_cents
         expected = 100_00
         self.assertEqual(result, expected)
+    
+    def test_metodo_str_retorna_numero_e_classe(self):
+        """testa se o método __str__ retorna o valor correto"""
+        result = self.valid_room.__str__()
+        expected = f'Nº{self.valid_room.number} {self.valid_room.room_class}'
+        self.assertEqual(result, expected)
+    
+    def test_resize_image_redimensiona_a_img_corretamente_passando_w_e_h_validos(self):
+        """testa se redimensiona a imagem corretamente passa os args `w` e `h` esperados"""
+        img = self.tmp_img.resize((800,600))
+        img.save(self.tmp_file)
+
+        Room.resize_image(self.tmp_file, 400, 300)
+        img = Image.open(self.tmp_file)
+
+        self.assertTupleEqual(img.size, (400, 300))
+    
+    def test_resize_image_redimensiona_a_img_corretamente_passando_w_e_h_validos(self):
+        """testa se redimensiona a imagem corretamente passa os args `w` e `h` esperados"""
+        img = self.tmp_img.resize((800,600))
+        img.save(self.tmp_file)
+
+        Room.resize_image(self.tmp_file, 400, 300)
+        img = Image.open(self.tmp_file)
+        self.assertTupleEqual(img.size, (400, 300))
+    
+    def test_resize_image_nao_altera_altura_da_img_caso_seja_menor_que_a_altura_original(self):
+        """testa se a imagem não tem a altura alterada caso a altura original seja menor que a passada"""
+        resized = self.tmp_img.resize((400,300))
+        resized.save(self.tmp_file)
+
+        Room.resize_image(self.tmp_file, 400, 400)
+        img = Image.open(self.tmp_file)
+
+        resized.close()
+        img.close()
+
+        self.assertTupleEqual(img.size, (400, 300))
 
 
 class TestReserva(BaseTestReservations):

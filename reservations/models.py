@@ -243,7 +243,7 @@ class Room(models.Model):
         original_w, original_h = img.size
 
         if h is None: h = round(w * original_h / original_w)
-        if original_h <= h: return
+        if original_h <= h: h = original_h
         
         resized = img.resize((w, h), Image.Resampling.NEAREST)
         resized.save(img_path, optimize=True, quality=70)
