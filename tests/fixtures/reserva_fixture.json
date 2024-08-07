@@ -20,7 +20,7 @@
             "checkout": "2024-07-29",
             "amount": "100",
             "observations": "",
-            "room": 1
+            "room": 2
         }
     },
     {
@@ -32,7 +32,7 @@
             "checkout": "2024-07-11",
             "amount": "120",
             "observations": "",
-            "room": 2
+            "room": 3
         }
     }
 ]

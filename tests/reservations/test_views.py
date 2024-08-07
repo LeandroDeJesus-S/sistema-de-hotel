@@ -7,8 +7,10 @@ from reservations.models import Room, Benefit, Reservation
 from reservations.views import Rooms
 from clients.models import Client
 from utils.supportmodels import ReserveErrorMessages, ReserveRules
+from utils.supportviews import ReserveMessages
 from django_q.models import Schedule
 from utils.supporttest import get_message
+from unittest.mock import patch
 
 
 class Base(TestCase):
@@ -25,6 +27,7 @@ class Base(TestCase):
         self.room3 = Room.objects.get(pk=3)
 
         self.url = ''
+        self.next_url_field_name = 'next'
 
 
 class RoomTestMixin:
@@ -84,7 +87,6 @@ class RoomTestMixin:
                 reservation_on.delete()
 
 
-
 class TestRooms(Base, RoomTestMixin):
     def setUp(self):
         super().setUp()
@@ -133,9 +135,10 @@ class TestRoom(Base, RoomTestMixin):
         self.assertEqual(result, expected)
 
 
-class TestReservar(Base):
+class TestReserve(Base):
     def setUp(self):
         super().setUp()
+        call_command('loaddata', 'tests/fixtures/reserva_fixture.json')
 
         self.user = Client.objects.first()
         self.room1 = Room.objects.first()
@@ -232,8 +235,43 @@ class TestReservar(Base):
         expected = 'reservations.tasks.release_room'
         self.assertEqual(result, expected)
 
+    def test_cliente_que_ja_tem_reserva_com_status_ativa_ou_agendada_e_redirecionado_para_quartos_com_msg_correta(self):
+        """testa se um cliente tentar acessar pagina de realizar reserva
+        com uma reserva de status ativa ou agendada ele é redirecionado para a pagina de quartos
+        com msg correta
+        """
+        for status in ['A', 'S']:
+            with self.subTest(status=status):
+                self.client.force_login(self.user)
+                r = Reservation.objects.get(pk=1)
+                r.status = status
+                r.save()
+                
+                response = self.client.get(self.url)
 
-class TestHistoricoReservas(Base):
+                msg = get_message(response)
+                result = [msg, response.url]
+                expected = [ReserveMessages.ALREADY_HAVE_A_RESERVATION, reverse('rooms')]
+                self.assertListEqual(result, expected)
+
+    @patch('reservations.views.convert_date')
+    def test_se_erro_inesperado_acontecer_ao_enviar_dados_de_reserva_redireciona_para_quarto_com_msg_correta(self, mock_convert_date):
+        """testa se ao enviar dos dados do formulário ocorrer uma exceção inesperada redireciona para
+        pagina do quarto com msg correta
+        """
+        mock_convert_date.side_effect = Exception
+
+        self.client.force_login(self.user)
+        response = self.client.post(self.url, self.valid_data)
+        msg = get_message(response)
+
+        self.assertListEqual(
+            [msg, response.url],
+            [ReserveMessages.RESERVATION_FAIL, reverse('room', args=[self.room1.pk])]
+        )
+
+
+class TestReservationsHistory(Base):
     def setUp(self):
         super().setUp()
         call_command('loaddata', 'tests/fixtures/reserva_fixture.json')
@@ -255,13 +293,46 @@ class TestHistoricoReservas(Base):
 
         response = self.client.get(self.url)
         
-        result = list(response.context[self.context_obj_name])
-        expected = list(Reservation.objects.filter(client=self.user).order_by('-id'))
-        self.assertListEqual(result, expected)
+        result = response.context[self.context_obj_name]
+        expected = Reservation.objects.filter(client=self.user).order_by('-id')
+        self.assertQuerysetEqual(result, expected)
 
     def test_cliente_nao_logado_redirecionado_para_signin(self):
         """testa se o cliente não estiver logado ele é redirecionado para o signin"""
         response = self.client.get(self.url)
-        expected_url = reverse('signin') + f'?next={self.url}'
+        expected_url = reverse('signin') + f'?{self.next_url_field_name}={self.url}'
         self.assertRedirects(response, expected_url)
-        
+
+
+class TestReservationHistory(Base):
+    def setUp(self) -> None:
+        super().setUp()
+        call_command('loaddata', 'tests/fixtures/reserva_fixture.json')
+        self.reservation = Reservation.objects.get(pk=1)
+        self.url = reverse('reservation_history', args=[self.reservation.pk])
+        self.context_obj_name = 'reservation'
+        self.template = 'reservation_history.html'
+    
+    def test_template(self):
+        """testa se renderizou o template correto"""
+        self.client.force_login(self.user)
+        response = self.client.get(self.url)
+        self.assertTemplateUsed(response, self.template)    
+    
+    def test_apenas_quartos_do_cliente_e_passado_para_context(self):
+        """testa se é adicionado no context apenas os quartos pertencentes
+        ao cliente da sessão atual
+        """
+        self.client.force_login(self.user)
+        response = self.client.get(self.url)
+        result = response.context[self.context_obj_name]
+        expected = Reservation.objects.get(pk=self.reservation.pk, client=self.user)
+        self.assertEqual(result, expected)
+
+    def test_cliente_logado_redirecionado_para_signin(self):
+        """se cliente não estiver autenticado ele é redirecionado para
+        signin
+        """
+        response = self.client.get(self.url)
+        next_url = reverse('signin') + f'?{self.next_url_field_name}={self.url}'
+        self.assertRedirects(response, next_url)

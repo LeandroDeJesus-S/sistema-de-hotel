@@ -103,7 +103,7 @@ class Reserve(LoginRequired, View):
         if Reservation.objects.filter(client=request.user, status__in=['A', 'S']).exists():
             self.logger.info('user already have a reservation active ou scheduled')
             messages.info(request, ReserveMessages.ALREADY_HAVE_A_RESERVATION)
-            return redirect('room')
+            return redirect('rooms')
 
         self.context['room_pk'] = room_pk
         self.logger.debug(f'rendering {self.template_name}')
@@ -113,11 +113,11 @@ class Reserve(LoginRequired, View):
         self.logger.debug(f'reservation for room {room_pk} started')
         self.context['room_pk'] = room_pk
 
-        CHECK_IN = convert_date(self.request.POST.get('checkin', '0001-01-01'))
-        CHECKOUT = convert_date(self.request.POST.get('checkout', '0001-01-01'))
-        OBS = self.request.POST.get('obs', '')
-        
         try:
+            CHECK_IN = convert_date(self.request.POST.get('checkin', '0001-01-01'))
+            CHECKOUT = convert_date(self.request.POST.get('checkout', '0001-01-01'))
+            OBS = self.request.POST.get('obs', '')
+        
             with transaction.atomic():
                 reservation = Reservation(
                     checkin=CHECK_IN, 
@@ -174,5 +174,6 @@ class ReservationHistory(LoginRequired, DetailView):
     template_name = 'reservation_history.html'
 
     def get_queryset(self) -> QuerySet[Any]:
+        """filtra por quartos do usuário ativo"""
         qs = super().get_queryset()
         return qs.filter(client__exact=self.request.user)
