@@ -16,7 +16,7 @@ from django.contrib.auth.decorators import login_required
 from reservations.mixins import LoginRequired
 from reservations.decorators import check_reservation_ownership
 from django.contrib import messages
-from sqlite3 import OperationalError
+from django.db import OperationalError
 from utils.supportviews import CheckoutMessages
 from django.db import transaction
 from django.core.exceptions import ValidationError
@@ -55,6 +55,7 @@ class Schedules(LoginRequired, View):
                 checkout=CHECKOUT
             ).first()
             self.logger.debug(f'existing reservation {reservation}')
+            
             if reservation is None:
                 self.logger.debug('creating a new reservation')
                 reservation = Reservation(
@@ -67,7 +68,7 @@ class Schedules(LoginRequired, View):
                 reservation.amount = reservation.calc_reservation_value()
 
                 reservation.error_messages = {}
-                reservation._validate_date_availability()
+                reservation._validate_date_availability(reservation.error_messages, 'checkin')
                 reservation._validate_check_in()
                 if reservation.error_messages:
                     self.logger.error(str(reservation.error_messages))
