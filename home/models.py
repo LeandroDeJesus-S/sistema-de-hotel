@@ -86,7 +86,7 @@ class Contact(models.Model):
     )
 
     def __str__(self) -> str:
-        return f'<{self.__class__.__name__}: {self.pk}>'
+        return f'{self.__class__.__name__} {self.pk}'
 
     class Meta:
         verbose_name = 'Contato'

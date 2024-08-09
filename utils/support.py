@@ -30,12 +30,14 @@ class PaymentPDFHandler:
         self.hotel_contact = Contact.objects.get(hotel=self.hotel)
     
     def handle(self):
+        """template method that generate the pdf and sent by email to the client"""
         self._draw_header()
         self._draw_body()
         self._save()
-        self._send_email()
+        return self._send_email()
         
     def _rows_list(self):
+        """return all the rows of the pdf in list format"""
         rows = [
             f'Data de emissão: {self.payment.date.strftime("%h:%M:%S %d/%m/%Y")}',
             f'Status: {self.payment.status}',
@@ -50,7 +52,9 @@ class PaymentPDFHandler:
         return rows
     
     def _draw_header(self):
-        self._canvas.drawInlineImage(str(self.hotel.logo.path), 30, self.h-40)
+        """draw the logo, hotel name, and title of the pdf"""
+        if self.hotel.logo:
+            self._canvas.drawInlineImage(str(self.hotel.logo.path), 30, self.h-40)
 
         self._canvas.setFontSize(30)
         self._canvas.drawString(65, self.h-38, self.hotel.name)
@@ -61,6 +65,7 @@ class PaymentPDFHandler:
         self._canvas.line(30, self.h-50, self.w-30, self.h-50)
     
     def _draw_body(self):
+        """draw the payment information into the body of the pdf"""
         self._canvas.setFontSize(15)
         initial_offset = 85
         offset_y = initial_offset
@@ -69,10 +74,14 @@ class PaymentPDFHandler:
             offset_y += initial_offset * .5
 
     def _save(self):
+        """save the generated pdf in the buffer"""
         self._canvas.save()
         self.buffer.seek(0)
 
     def _send_email(self):
+        """send the email with the generated pdf to the client and return 1 if
+        the email was sent correctly
+        """
         msg = EmailMessage(
             subject='Comprovante de pagamento  da reserva',
             body=f'Seu comprovante de pagamento para a reserva do quarto Nº{self.payment.reservation.room.number}',
@@ -80,7 +89,7 @@ class PaymentPDFHandler:
             from_email=self.hotel_contact.email,
         )
         msg.attach(self.pdf_name, self.buffer.getvalue(), 'application/pdf')
-        msg.send(fail_silently=False)
+        return msg.send(fail_silently=False)
 
 
 class ReservationStripePaymentCreator:

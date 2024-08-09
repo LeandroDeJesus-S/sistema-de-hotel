@@ -83,8 +83,8 @@ class SignIn(View):
 
     def get(self, request: HttpRequest, *args, **kwargs):
         next_url = request.GET.get("next", self.next_url)
-        self.request.session['next_url'] = next_url
-        self.request.session.save()
+        request.session['next_url'] = next_url
+        request.session.save()
         self.logger.debug(f'next url: {next_url}')
 
         if request.user.is_authenticated:
@@ -107,9 +107,11 @@ class SignIn(View):
         login(request, user)
 
         next_url = request.session.get('next_url')
+        self.logger.info(f'next url in the session: {next_url}')
         if next_url:
-            del request.session['next_url']
+            deleted = request.session.pop('next_url')
             request.session.save()
+            self.logger.debug(f'delete {deleted} from session')
         else:
             next_url = self.next_url
 

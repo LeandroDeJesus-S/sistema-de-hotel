@@ -1,0 +1,44 @@
+[
+    {
+        "model": "clients.client",
+        "pk": 1,
+        "fields": {
+            "username": "DahyeLee123",
+            "password": "LeeDahyeCheer@123",
+            "first_name": "Lee",
+            "last_name": "Dahye",
+            "phone": "27988555333",
+            "email": "dahye@email.com",
+            "birthdate": "2006-03-06",
+            "cpf": "90248488066"
+        }
+    },
+    {
+        "model": "clients.client",
+        "pk": 2,
+        "fields": {
+            "username": "Ailynuwu",
+            "password": "aily@123",
+            "first_name": "Ailyn",
+            "last_name": "Non Sabo",
+            "phone": "27922855333",
+            "email": "ailyn@email.com",
+            "birthdate": "2001-03-06",
+            "cpf":"19587109031"
+        }
+    },
+    {
+        "model": "clients.client",
+        "pk": 3,
+        "fields": {
+            "username": "Bruce",
+            "password": "Bruce@123",
+            "first_name": "Bruce",
+            "last_name": "Lee",
+            "phone": "21988533643",
+            "email": "bruce@email.com",
+            "birthdate": "1986-03-06",
+            "cpf": "50411153030"
+        }
+    }
+]

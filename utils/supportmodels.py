@@ -104,7 +104,7 @@ class ContactErrorMessages:
     INVALID_EMAIL = 'Informe um endereço de email válido.'
 
 
-class ReservaRules:
+class ReserveRules:
     MIN_RESERVATION_DAYS = 1
     MAX_RESERVATION_DAYS = 30
     ANTICIPATED_MONTHS_CHECKIN = 3
@@ -114,13 +114,13 @@ class ReservaRules:
         return (datetime.now() + timedelta(weeks=4 * cls.ANTICIPATED_MONTHS_CHECKIN)).date()
 
 
-class ReservaErrorMessages:
+class ReserveErrorMessages:
     GENERIC = 'Dados de reserva inválidos'
     INVALID_CHECKIN_DATE = 'Data de check-in inválida'
-    INVALID_CHECKIN_ANTICIPATION = f'Só é possível fazer reserva com até {ReservaRules.ANTICIPATED_MONTHS_CHECKIN} meses.'
+    INVALID_CHECKIN_ANTICIPATION = f'Só é possível fazer reserva com até {ReserveRules.ANTICIPATED_MONTHS_CHECKIN} meses.'
     UNAVAILABLE_ROOM = 'Este quarto não esta disponível.'
-    INVALID_STAYED_DAYS = (f'A reserva deve ter de {ReservaRules.MIN_RESERVATION_DAYS}'
-                                        f' a {ReservaRules.MAX_RESERVATION_DAYS} dias.')
+    INVALID_STAYED_DAYS = (f'A reserva deve ter de {ReserveRules.MIN_RESERVATION_DAYS}'
+                                        f' a {ReserveRules.MAX_RESERVATION_DAYS} dias.')
     INVALID_ROOM_CHOICE = 'Por favor, escolha um quarto válido.'
     UNAVAILABLE_DATE = 'Data de reserva indisponível. A datas disponíveis são {dates}'
 

@@ -42,6 +42,7 @@ htmlcov/
 .tox/
 .nox/
 .coverage
+.coveragerc
 .coverage.*
 .cache
 nosetests.xml
@@ -124,7 +125,14 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-*.txt
+notes.txt
 *.bak
-test*
 db.json
+media/2*/
+media/benefits/
+media/hotel/
+media/restaurantes/
+media/*.png
+
+.ruff_cache/
+.vscode/

@@ -8,6 +8,10 @@ from payments.models import Payment
 
 
 def check_reservation_dates():
+    """filtra por reservas ativas e verifica se a data de checkout é menor
+    ou igual a data atual, caso seja, desativa a reserva e passa o status para
+    finalizada, envia email avisando ao cliente e os admins
+    """
     for reservation in Reservation.objects.filter(active=True):
         if reservation.checkout <= now().date():
             reservation.active = False
@@ -38,11 +42,12 @@ def check_reservation_dates():
 
 
 def release_room(reservation_pk):
+    """libera o quarto caso a reserva não tenha um pagamento finalizado"""
     logger = logging.getLogger('djangoLogger')
     try:
         reservation = Reservation.objects.get(pk=reservation_pk)
         payment = Payment.objects.filter(reservation=reservation).first()
-        if payment is None or payment.status != 'f':
+        if payment is None or payment.status != 'F':
             logger.info(f'room {reservation.room} of the reservation {reservation_pk} released')
             room = Room.objects.get(pk=reservation.room.pk)
             room.available = True

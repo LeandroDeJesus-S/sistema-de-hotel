@@ -37,7 +37,7 @@ class Payment(models.Model):
     )
     
     def __str__(self) -> str:
-        return f'< {self.__class__.__name__}: {self.pk} >'
+        return f'{self.__class__.__name__} {self.pk}'
 
     def clean(self) -> None:
         super().clean()

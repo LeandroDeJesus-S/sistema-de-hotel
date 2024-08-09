@@ -1,0 +1,93 @@
+[
+    {
+        "model": "reservations.reservation",
+        "pk": 1,
+        "fields": {
+            "client": 1,
+            "checkin": "2024-07-24",
+            "checkout": "2024-07-24",
+            "amount": "100",
+            "observations": "",
+            "room": 1,
+            "status": "F"
+        }
+    },
+    {
+        "model": "reservations.reservation",
+        "pk": 2,
+        "fields": {
+            "client": 1,
+            "checkin": "2024-07-28",
+            "checkout": "2024-07-29",
+            "amount": "100",
+            "observations": "",
+            "room": 2,
+            "status": "F"
+        }
+    },
+    {
+        "model": "reservations.reservation",
+        "pk": 3,
+        "fields": {
+            "client": 2,
+            "checkin": "2024-07-10",
+            "checkout": "2024-07-11",
+            "amount": "120",
+            "observations": "",
+            "room": 3,
+            "status": "F"
+        }
+    },
+    {
+        "model": "reservations.reservation",
+        "pk": 4,
+        "fields": {
+            "client": 1,
+            "checkin": "2024-07-24",
+            "checkout": "2024-07-24",
+            "amount": "100",
+            "observations": "",
+            "room": 4,
+            "status": "F"
+        }
+    },
+    {
+        "model": "reservations.reservation",
+        "pk": 5,
+        "fields": {
+            "client": 1,
+            "checkin": "2024-07-28",
+            "checkout": "2024-07-29",
+            "amount": "100",
+            "observations": "",
+            "room": 2,
+            "status": "S"
+        }
+    },
+    {
+        "model": "reservations.reservation",
+        "pk": 6,
+        "fields": {
+            "client": 2,
+            "checkin": "2024-07-10",
+            "checkout": "2024-07-11",
+            "amount": "120",
+            "observations": "",
+            "room": 3,
+            "status": "A"
+        }
+    },
+    {
+        "model": "reservations.reservation",
+        "pk": 7,
+        "fields": {
+            "client": 2,
+            "checkin": "2024-07-10",
+            "checkout": "2024-07-11",
+            "amount": "120",
+            "observations": "",
+            "room": 2,
+            "status": "A"
+        }
+    }
+]

@@ -1,0 +1,110 @@
+[
+    {
+        "model": "reservations.room",
+        "pk": 1,
+        "fields": {
+            "room_class" : 1,
+            "number" : 401,
+            "adult_capacity" : 1,
+            "child_capacity" : 0,
+            "size" : 20,
+            "daily_price" : 100,
+            "available" : true,
+            "benefit": [1],
+            "image": "test/room_test.jpg",
+            "short_desc": "short desc",
+            "long_desc": "long_desc, long_desc, long_desc, long_desc, long_desc, long_desc, long_desc, long_desc, long_desc, long_desc,",
+            "hotel": 1
+        }
+    },
+    {
+        "model": "reservations.room",
+        "pk": 2,
+        "fields": {
+            "room_class" : 2,
+            "number" : 402,
+            "adult_capacity" : 1,
+            "child_capacity" : 1,
+            "size" : 20,
+            "daily_price" : 120,
+            "available" : true,
+            "benefit": [1, 2],
+            "image": "test/room_test.jpg",
+            "short_desc":"short desc2",
+            "long_desc": "",
+            "hotel": 1
+        }
+    },
+    {
+        "model": "reservations.room",
+        "pk": 3,
+        "fields": {
+            "room_class" : 3,
+            "number" : 403,
+            "adult_capacity" : 2,
+            "child_capacity" : 1,
+            "size": 30,
+            "daily_price": 130,
+            "available" : true,
+            "benefit": [1, 2, 3],
+            "image": "test/room_test.jpg",
+            "short_desc": "short desc3",
+            "long_desc": "",
+            "hotel": 1
+        }
+    },
+    {
+        "model": "reservations.room",
+        "pk": 4,
+        "fields": {
+            "room_class" : 1,
+            "number" : 404,
+            "adult_capacity" : 1,
+            "child_capacity" : 0,
+            "size" : 20,
+            "daily_price" : 100,
+            "available" : true,
+            "benefit": [1],
+            "image": "test/room_test.jpg",
+            "short_desc": "short desc4",
+            "long_desc": "long_desc, long_desc, long_desc, long_desc, long_desc, long_desc, long_desc, long_desc, long_desc, long_desc,",
+            "hotel": 1
+        }
+    },
+    {
+        "model": "reservations.room",
+        "pk": 5,
+        "fields": {
+            "room_class" : 2,
+            "number" : 405,
+            "adult_capacity" : 1,
+            "child_capacity" : 1,
+            "size" : 20,
+            "daily_price" : 120,
+            "available" : true,
+            "benefit": [1, 2],
+            "image": "test/room_test.jpg",
+            "short_desc":"short desc5",
+            "long_desc": "",
+            "hotel": 1
+        }
+    },
+    {
+        "model": "reservations.room",
+        "pk": 6,
+        "fields": {
+            "room_class" : 3,
+            "number" : 406,
+            "adult_capacity" : 2,
+            "child_capacity" : 1,
+            "size": 30,
+            "daily_price": 130,
+            "available" : true,
+            "benefit": [1, 2, 3],
+            "image": "test/room_test.jpg",
+            "short_desc": "short desc6",
+            "long_desc": "",
+            "hotel": 1
+        }
+    }
+]
