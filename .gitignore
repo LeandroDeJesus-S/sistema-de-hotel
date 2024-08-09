@@ -42,6 +42,7 @@ htmlcov/
 .tox/
 .nox/
 .coverage
+.coveragerc
 .coverage.*
 .cache
 nosetests.xml
@@ -127,3 +128,11 @@ dmypy.json
 notes.txt
 *.bak
 db.json
+media/2*/
+media/benefits/
+media/hotel/
+media/restaurantes/
+media/*.png
+
+.ruff_cache/
+.vscode/

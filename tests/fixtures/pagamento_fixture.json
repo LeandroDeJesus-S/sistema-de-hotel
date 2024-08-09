@@ -1,0 +1,12 @@
+[
+    {
+        "model": "payments.payment",
+        "pk": "1",
+        "fields": {
+            "reservation": 1,
+            "amount": "100",
+            "status": "F",
+            "date": "2024-08-08 16:58:17.756369"
+        }
+    }
+]

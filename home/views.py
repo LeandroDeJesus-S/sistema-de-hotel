@@ -13,9 +13,9 @@ def home(request):
     context = {
         'benefits': Benefit.objects.filter(displayable_on_homepage=True)
     }
-    top4_rooms = Reservation.objects.filter(status__in=['F', 'A']).values('room').annotate(
+    top4_rooms = Reservation.objects.filter(status__in=['F', 'A', 'S']).values('room').annotate(
         room_count=Count('room')
-    ).order_by('-room_count').values('room')[:3]
+    ).order_by('-room_count').values('room')[:4]
     logger.info(f'top 4 rooms fetched: {top4_rooms}')
 
     context['rooms'] = Room.objects.filter(pk__in=top4_rooms)

@@ -143,6 +143,10 @@ class TestReserve(Base):
         self.user = Client.objects.first()
         self.room1 = Room.objects.first()
 
+        for r in Reservation.objects.filter(client=self.user):
+            r.status = 'I'
+            r.save()
+
         self.url = reverse('reserve', args=(self.room1.pk,))
         self.template = 'reserve.html'
 
@@ -156,6 +160,7 @@ class TestReserve(Base):
         """testa se esta renderizando o template correto"""
         self.client.force_login(self.user)
         response = self.client.get(self.url)
+        print(response)
         self.assertTemplateUsed(response, self.template)
 
     def test_redireciona_para_checkout_com_dados_validos(self):

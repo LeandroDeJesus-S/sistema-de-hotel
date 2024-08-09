@@ -62,7 +62,7 @@ class CpfValidator:
         return final_result if int(final_result) <= 9 else '0'
 
     def is_valid(self) -> bool:
-        """verifica se o cpf enviado é valido
+        """verifica se o cpf enviado é valido. Precisa ser chamado depois de `validate`
 
         Returns:
             bool: True se o cpf é valido ou False se não é valido.
@@ -87,7 +87,7 @@ class CpfValidator:
         return True if len(self._cpf) == 11 else False
 
     def validate(self) -> str:
-        """Faz verificação de comprimento e sequencia, execulta os calculos do
+        """Faz verificação de comprimento e sequencia, executa os cálculos do
         primeiro e segundo digito, e forma o cpf para validação.
 
         Returns:

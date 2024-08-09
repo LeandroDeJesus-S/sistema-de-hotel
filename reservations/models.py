@@ -358,7 +358,7 @@ class Reservation(models.Model):
         super().clean()
         self.error_messages = {}
         if self.status == 'I':
-            self._validate_date_availability()
+            self._validate_date_availability(self.error_messages, 'checkin')
             self._validate_check_in()
             self._validate_room()
         
@@ -411,7 +411,7 @@ class Reservation(models.Model):
         )
         return cls.get_free_dates(reservas)
         
-    def _validate_date_availability(self):
+    def _validate_date_availability(self, msg_dict, k) -> bool:
         """verifica se a data da reserva sobrepõe um reserva ativa ou agendada"""
         reservations = Reservation.objects.filter(
             room=self.room, 
@@ -421,7 +421,8 @@ class Reservation(models.Model):
         )
         if reservations.exists():
             dates = self.get_free_dates(reservations)
-            self.error_messages['checkin'] = ReserveErrorMessages.UNAVAILABLE_DATE.format_map({'dates': dates})
+            msg = ReserveErrorMessages.UNAVAILABLE_DATE.format_map({'dates': dates})
+            msg_dict[k] = msg
     
     def _validate_check_in(self):
         """realiza as validações relacionadas ao check-in"""
