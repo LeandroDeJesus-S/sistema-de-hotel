@@ -1,3 +1,16 @@
 <footer class="footer mt-2">
     © {% now "Y" %} {{hotel.name}}. Todos os direitos reservados.
 </footer>
+<nav class="nav justify-content-center p-3" style="color: var(--realce-2-color);">
+    <div class="row">
+        <div class="col-md-12 d-flex justify-content-center">    
+            &copy; {% now "Y" %} {{hotel.name}}. Todos os direitos reservados.
+        </div>
+
+        <div class="col-md-12 d-flex justify-content-center">
+            <a class="nav-item nav-link" href="{{hotel_contact.whatsapp}}"><i class="fa-brands fa-whatsapp"></i> Whatsapp</a>
+            <a class="nav-item nav-link" href="mailto:{{hotel_contact.email}}"><i class="fa-regular fa-envelope"></i> E-mail</a>
+            <a class="nav-item nav-link" href="#"><i class="fa-solid fa-phone"></i> {{hotel_contact.phone}}</a>
+        </div>
+    </div>
+</nav>

@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'fontawesomefree',
     'django_q',
     'home',
-    'restaurants',
+    'services',
     'reservations',
     'schedules',
     'payments',

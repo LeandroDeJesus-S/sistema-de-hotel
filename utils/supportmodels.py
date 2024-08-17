@@ -131,3 +131,7 @@ class PaymentRules:
 
 class PaymentErrorMessages:
     INVALID_PAYMENT_VALUE = 'Valor de pagamento inválido'
+
+
+class ServicesRules:
+    IMG_SIZE = 720, 480

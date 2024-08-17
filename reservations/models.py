@@ -12,7 +12,6 @@ from django.core.validators import (
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from PIL import Image
 
 from clients.models import Client
 from home.models import Hotel
@@ -25,6 +24,7 @@ from utils.supportmodels import (
     BenefitRules,
     BenefitErrorMessages
 )
+from utils import support
 
 
 class Benefit(models.Model):
@@ -48,7 +48,7 @@ class Benefit(models.Model):
         blank=True,
         null=True,
         unique=False,
-        help_text='ícone com tamanho 32x32',
+        help_text='ícone com tamanho 64x64',
         upload_to='benefits/icon'
     )
     displayable_on_homepage = models.BooleanField(
@@ -230,31 +230,31 @@ class Room(models.Model):
         com api do stripe"""
         return int(self.daily_price * Decimal('100'))
 
-    @staticmethod
-    def resize_image(img_path, w, h=None):
-        """redimensiona imagem com tamanhos expecificados
+    # @staticmethod
+    # def resize_image(img_path, w, h=None):
+    #     """redimensiona imagem com tamanhos expecificados
 
-        Args:
-            img_path (Any): caminho da imagem
-            w (int): largura da imagem
-            h (int, optional): altura da imagem. Defaults to None.
-        """
-        img = Image.open(img_path)
-        original_w, original_h = img.size
+    #     Args:
+    #         img_path (Any): caminho da imagem
+    #         w (int): largura da imagem
+    #         h (int, optional): altura da imagem. Defaults to None.
+    #     """
+    #     img = Image.open(img_path)
+    #     original_w, original_h = img.size
 
-        if h is None: h = round(w * original_h / original_w)
-        if original_h <= h: h = original_h
+    #     if h is None: h = round(w * original_h / original_w)
+    #     if original_h <= h: h = original_h
         
-        resized = img.resize((w, h), Image.Resampling.NEAREST)
-        resized.save(img_path, optimize=True, quality=70)
+    #     resized = img.resize((w, h), Image.Resampling.NEAREST)
+    #     resized.save(img_path, optimize=True, quality=70)
 
-        resized.close()
-        img.close()
+    #     resized.close()
+    #     img.close()
 
     def save(self, *args, **kwargs) -> None:
         super().save(*args, **kwargs)
         if self.image:
-            self.resize_image(self.image.path, *RoomRules.IMAGE_SIZE)
+            support.resize_image(self.image.path, *RoomRules.IMAGE_SIZE)
 
 
 class Reservation(models.Model):

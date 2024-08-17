@@ -2,12 +2,13 @@ import logging
 from django.shortcuts import render
 from django.db.models.aggregates import Count
 from reservations.models import Benefit, Reservation, Room
-from restaurants.models import Restaurant
+from services.models import Services
 from django.views.decorators.http import require_GET
+from django.http import HttpRequest
 
 
 @require_GET
-def home(request):
+def home(request: HttpRequest):
     logger = logging.getLogger('djangoLogger')
 
     context = {
@@ -19,6 +20,6 @@ def home(request):
     logger.info(f'top 4 rooms fetched: {top4_rooms}')
 
     context['rooms'] = Room.objects.filter(pk__in=top4_rooms)
-    context['restaurant'] = Restaurant.objects.first()
+    context['services'] = Services.objects.filter(hotel__pk=1)
     logger.debug(f'rendering home with context {context}')
     return render(request, 'static/home/html/home.html', context)

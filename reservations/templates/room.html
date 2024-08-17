@@ -1,43 +1,41 @@
 {% extends "base.html" %}
 
+{% block title %}Quarto {{room.number}}{% endblock title %}
 
 {% block content %}
 
-<div class="container mt-5 vh-100">
-    <div class="row ">
-        <div class="col-md-6">
-            <img src="{{ room.image.url }}" class="img-thumbnail" alt="{{ room.image.name }}">
+<div class="container">
+    <!--image and short description-->
+    <div class="row mb-5">
+        <div class="col-md-4 d-flex justify-content-center">
+            <img src="{{room.image.url}}" alt="" class="img-fluid rounded">
         </div>
-        <div class="col-md-6">
-            <h1>Quarto {{ room.room_class }}</h1>
-            {% if room.available %}
-                <a href="{% url "reserve" room.pk %}" class="btn btn-success btn-sm my-2">Reservar {{room.daily_price_formatted}}</a>
-            {% elif reservation_on and room.pk == reservation_on.room.pk %}
-                <a href="{% url "reservation_history" reservation_on.pk %}" class="btn btn-info btn-sm my-2">
-                    Ver reserva
-                </a>
-            {% else %}
-                <a href="{% url "schedule" room.pk %}" class="btn btn-success btn-sm my-2">
-                    <i class="fa-brands fa-whatsapp"></i> 
-                    Agendar {{room.daily_price_formatted}}
-                </a>
-            {% endif %}
-            <p>{{ room.short_desc }}</p>
-            <div class="row">
-                                        
-                {% for benefit in benefits %}
-                    <div class="col-md-6 form-check">
-                        <input class="form-check-input" type="checkbox" id="flexCheckDisabled" disabled {% if benefit in room.benefit.all %} checked {% endif %}>
-                        <label class="form-check-label text-light" for="{% if benefit in room.benefit.all %} flexCheckCheckedDisabled {% else %} flexCheckDisabled {% endif %} ">{{benefit}}</label>
-                    </div>
-                {% endfor %}
-
+        <div class="col-md-8 d-flex align-items-center">
+            <div class="jubroton">
+                <h1 class="text-center display-4">Quarto {{room.number}} | {{room.room_class|capfirst}}</h1>
+                <p>{{room.short_desc}}</p>
             </div>
+        </div>
+    </div>
 
-        </div>
-        <div class="col-md-12 my-3">
-            <p class="text-dark">{{room.long_desc}}</p>
-        </div>
+    <!--all the benefits of the room-->
+    <div class="row mb-5">
+        {% for benefit in benefits %}
+            <div class="col-md-3 text-light mb-3">
+                {% if benefit.icon %}
+                    <img src="{{benefit.icon.url}}" alt="" width="64" class="img-fluid mr-3">
+                {% endif %}
+                <span style="margin-left: 5%;">{{benefit}}</span>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!--long description-->
+    <p>
+        {{room.long_desc}}
+    </p>
+    <div class="d-flex justify-content-center">
+        {% include "partials/_reserve_btn.html" %}
     </div>
 </div>
 

@@ -9,11 +9,11 @@ class UpdatePerfilForm(forms.ModelForm):
             'email', 'phone', 'birthdate', 'cpf'
         )
         widgets = {
-            'username': forms.TextInput({'class': 'form-control'}),
-            'first_name': forms.TextInput({'class': 'form-control'}),
-            'last_name': forms.TextInput({'class': 'form-control'}),
-            'email': forms.EmailInput({'class': 'form-control'}),
-            'phone': forms.TextInput({'class': 'form-control'}),
-            'birthdate': forms.DateInput({'class': 'form-control', 'type': 'date'}, format='%d/%m/%Y'),
-            'cpf': forms.TextInput({'class': 'form-control'}),
+            'username': forms.TextInput({'class': 'form-control', 'style': 'background-color: var(--realce-color)'}),
+            'first_name': forms.TextInput({'class': 'form-control', 'style': 'background-color: var(--realce-color)'}),
+            'last_name': forms.TextInput({'class': 'form-control', 'style': 'background-color: var(--realce-color)'}),
+            'email': forms.EmailInput({'class': 'form-control', 'style': 'background-color: var(--realce-color)'}),
+            'phone': forms.TextInput({'class': 'form-control', 'style': 'background-color: var(--realce-color)'}),
+            'birthdate': forms.DateInput({'class': 'form-control', 'type': 'date', 'style': 'background-color: var(--realce-color)'}, format='%d/%m/%Y'),
+            'cpf': forms.TextInput({'class': 'form-control', 'style': 'background-color: var(--realce-color)'}),
         }

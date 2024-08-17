@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.core.management import call_command
 from reservations.models import Benefit, Room
-from restaurants.models import Restaurant
+from services.models import Services
 
 
 class TestHome(TestCase):
@@ -35,5 +35,5 @@ class TestHome(TestCase):
     def test_restaurante_enviado_no_context(self):
         """testa se o restaurante é enviado corretamente no context"""
         result = self.response.context.get('restaurant')
-        expected = Restaurant.objects.get(pk=1)
+        expected = Services.objects.get(pk=1)
         self.assertEqual(result, expected)

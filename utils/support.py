@@ -12,6 +12,7 @@ import stripe
 from stripe.checkout import Session
 from typing import Any
 from home.models import Hotel, Contact
+from PIL import Image
 
 
 class PaymentPDFHandler:
@@ -145,3 +146,24 @@ class ReservationStripePaymentCreator:
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}({self.__dict__})'
+
+
+def resize_image(img_path, w, h=None):
+    """redimensiona imagem com tamanhos expecificados
+
+    Args:
+        img_path (Any): caminho da imagem
+        w (int): largura da imagem
+        h (int, optional): altura da imagem. Defaults to None.
+    """
+    img = Image.open(img_path)
+    original_w, original_h = img.size
+
+    if h is None: h = round(w * original_h / original_w)
+    if original_h <= h: h = original_h
+    
+    resized = img.resize((w, h), Image.Resampling.NEAREST)
+    resized.save(img_path, optimize=True, quality=70)
+
+    resized.close()
+    img.close()

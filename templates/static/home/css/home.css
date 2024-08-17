@@ -1,22 +1,55 @@
-.navbar {
-    background-color: #694464;
-    padding-inline: 5%;
+:root {
+    --dark-color: #0d1b2a;
+    --main-color: #1b263b;
+    --realce-color: #415a77;
+    --realce-2-color: #778da9;
+    --realce-3-color: #8fb0ec;
+    --light-color: #e0e1dd;
 }
-.nav-link {
-    color: rgb(206, 203, 203);
 
-}
 body {
-    height: 100%;
-    background-image: url('../img/bg-3.jpg');
-    background-size: cover;
+    background-color: var(--main-color);
+    height: 100vh;
+    max-width: 100vw;
 }
-footer  {
-    background-color: #694464;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    padding: 10px;
+h1 {
+    color: var(--realce-3-color);
+}
+nav {
+    background-color: var(--dark-color);
+}
+
+p{
+    color: var(--light-color);
+}
+.slogan {
+    color: var(--realce-color);
+}
+
+.card {
+    background-color: var(--realce-color);
+    height: 100%;
+}
+.card-title {
     text-align: center;
-    position: -ms-page;
+}
+
+@keyframes signup_btn {
+    0% {background-color: #0d1b2a;}
+    25% {background-color: #1b263b;}
+    50% {background-color: #1d2f44;}
+    75% {background-color: #1b263b;}
+    100% {background-color: #0d1b2a;}
+}
+
+.signup_btn {
+    animation-name: signup_btn;
+    background-color: #0d1b2a;
+    animation-duration: 3s;
+    animation-iteration-count: infinite;
+}
+
+.reserve-btn {
+    background-color: #1d2f44;
+    /* color: var(--light-color); */
 }

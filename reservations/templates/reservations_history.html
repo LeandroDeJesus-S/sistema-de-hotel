@@ -1,25 +1,44 @@
 {% extends "base.html" %}
 {% load humanize %}
 
+{% block title %}histórico{% endblock title %}
+
 {% block content %}
 
 <div class="container">
+
     <div class="list-group d-flex justify-content-center">
         {% for reservation in reservations %}
-            <a href="{% url "reservation_history" reservation.pk %}" class="list-group-item list-group-item-action {% if reservation.active %}active{% endif %} mb-2" aria-current="true">
-            <div class="d-flex w-100 justify-content-between">
-                <h5 class="mb-1">Quarto Nº{{reservation.room.number}} - {{reservation.room.room_class}}</h5>
-                <small>{{reservation.get_status_display}} | {{reservation.created_at|naturalday}}</small>
-            </div>
-            <p class="mb-1">{{reservation.checkin}} - {{reservation.checkout}}</p>
-            <small>{{reservation.formatted_price}}</small>
+            <a href="{% url 'reservation_history' reservation.pk %}"  class="list-group-item border-info list-group-item-action {% if reservation.active %}active{% endif %} mb-2" aria-current="true" style="background-color: var(--realce-color);">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h1 class="mb-1 display-5">Quarto {{reservation.room.number}} | {{reservation.room.room_class}}</h1>
+                        <p class="mb-1">{{reservation.checkin}} - {{reservation.checkout}}</p>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <small>{{reservation.created_at|naturalday}}</small>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p>{{reservation.formatted_price}}</p>
+                    </div>
+                    <div class="col-md-6 text-end d-flex align-items-end justify-content-end">
+                        {% include "partials/_reservation_status_badge.html" %}
+                    </div>
+                    
+                </div>
             </a>
-        {% empty %}
-            <div class="d-flex justify-content-center mt-5">
-                <p class="fs-4">Você ainda não possui reservas. Dê um olhada em nossos <a href="{% url "rooms" %}">quartos.</a></p>
-            </div>
         {% endfor %}
+        
     </div>
+ 
 </div>
 
 {% endblock content %}
+
+{% block footer %}
+    <footer class="{% if reservations|length < 3 %}  fixed-bottom{% endif %}">
+        {% include "partials/_footer.html" %}
+    </footer>
+{% endblock footer %}

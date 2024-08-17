@@ -131,7 +131,7 @@ db.json
 media/2*/
 media/benefits/
 media/hotel/
-media/restaurantes/
+media/services/
 media/*.png
 
 .ruff_cache/

@@ -1,35 +1,55 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block css %}
+    <link rel="stylesheet" href="{% static 'reserva/css/reserve.css' %}">
+    <link rel="stylesheet" href="{% static 'cliente/css/signin.css' %}">
+{% endblock css %}
+
+{% block title %} Sign-in{% endblock title %}
+    
 
 
 {% block content %}
 
-<div class="container signup-container vh-100">
+<div class="container d-flex justify-content-center container-form-out align-items-center">
+            
+    <form action="{% url "signin" %}" method="post" class="form reserve-form text-light" >{% csrf_token %}
+        <div class="container">
+            {% include "partials/_messages.html" %}
+            <div class="text-end">
+                <a href="{% url "signup" %}" class="text-light">
+                    Criar conta.
+                </a>
+            </div>
 
-            <form action="{% url 'signin' %}" method="post" class="signup-form g-0">
-                {% csrf_token %}
-                {% include "partials/_messages.html" %}
-                    <div class="text-end">
-                        <a href="{% url "signup" %}" class="text-light">
-                            Criar conta.
-                        </a>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label for="username" class="form-label">Usuário ou E-mail</label>
+                        <input required id="username" name="username" type="text" class="form-control" placeholder="Insira seu e-mail ou nome de usuário">
                     </div>
-        
-                    <div class="form-floating col-md-12 mb-2">
-                        <input required type="text" required class="form-control" value="{% if request.POST.username %}{{request.POST.username}}{% endif %}" name="username" id="username" placeholder="Username" aria-label="Username">
-                        <label for="username">Nome de usuário ou email</label>
-                    </div>
-                    
-                    <div class="form-floating col-md-12 mb-2">
-                        <input  required type="password" required class="form-control" name="password" id="password" placeholder="password" aria-label="password">
-                        <label for="password">Senha</label>
-                    </div>
-
-                <div class="col-md-12 d-flex justify-content-center mt-3">
-                    <button type="submit" class="reserva-btn btn btn-sm btn-primary">Enviar</button>
                 </div>
-                
-            </form>
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label for="password" class="form-label">Senha</label>
+                        <input required id="password" name="password" type="password" class="form-control" placeholder="Informe a sua senha">
+                    </div>
+                </div>
+                <div class="col-md-12 d-flex justify-content-center mt-3">
+                    <button type="submit" class="btn btn-outline-info">Enviar</button>
+                </div>
+            </div>
+        </div>
 
+    </form>
 </div>
 
+
 {% endblock content %}
+
+{% block footer %}
+    <footer class="fixed-bottom mt-5">
+        {% include "partials/_footer.html" %}
+    </footer>
+{% endblock footer %}

@@ -1,92 +1,110 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block css %}{% endblock css %}
+
 {% block content %}
-<br>
-<section>
-    
-    <article>
-        <h1 class="text-center">{{hotel.slogan}}</h1>
-        <p class="mx-5">
+
+<!--presentation section-->
+<section class="preserntation mb-5">
+    <div class="jubroton">
+        <h1 class="text-center display-4">Hotel {{hotel.name}}</h1>
+        <h2 class="slogan text-center mb-4" style="font-size: 15px;">{{hotel.slogan}}</h2>
+
+        <p class="lead presentation-text text-center mx-5">
             {{hotel.presentation_text}}
         </p>
-    </article>
 
+    </div>
+    <div class="d-flex justify-content-center">
+        <a href="{% url "signup" %}" class="btn btn-outline-info signup_btn">Registrar-se</a>
+    </div>
 </section>
-<br>
-<section class="mx-5 my-3">
-    <article>
-        <h2 class="text-center fs-3">{{restaurant.name|upper}}</h2>
-        <div class="row align-items-center">
-            <div class="col-md-4">
-                <img class="img-thumbnail p-1" src="{{restaurant.logo.url}}" alt="Placeholder Image">
-            </div>
-            <div class="col-md-8">
-                <p class="mr-5">
-                    {{restaurant.presentation_text}}
-                </p>
-            </div>
-        </div>
-    </article>
-</section>
-<br>
-<section class="mt-2">
-    <article>
-        {% if rooms %}
-            <h2 class="text-center fs-3 mb-2">QUARTOS MAIS PROCURADOS</h2>
-        {% endif %}
-        <div class="row d-flex justify-content-center align-items-center">
+
+<!--rooms section-->
+<section class="best-seller-rooms mb-5">
+
+    <h1 class="text-center mb-5">Quartos mais procurados</h1>
+    <div class="container">
+        <div class="row">
+
             {% for room in rooms %}
-        
-                <div class="col-md-3">
-                    <div class="card">
-                        <img src="{{room.image.url}}" class="card-img-top img-thumbnail" alt="...">
-                        <div class="card-body d-flex flex-column p-2">
-                            <h5 class="card-title">{{room.classe}}</h5>
-                            <p class="card-text">{{room.short_desc}}</p>
-                            <a href="{% url 'room' room.pk %}" class="btn btn-primary text-center">Conhecer</a>
+                <div class="col-md-4">
+                    <div class="card p-1">
+                        <img src="{{room.image.url}}" alt="" class="card-img-top rounded">
+                        <div class="card-body">
+                            <h5 class="card-title">Quarto {{room.number}} | {{room.room_class}}</h5>
+                            <p class="card-text">
+                                {{room.short_desc}}
+                            </p>
                         </div>
+                        <a href="{% url "room" room.pk %}" class="btn reserve-btn btn-outline-info">Conhecer</a>
                     </div>
                 </div>
-        
-                {% endfor %}
-        </div>
-    </article>
-</section>
-<br>
-<section class="mx-5 my-3 mb-5">
-    <article>
-        <h2 class="text-center fs-3">ALGUNS DE NOSSOS BENEFÍCIOS</h2>
-
-        <ul class="list-group mb-1">
-            {% for benefit in benefits %}
+            {% endfor %}
             
-                {% if benefit.displayable_on_homepage %}
-                    <li class="list-group-item">
-                        <div class="row d-flex align-items-center">
-                            <div class="col-md-1">
-                                {% if benefit.icon %}
-                                    <img class="img-thumbnail" src="{{benefit.icon.url}}" alt="Placeholder Image">
-                                {% endif %}
-                            </div>
-                            <div class="col-md-11">
-                                <span class="ml-5">
-                                    {{benefit.short_desc}}
-                                </span>
-                            </div>
+        </div>
+    </div>
 
+</section>
+
+<!--services section-->
+<section class="services mb-5">
+    <h1 class="text-center mb-4 ">Alguns de nossos serviços</h1>
+
+    <div class="container">
+        <div class="row d-flex align-items-center mb-5">
+
+            {% for service in services %}
+                {% if forloop.counter|divisibleby:"2" %}
+                    <div class="row d-flex align-items-center mb-5">
+                        <div class="col-md-8">
+                            <h2 style="color: var(--realce-2-color); margin-left: 5%;">{{service.name|capfirst}}</h2>
+                            <p>
+                                {{service.presentation_text}}
+                            </p>
                         </div>
-                    </li>
+                        <div class="col-md-4">
+                            <img src="{{service.logo.url}}" alt="" class="img-fluid rounded">
+                        </div>
+                    </div>
+
+                {% else %}
+                    <div class="row d-flex align-items-center mb-5">
+                        <div class="col-md-4">
+                            <img src="{{service.logo.url}}" alt="" class="img-fluid rounded">
+                        </div>
+                        <div class="col-md-8">
+                            <h2 style="color: var(--realce-2-color); text-align: end; margin-right: 8%;">{{service.name|capfirst}}</h2>
+                            <p>
+                                {{service.presentation_text}}
+                            </p>
+                        </div>
+                    </div>
 
                 {% endif %}
-
             {% endfor %}
+        </div>
         
-        </ul>
-
-    </article>
+    </div>
 </section>
 
+<!--benefits section-->
+<section class="benefits ">
+    <h1 class="text-center">Benefícios Destaques</h1>
+    <div class="container mt-4">
+        <div class="row d-flex justify-content-center">
+            {% for benefit in benefits %}
+                <div class="col-md-2 d-flex flex-column justify-content-center align-items-center mb-3">
+                    <img src="{{benefit.icon.url}}" alt="" width="64" class="img-fluid mr-3">
+                    <p>
+                        {{benefit.short_desc|capfirst}}
+                    </p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
 
+</section>
 
 {% endblock content %}

@@ -3,57 +3,14 @@
 <html lang="pt-BR">
 <head>
     {% include "partials/_head.html" %}
-    {% block head %}{% endblock head %}
-    
-    <title>{{hotel.name}} {% block title %}{% endblock title %}</title>
+    {% block css %}{% endblock css %}
+    <title>{{hotel.name}} | {% block title %}Início{% endblock title %}</title>
 </head>
 <body>
 
-    <div>
-        <nav class="navbar sticky-top expand-lg mb-2">
-            <div class="container-fluid">
-    
-                <a class="navbar-brand" href="/">
-                    {% if hotel.logo %}
-                        <img src="{{hotel.logo.url}}" alt="Bootstrap" width="32" height="32">
-                    {% endif %}
-                    {{hotel.name}}
-                  </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-    
-                <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                    <ul class="navbar-nav">
-                        <li class="navbar-item"><a href="{% url "rooms" %}" class="nav-link">Acomodações</a></li>
-                        <li class="navbar-item"><a href="#" class="nav-link">Serviços</a></li>
-                        <li class="navbar-item"><a href="{% url "reservations_history" %}" class="nav-link">Minhas reservas</a></li>
-                        
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                              Contato
-                            </a>
-                            <ul class="dropdown-menu">
-                              <li><a class="dropdown-item" href="{{hotel_contact.whatsapp}}"><i class="fa-brands fa-whatsapp"></i> Whatsapp</a></li>
-                              <li><a class="dropdown-item" href="mailto:{{hotel_contact.email}}"><i class="fa-regular fa-envelope"></i> E-mail</a></li>
-                              <li><a class="dropdown-item" href="#"><i class="fa-solid fa-phone"></i> {{hotel_contact.phone}}</a></li>
-                            </ul>
-                          </li>
-
-                        {% if request.user.is_authenticated %}
-                            <li class="navbar-item"><a href="{% url "perfil" request.user.pk %}" class="nav-link">Perfil</a></li>
-                            <li class="navbar-item"><a href="{% url "logout" %}" class="nav-link">Sair</a></li>
-                        {% else %}
-                            <li class="navbar-item"><a href="{% url "signin" %}" class="nav-link">Entrar</a></li>
-                            <li class="navbar-item"><a href="{% url "signup" %}" class="nav-link">Criar conta</a></li>
-                        {% endif %}
-                    </ul>
-                </div>
-    
-            </div>
-    
-        </nav>
-    </div>
+    <header>
+        {% include "partials/_navbar.html" %}
+    </header>
     
     <main>
         {% autoescape on %}
@@ -61,16 +18,14 @@
         {% endautoescape %}
     </main>
 
-
-        <div class="">
+    {% block footer %}
+        <footer class="footer mt-5">
             {% include "partials/_footer.html" %}
-        </div>
+        </footer>
+    {% endblock footer %}
             
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    {% comment %} <script src="https://js.stripe.com/v3/"></script>
-    <script src="{% static '/payments/js/checkout.js'%}"></script> {% endcomment %}
-    {% comment %} <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script> {% endcomment %}
 
 </body>
 </html>
