@@ -299,7 +299,7 @@ class TestReservationsHistory(Base):
         response = self.client.get(self.url)
         
         result = response.context[self.context_obj_name]
-        expected = Reservation.objects.filter(client=self.user).order_by('-id')
+        expected = Reservation.objects.filter(client=self.user, status__in=['A', 'S', 'C', 'F']).order_by('-id')
         self.assertQuerysetEqual(result, expected)
 
     def test_cliente_nao_logado_redirecionado_para_signin(self):
@@ -331,7 +331,7 @@ class TestReservationHistory(Base):
         self.client.force_login(self.user)
         response = self.client.get(self.url)
         result = response.context[self.context_obj_name]
-        expected = Reservation.objects.get(pk=self.reservation.pk, client=self.user)
+        expected = Reservation.objects.get(pk=self.reservation.pk, client=self.user, status__in=['A', 'S', 'C', 'F'])
         self.assertEqual(result, expected)
 
     def test_cliente_logado_redirecionado_para_signin(self):

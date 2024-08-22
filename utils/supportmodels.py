@@ -134,4 +134,4 @@ class PaymentErrorMessages:
 
 
 class ServicesRules:
-    IMG_SIZE = 720, 480
+    IMG_SIZE = 560, 420

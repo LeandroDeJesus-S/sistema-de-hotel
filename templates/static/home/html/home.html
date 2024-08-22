@@ -16,9 +16,11 @@
         </p>
 
     </div>
-    <div class="d-flex justify-content-center">
-        <a href="{% url "signup" %}" class="btn btn-outline-info signup_btn">Registrar-se</a>
-    </div>
+    {% if not request.user.is_authenticated %}
+        <div class="d-flex justify-content-center">
+            <a href="{% url "signup" %}" class="btn btn-outline-info signup_btn">Registrar-se</a>
+        </div>
+    {% endif %}
 </section>
 
 <!--rooms section-->

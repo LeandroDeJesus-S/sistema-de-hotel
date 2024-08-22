@@ -10,6 +10,7 @@ from django.views import View
 from django.views.generic.edit import UpdateView, DeleteView
 from django.views.generic.detail import DetailView
 from clients.models import Client
+from utils import support
 from utils.supportviews import SignUpMessages, SignInMessages, PerfilChangePasswordMessages
 from django.contrib.auth import login, authenticate, logout
 from reservations.mixins import LoginRequired
@@ -40,6 +41,11 @@ class SignUp(View):
         email = self.request.POST.get('email', '').strip()
         birthdate = self.request.POST.get('nascimento')
         cpf = self.request.POST.get('cpf', '').strip()
+        captcha = request.POST.get('g-recaptcha-response')
+        if not support.verify_captcha(captcha):
+            self.logger.debug(f'captcha response: {captcha}')
+            messages.error(request, 'Mr. Robot, é você???')
+            return redirect(request.META.get('HTTP_REFERER', 'signup'))
 
         if not all((username,password,name,surname, phone, email, birthdate, cpf)):
             messages.error(request, SignUpMessages.MISSING)
@@ -97,6 +103,11 @@ class SignIn(View):
     def post(self, request: HttpRequest, *args, **kwargs):
         username = request.POST.get('username')
         password = request.POST.get('password')
+        captcha = request.POST.get('g-recaptcha-response')
+        if not support.verify_captcha(captcha):
+            self.logger.debug(f'captcha response: {captcha}')
+            messages.error(request, 'Mr. Robot, é você???')
+            return redirect(request.META.get('HTTP_REFERER', 'signin'))
 
         user = authenticate(request, username=username, password=password)
         if user is None:
@@ -117,6 +128,17 @@ class SignIn(View):
 
         self.logger.info(f'user logged with success. Redirecting to {next_url}')
         return redirect(next_url)
+
+
+def axes_locked_out(request, *args, **kwargs):
+    """callback que add uma msg e redireciona para a url referer
+    quando número de tentativas de fazer login é excedia"""
+    messages.error(
+        request,
+        'Número de tentativas excedida. Tente novamente mais tarde.'
+    )
+    redirect_url = request.META.get('HTTP_REFERER', 'signin')
+    return redirect(redirect_url)
 
 
 def logout_user(request: HttpRequest):
@@ -168,9 +190,13 @@ class PerfilChangePassword(LoginRequired, View):
         self.logger.debug(f'rendering {self.template}')    
         return render(self.request, self.template)
     
-    def post(self, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         new_pass = self.request.POST.get('new_password')
         pass_repeat = self.request.POST.get('password_repeat')
+        captcha = request.POST.get('g-recaptcha-response')
+        if not support.verify_captcha(captcha):
+            messages.error(request, 'Mr. Robot, é você???')
+            return redirect(request.META.get('HTTP_REFERER', 'update_perfil_password'))
 
         if new_pass == pass_repeat:
             self.request.user.set_password(new_pass)
@@ -192,6 +218,14 @@ class PerfilChangePassword(LoginRequired, View):
 class PerfilDelete(LoginRequired, DeleteView):
     model = Client
     template_name = 'perfil_delete.html'
+
+    def post(self, request: HttpRequest, *args: str, **kwargs: Any) -> HttpResponse:
+        captcha = request.POST.get('g-recaptcha-response')
+        if not support.verify_captcha(captcha):
+            messages.error(request, 'Mr. Robot, é você???')
+            return redirect(request.META.get('HTTP_REFERER', 'delete_perfil'))
+        
+        return super().post(request, *args, **kwargs)
 
     def get_success_url(self) -> str:
         return reverse_lazy('rooms')

@@ -1,3 +1,5 @@
+import requests
+from django.conf import settings
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from secrets import token_hex
@@ -13,6 +15,7 @@ from stripe.checkout import Session
 from typing import Any
 from home.models import Hotel, Contact
 from PIL import Image
+from datetime import datetime, date
 
 
 class PaymentPDFHandler:
@@ -167,3 +170,35 @@ def resize_image(img_path, w, h=None):
 
     resized.close()
     img.close()
+
+
+def fmt_date(value: str, fmt='%d/%m/%Y') -> str:
+    """formata a data no formato especificado.
+
+    Args:
+        value (str): data a ser formatada
+        fmt (str, optional): padrão para a formatação. Defaults to '%d/%m/%Y'.
+
+    Returns:
+        str: data formatada.
+    """
+    return datetime.strftime(value, fmt)
+
+
+def verify_captcha(captcha_resp) -> bool:
+    """realiza a validação do google recaptcha v3
+
+    Args:
+        captcha_resp (Any): resposta do usuário para o captcha
+
+    Returns:
+        bool: retorna True se o captcha é valido
+    """
+    data = {
+        'response': captcha_resp,
+        'secret': settings.G_RECAPTCHA_KEY_SECRET
+    }
+    response = requests.post('https://www.google.com/recaptcha/api/siteverify', data=data)
+    json_resp = response.json()
+    print(json_resp)
+    return True if json_resp.get('success', False) else False

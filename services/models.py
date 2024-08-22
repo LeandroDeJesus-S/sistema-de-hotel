@@ -6,7 +6,7 @@ from utils import support
 from utils.supportmodels import ServicesRules
 
 
-class Services(models.Model):
+class Service(models.Model):
     """serviços de um determinado hotel"""
     name = models.CharField(
         'Nome',
@@ -39,8 +39,8 @@ class Services(models.Model):
     def __str__(self) -> str:
         return self.name
 
-    def save(self, force_insert: bool = ..., force_update: bool = ..., using: str | None = ..., update_fields: Iterable[str] | None = ...) -> None:
-        super().save(force_insert, force_update, using, update_fields)
+    def save(self, *args, **kwargs) -> None:
+        super().save(*args, **kwargs)
         if self.logo:
             support.resize_image(self.logo.path, *ServicesRules.IMG_SIZE)
 

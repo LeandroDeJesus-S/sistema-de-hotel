@@ -11,7 +11,7 @@
 
 <div class="container d-flex justify-content-center containe-form-out align-items-center">
             
-    <form action="{% url "signup" %}" method="post" class="form reserve-form text-light" >{% csrf_token %}
+    <form id="form" action="{% url "signup" %}" method="post" class="form reserve-form text-light" >{% csrf_token %}
         <div class="container">
             {% include "partials/_messages.html" %}
 
@@ -78,6 +78,7 @@
                     </div>
                 </div>
 
+                {% include "partials/_recaptcha_input.html" %}
                 <div class="col-md-12 d-flex justify-content-center mt-3">
                     <button type="submit" class="btn btn-outline-info">Enviar</button>
                 </div>
@@ -87,5 +88,6 @@
     </form>
 </div>
 
+{% include "partials/_recaptcha_v3.html" %}
 
 {% endblock content %}

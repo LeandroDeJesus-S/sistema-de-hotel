@@ -2,35 +2,54 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block head %}
-    <link rel="stylesheet" href={% static "/reserva/css/prereserva.css" %}>
-{% endblock head %}
+{% block css %}
+    <link rel="stylesheet" href={% static "/reserva/css/reserve.css" %}>
+{% endblock css %}
 
 {% block content %}
-    <div class="prereserva-container container">
-        <form action="{% if "/agendar/" in request.path %} {% url "schedule" room_pk %}{% else %} {% url 'reserve' room_pk %}{% endif %}" method="post" class="reservas-form row g-3">
-            {% csrf_token %}
-            {% include "partials/_messages.html" %}
 
-            <div class="col-md-6">
-                <label for="checkin" class="form-label">Check-in</label>
-                <input required type="date" class="form-control" name="checkin" value="{% if request.POST.checkin %}{{request.POST.checkin}}{% endif %}">
-            </div>
-    
-            <div class="col-md-6">
-                <label for="checkout" class="form-label">Check-out</label>
-                <input required type="date" class="form-control" name="checkout" value="{% if request.POST.checkout %}{{request.POST.checkout}}{% endif %}">
-            </div>
+<div class="container d-flex justify-content-center align-items-center p-5">
 
-            <div class="col-md-12">
-                <label for="obs" class="form-label">Observações</label>
-                <textarea maxlength="100" rows="3" class="form-control" name="obs" id="obs" placeholder="Ex.: Decoração de casal" value="{% if request.POST.obs %}{{request.POST.obs}}{% endif %}"></textarea>
+    <form id="form" action="{% if "/agendar/" in request.path %} {% url "schedule" room_pk %}{% else %} {% url 'reserve' room_pk %}{% endif %}" method="post" class="form reserve-form text-light" >{% csrf_token %}
+        <div class="container">
+            <div class="d-flex justify-content-center">
+                {% include "partials/_messages.html" %}
             </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="checkin" class="form-label">Check-In</label>
+                        <input required id="checkin" name="checkin" type="date" class="form-control">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="checkout" class="form-label">Check-In</label>
+                        <input required id="checkout" name="checkout" type="date" class="form-control">
+                    </div>
+                </div>
+                <div class="col-md-12 mt-3">
+                    <div class="form-group">
+                        <label class="form-label text-light" for="obs">Check-Out</label>
+                        <textarea maxlength="100" name="obs" id="obs" class="form-control" placeholder="Ex.: Decoração de aniversário de casamento"></textarea>
+                    </div>
+                </div>
+                {% include "partials/_recaptcha_input.html" %}
+                <div class="col-md-12 d-flex justify-content-center mt-3">
+                    <button type="submit" class="btn btn-outline-info">Enviar</button>
+                </div>
+            </div>
+        </div>
 
-            <div class="col-md-12 d-flex justify-content-center mt-3">
-                    <button type="submit" class="reserva-btn btn">Enviar</button>
-            </div>
-    
-        </form>
-    </div>
+    </form>
+
+</div>
+
+{% include "partials/_recaptcha_v3.html" %}
 {% endblock content %}
+
+{% block footer %}
+    <footer class="footer fixed-bottom">
+        {% include "partials/_footer.html" %}
+    </footer>
+{% endblock footer %}

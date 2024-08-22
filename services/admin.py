@@ -1,13 +1,13 @@
 from django.contrib import admin
-from .models import Services
+from .models import Service
 
 
 class RestaurantAdmin(admin.ModelAdmin):
-    model = Services
+    model = Service
     exclude = ()
     list_filter = [
         'hotel'
     ]
 
 
-admin.site.register(Services, RestaurantAdmin)
+admin.site.register(Service, RestaurantAdmin)

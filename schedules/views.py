@@ -20,6 +20,7 @@ from django.db import OperationalError
 from utils.supportviews import CheckoutMessages
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from utils import support
 
 
 class Schedules(LoginRequired, View):
@@ -46,6 +47,10 @@ class Schedules(LoginRequired, View):
         CHECK_IN = convert_date(self.request.POST.get('checkin', '0001-01-01'))
         CHECKOUT = convert_date(self.request.POST.get('checkout', '0001-01-01'))
         OBS = self.request.POST.get('obs', '')
+        captcha = request.POST.get('g-recaptcha-response')
+        if not support.verify_captcha(captcha):
+            messages.error(request, 'Mr. Robot, é você???')
+            return redirect(request.META.get('HTTP_REFERER', 'schedule'))
         
         try:
             room = get_object_or_404(Room, pk__exact=room_pk)

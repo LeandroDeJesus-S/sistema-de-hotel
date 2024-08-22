@@ -1,6 +1,6 @@
 [
     {
-        "model": "restaurants.restaurant",
+        "model": "services.service",
         "pk": 1,
         "fields": {
             "name": "restaurant 1",

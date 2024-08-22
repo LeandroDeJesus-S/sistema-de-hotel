@@ -230,27 +230,6 @@ class Room(models.Model):
         com api do stripe"""
         return int(self.daily_price * Decimal('100'))
 
-    # @staticmethod
-    # def resize_image(img_path, w, h=None):
-    #     """redimensiona imagem com tamanhos expecificados
-
-    #     Args:
-    #         img_path (Any): caminho da imagem
-    #         w (int): largura da imagem
-    #         h (int, optional): altura da imagem. Defaults to None.
-    #     """
-    #     img = Image.open(img_path)
-    #     original_w, original_h = img.size
-
-    #     if h is None: h = round(w * original_h / original_w)
-    #     if original_h <= h: h = original_h
-        
-    #     resized = img.resize((w, h), Image.Resampling.NEAREST)
-    #     resized.save(img_path, optimize=True, quality=70)
-
-    #     resized.close()
-    #     img.close()
-
     def save(self, *args, **kwargs) -> None:
         super().save(*args, **kwargs)
         if self.image:
@@ -390,8 +369,11 @@ class Reservation(models.Model):
                 dates.append(f'{start} a {end}')
             
             lst = reserva
-        dates.append(f'e {fmt_date(reserva.checkout)} para frente.')
-        return ', '.join(dates)
+        
+        if dates:
+            dates.append(f'e {fmt_date(reserva.checkout)} para frente.')
+            return ', '.join(dates)
+        return f'de {fmt_date(reserva.checkout)} para frente'
 
     @classmethod
     def available_dates(cls, room) -> str:

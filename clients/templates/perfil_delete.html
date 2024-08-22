@@ -2,13 +2,16 @@
 
 {% block content %}
 <div class="container d-flex justify-content-center align-items-center text-center" style="padding: 10%;">
-    <form method="post">{% csrf_token %}
+    <form id="form" method="post">{% csrf_token %}
         <p>Tem certeza que deseja deletar sua conta com o usuário "{{ object }}"?</p>
         <small class="text-danger">esta ação não podera ser desfeita</small><br>
         {{ form }}
+        {% include "partials/_recaptcha_input.html" %}
         <input class="btn btn-danger mt-5" type="submit" value="Excluir">
     </form>
 </div>
+
+{% include "partials/_recaptcha_v3.html" %}
 {% endblock content %}
 
 {% block footer %}

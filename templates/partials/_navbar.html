@@ -2,7 +2,9 @@
     <div class="container-fluid mx-3">
 
         <a href="/" class="navbar-brand mb-0 h1" style="color: var(--realce-color);">
-            <img class="d-inline-block align-top" src="{{hotel.logo.url}}" alt="">
+            {% if hotel.logo %}
+                <img class="d-inline-block align-top" src="{{hotel.logo.url}}" alt="">
+            {% endif %}
             {{hotel.name}}
         </a>
         

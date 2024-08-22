@@ -28,6 +28,7 @@ from .models import (
     Reservation
 )
 from .validators import convert_date
+from utils import support
 from utils.supportviews import ReserveMessages, ReserveSupport
 
 
@@ -117,6 +118,10 @@ class Reserve(LoginRequired, View):
             CHECK_IN = convert_date(self.request.POST.get('checkin', '0001-01-01'))
             CHECKOUT = convert_date(self.request.POST.get('checkout', '0001-01-01'))
             OBS = self.request.POST.get('obs', '')
+            captcha = request.POST.get('g-recaptcha-response')
+            if not support.verify_captcha(captcha):
+                messages.error(request, 'Mr. Robot, é você???')
+                return redirect(request.META.get('HTTP_REFERER', 'reserve'))
         
             with transaction.atomic():
                 reservation = Reservation(
@@ -136,7 +141,8 @@ class Reserve(LoginRequired, View):
                 'reservations.tasks.release_room', 
                 reservation.pk,
                 repeats=1,
-                next_run=timezone.now() + timedelta(minutes=ReserveSupport.RESERVATION_PATIENCE_MINUTES)
+                next_run=timezone.now() + timedelta(minutes=ReserveSupport.RESERVATION_PATIENCE_MINUTES),
+                name=f'release_room : reservation {reservation.pk} : room {reservation.room.pk}'
             )
             self.logger.info(f'schedule {schd} created')
             self.logger.info(f'reservation {reservation.pk} registered. Redirecting to checkout')
@@ -164,7 +170,7 @@ class ReservationsHistory(LoginRequired, ListView):
 
     def get_queryset(self) -> QuerySet[Any]:
         qs = super().get_queryset()
-        return qs.filter(client__exact=self.request.user)
+        return qs.filter(client__exact=self.request.user, status__in=['A', 'S', 'C', 'F'])
 
 
 class ReservationHistory(LoginRequired, DetailView):
@@ -176,4 +182,4 @@ class ReservationHistory(LoginRequired, DetailView):
     def get_queryset(self) -> QuerySet[Any]:
         """filtra por quartos do usuário ativo"""
         qs = super().get_queryset()
-        return qs.filter(client__exact=self.request.user)
+        return qs.filter(client__exact=self.request.user, status__in=['A', 'S', 'C', 'F'])

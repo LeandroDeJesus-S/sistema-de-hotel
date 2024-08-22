@@ -18,7 +18,7 @@
                 </div>
                 <div class="col-md-7">
                     <div class="card-body">
-                        <h1 class="card-title"><a style="text-decoration: none;color: var(--realce-3-color);" href="room.html">Quarto {{room.number}} | {{room.room_class|capfirst}}</a></h1>
+                        <h1 class="card-title"><a style="text-decoration: none;color: var(--realce-3-color);" href="{% url "room" room.pk %}">Quarto {{room.number}} | {{room.room_class|capfirst}}</a></h1>
                         <span class="text-light"><i class="fa-solid fa-person fs-5"></i> {{room.adult_capacity}}</span>
                         <span class="text-light"><i class="fa-solid fa-child "></i> {{room.child_capacity}}</span>
 

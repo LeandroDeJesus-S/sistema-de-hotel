@@ -61,8 +61,8 @@ class TestSchedules(Base, CommonTestsMixin):
         self.url = reverse('schedule', args=[1])
 
         self.schedule_form_data = {
-            'checkin': '2024-08-09',
-            'checkout': '2024-08-10',
+            'checkin': datetime.now().strftime('%Y-%m-%d'),
+            'checkout': (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d'),
             'obs': ''
         }
     

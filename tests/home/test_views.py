@@ -1,13 +1,13 @@
 from django.test import TestCase
 from django.core.management import call_command
 from reservations.models import Benefit, Room
-from services.models import Services
+from services.models import Service
 
 
 class TestHome(TestCase):
     def setUp(self):
         call_command('loaddata', 'tests/fixtures/hotel_fixture.json')
-        call_command('loaddata', 'tests/fixtures/restaurante_fixture.json')
+        call_command('loaddata', 'tests/fixtures/servico_fixture.json')
         call_command('loaddata', 'tests/fixtures/beneficio_fixture.json')
         call_command('loaddata', 'tests/fixtures/classe_fixture.json')
         call_command('loaddata', 'tests/fixtures/quarto_fixture.json')
@@ -32,8 +32,8 @@ class TestHome(TestCase):
         expected = Room.objects.filter(reservation_room__pk__in=[2, 3, 1, 4])
         self.assertQuerysetEqual(result, expected)
 
-    def test_restaurante_enviado_no_context(self):
-        """testa se o restaurante é enviado corretamente no context"""
-        result = self.response.context.get('restaurant')
-        expected = Services.objects.get(pk=1)
-        self.assertEqual(result, expected)
+    def test_servicos_enviados_no_context(self):
+        """testa se todos os serviços são enviados corretamente no context"""
+        result = self.response.context.get('services')
+        expected = Service.objects.all()
+        self.assertQuerysetEqual(result, expected)

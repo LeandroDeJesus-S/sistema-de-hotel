@@ -12,7 +12,8 @@ def check_reservation_dates():
     ou igual a data atual, caso seja, desativa a reserva e passa o status para
     finalizada, envia email avisando ao cliente e os admins
     """
-    for reservation in Reservation.objects.filter(active=True):
+    active_reservations = Reservation.objects.filter(active=True)
+    for reservation in active_reservations:
         if reservation.checkout <= now().date():
             reservation.active = False
             reservation.status = 'F'

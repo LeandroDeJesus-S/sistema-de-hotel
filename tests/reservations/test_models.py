@@ -281,37 +281,37 @@ class TestRoom(BaseTestReservations):
         expected = f'Nº{self.valid_room.number} {self.valid_room.room_class}'
         self.assertEqual(result, expected)
     
-    def test_resize_image_redimensiona_a_img_corretamente_passando_w_e_h_validos(self):
-        """testa se redimensiona a imagem corretamente passa os args `w` e `h` esperados"""
-        img = self.tmp_img.resize((800,600))
-        img.save(self.tmp_file)
+    # def test_resize_image_redimensiona_a_img_corretamente_passando_w_e_h_validos(self):
+    #     """testa se redimensiona a imagem corretamente passa os args `w` e `h` esperados"""
+    #     img = self.tmp_img.resize((800,600))
+    #     img.save(self.tmp_file)
 
-        Room.resize_image(self.tmp_file, 400, 300)
-        img = Image.open(self.tmp_file)
+    #     Room.resize_image(self.tmp_file, 400, 300)
+    #     img = Image.open(self.tmp_file)
 
-        self.assertTupleEqual(img.size, (400, 300))
+    #     self.assertTupleEqual(img.size, (400, 300))
     
-    def test_resize_image_redimensiona_a_img_corretamente_passando_w_e_h_validos(self):
-        """testa se redimensiona a imagem corretamente passa os args `w` e `h` esperados"""
-        img = self.tmp_img.resize((800,600))
-        img.save(self.tmp_file)
+    # def test_resize_image_redimensiona_a_img_corretamente_passando_w_e_h_validos(self):
+    #     """testa se redimensiona a imagem corretamente passa os args `w` e `h` esperados"""
+    #     img = self.tmp_img.resize((800,600))
+    #     img.save(self.tmp_file)
 
-        Room.resize_image(self.tmp_file, 400, 300)
-        img = Image.open(self.tmp_file)
-        self.assertTupleEqual(img.size, (400, 300))
+    #     Room.resize_image(self.tmp_file, 400, 300)
+    #     img = Image.open(self.tmp_file)
+    #     self.assertTupleEqual(img.size, (400, 300))
     
-    def test_resize_image_nao_altera_altura_da_img_caso_seja_menor_que_a_altura_original(self):
-        """testa se a imagem não tem a altura alterada caso a altura original seja menor que a passada"""
-        resized = self.tmp_img.resize((400,300))
-        resized.save(self.tmp_file)
+    # def test_resize_image_nao_altera_altura_da_img_caso_seja_menor_que_a_altura_original(self):
+    #     """testa se a imagem não tem a altura alterada caso a altura original seja menor que a passada"""
+    #     resized = self.tmp_img.resize((400,300))
+    #     resized.save(self.tmp_file)
 
-        Room.resize_image(self.tmp_file, 400, 400)
-        img = Image.open(self.tmp_file)
+    #     Room.resize_image(self.tmp_file, 400, 400)
+    #     img = Image.open(self.tmp_file)
 
-        resized.close()
-        img.close()
+    #     resized.close()
+    #     img.close()
 
-        self.assertTupleEqual(img.size, (400, 300))
+    #     self.assertTupleEqual(img.size, (400, 300))
 
 
 class TestReserva(BaseTestReservations):
