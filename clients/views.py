@@ -196,7 +196,8 @@ class PerfilChangePassword(LoginRequired, View):
         captcha = request.POST.get('g-recaptcha-response')
         if not support.verify_captcha(captcha):
             messages.error(request, 'Mr. Robot, é você???')
-            return redirect(request.META.get('HTTP_REFERER', 'update_perfil_password'))
+            default_url = reverse('update_perfil_password', args=(request.user.pk,))
+            return redirect(request.META.get('HTTP_REFERER', default_url))
 
         if new_pass == pass_repeat:
             self.request.user.set_password(new_pass)

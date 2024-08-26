@@ -50,7 +50,7 @@ class Schedules(LoginRequired, View):
         captcha = request.POST.get('g-recaptcha-response')
         if not support.verify_captcha(captcha):
             messages.error(request, 'Mr. Robot, é você???')
-            return redirect(request.META.get('HTTP_REFERER', 'schedule'))
+            return redirect(request.META.get('HTTP_REFERER', reverse('schedule', args=(room_pk,))))
         
         try:
             room = get_object_or_404(Room, pk__exact=room_pk)

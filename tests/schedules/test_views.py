@@ -75,9 +75,11 @@ class TestSchedules(Base, CommonTestsMixin):
         expected = 1
         self.assertEqual(result, expected)
     
+    @patch('schedules.views.support.verify_captcha')
     @patch('schedules.views.ReservationStripePaymentCreator.session')
-    def test_agendamento_criado_se_form_e_valido(self, stripe_session):
+    def test_agendamento_criado_se_form_e_valido(self, stripe_session, fake_captcha):
         """agendamento é criado se os dados enviados são validos"""
+        fake_captcha.return_value = True
         stripe_session.url = 'http://fakestripesession.com/'
 
         self.client.force_login(self.user)
@@ -99,11 +101,13 @@ class TestSchedules(Base, CommonTestsMixin):
             ],
         )
 
+    @patch('schedules.views.support.verify_captcha')
     @patch('schedules.views.Payment.full_clean')
-    def test_se_levantar_validation_error_renderiza_novamente_pagina_de_agendamento_com_msg(self, payment_full_clean):
+    def test_se_levantar_validation_error_renderiza_novamente_pagina_de_agendamento_com_msg(self, payment_full_clean, fake_captcha):
         """renderiza novamente a pagina de agendamentos com mensagem se ocorrer
         algum erro de validação
         """
+        fake_captcha.return_value = True
         payment_full_clean.side_effect = ValidationError({'msg': 'error message'})
 
         self.client.force_login(self.user)
@@ -113,11 +117,13 @@ class TestSchedules(Base, CommonTestsMixin):
         self.assertEqual(msg, 'error message')
         self.assertTemplateUsed(response, self.template)
 
+    @patch('schedules.views.support.verify_captcha')
     @patch('schedules.views.Payment.full_clean')
-    def test_se_levantar_operational_error_redireciona_para_quartos_com_msg(self, payment_full_clean):
+    def test_se_levantar_operational_error_redireciona_para_quartos_com_msg(self, payment_full_clean, fake_captcha):
         """testa se  caso levantar OperationalError redireciona para os quartos
         com msg correta
         """
+        fake_captcha.return_value = True
         payment_full_clean.side_effect = OperationalError
 
         self.client.force_login(self.user)
@@ -127,11 +133,13 @@ class TestSchedules(Base, CommonTestsMixin):
         self.assertEqual(msg, CheckoutMessages.TRANSACTION_BLOCKING)
         self.assertRedirects(response, reverse('rooms'))
 
+    @patch('schedules.views.support.verify_captcha')
     @patch('schedules.views.Payment.full_clean')
-    def test_se_levantar_exception_redireciona_para_quartos_com_msg(self, payment_full_clean):
+    def test_se_levantar_exception_redireciona_para_quartos_com_msg(self, payment_full_clean, fake_captcha):
         """testa se  caso levantar uma exceção inesperada redireciona para os quartos
         com msg correta
         """
+        fake_captcha.return_value = True
         payment_full_clean.side_effect = Exception
 
         self.client.force_login(self.user)
@@ -141,10 +149,12 @@ class TestSchedules(Base, CommonTestsMixin):
         self.assertEqual(msg, CheckoutMessages.PAYMENT_FAIL)
         self.assertRedirects(response, reverse('rooms'))
 
-    def test_se_nao_passar_por_validacao_da_reserva_renderiza_novamente_pagina_de_agendamento_com_msg(self):
+    @patch('schedules.views.support.verify_captcha')
+    def test_se_nao_passar_por_validacao_da_reserva_renderiza_novamente_pagina_de_agendamento_com_msg(self, fake_captcha):
         """se nao passar pela validação da reserva e levantar ValidationError renderiza
         novamente a pagina de agendamento com a respectiva msg
         """
+        fake_captcha.return_value = True
         self.client.force_login(self.user)
         self.schedule_form_data['checkin'] = str(datetime.now().date() - timedelta(days=1))
         self.schedule_form_data['checkout'] = str(datetime.now().date())

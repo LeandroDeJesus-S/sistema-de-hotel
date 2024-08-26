@@ -163,8 +163,10 @@ class TestReserve(Base):
         print(response)
         self.assertTemplateUsed(response, self.template)
 
-    def test_redireciona_para_checkout_com_dados_validos(self):
+    @patch('reservations.views.support.verify_captcha')
+    def test_redireciona_para_checkout_com_dados_validos(self, fake_captcha):
         """se tiver dados validos a redireciona para checkout após a reserva criada"""
+        fake_captcha.return_value = True
         self.client.force_login(self.user)
         response = self.client.post(
             path=self.url,
@@ -173,8 +175,10 @@ class TestReserve(Base):
         reserva = Reservation.objects.last()
         self.assertRedirects(response, reverse('checkout', args=(reserva.pk,)))
 
-    def test_checkin_com_data_invalida_renderiza_novamente_reserva_com_mensagem(self):
+    @patch('reservations.views.support.verify_captcha')
+    def test_checkin_com_data_invalida_renderiza_novamente_reserva_com_mensagem(self, fake_captcha):
         """testa se renderiza novamente a pagina de reserva com mensagem correta"""
+        fake_captcha.return_value = True
         self.client.force_login(self.user)
 
         invalid_cases = (
@@ -203,24 +207,31 @@ class TestReserve(Base):
                 self.assertEqual(result, expected)
                 self.assertTemplateUsed(response, self.template)
 
-    def test_cliente_e_relacionado_a_reserva(self):
+
+    @patch('reservations.views.support.verify_captcha')
+    def test_cliente_e_relacionado_a_reserva(self, fake_captcha):
         """testa se o cliente é relacionado a reserva corretamente"""
+        fake_captcha.return_value = True
         self.client.force_login(self.user)
 
         self.client.post(self.url, self.valid_data)
         reserva = Reservation.objects.last()
         self.assertEqual(reserva.client, self.user)
     
-    def test_quarto_e_relacionado_a_reserva(self):
+    @patch('reservations.views.support.verify_captcha')
+    def test_quarto_e_relacionado_a_reserva(self, fake_captcha):
         """testa se o quarto é relacionado corretamente a reserva"""
+        fake_captcha.return_value = True
         self.client.force_login(self.user)
 
         self.client.post(self.url, self.valid_data)
         reserva = Reservation.objects.last()
         self.assertEqual(reserva.room, self.room1)
     
-    def test_custo_e_relacionado_a_reserva(self):
+    @patch('reservations.views.support.verify_captcha')
+    def test_custo_e_relacionado_a_reserva(self, fake_captcha):
         """testa se o custo da reserva é adicionada corretamente"""
+        fake_captcha.return_value = True
         self.client.force_login(self.user)
 
         self.client.post(self.url, self.valid_data)
@@ -230,8 +241,10 @@ class TestReserve(Base):
         expected = Decimal(str(reserva.reservation_days)) * self.room1.daily_price
         self.assertEqual(result, expected)
     
-    def test_django_q_schedule_e_criado_quando_reserva_e_iniciada(self):
+    @patch('reservations.views.support.verify_captcha')
+    def test_django_q_schedule_e_criado_quando_reserva_e_iniciada(self, fake_captcha):
         """testa se a Schedule de liberar quarto é criada corretamente"""
+        fake_captcha.return_value = True
         self.client.force_login(self.user)
         self.client.post(self.url, self.valid_data)
         last_schedule = Schedule.objects.last()
@@ -259,11 +272,13 @@ class TestReserve(Base):
                 expected = [ReserveMessages.ALREADY_HAVE_A_RESERVATION, reverse('rooms')]
                 self.assertListEqual(result, expected)
 
+    @patch('reservations.views.support.verify_captcha')
     @patch('reservations.views.convert_date')
-    def test_se_erro_inesperado_acontecer_ao_enviar_dados_de_reserva_redireciona_para_quarto_com_msg_correta(self, mock_convert_date):
+    def test_se_erro_inesperado_acontecer_ao_enviar_dados_de_reserva_redireciona_para_quarto_com_msg_correta(self, mock_convert_date, fake_captcha):
         """testa se ao enviar dos dados do formulário ocorrer uma exceção inesperada redireciona para
         pagina do quarto com msg correta
         """
+        fake_captcha.return_value = True
         mock_convert_date.side_effect = Exception
 
         self.client.force_login(self.user)
