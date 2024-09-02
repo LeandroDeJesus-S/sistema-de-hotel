@@ -11,7 +11,7 @@ from utils.supportviews import ReserveMessages
 from django_q.models import Schedule
 from utils.supporttest import get_message
 from unittest.mock import patch
-
+from utils.supportviews import INVALID_RECAPTCHA_MESSAGE
 
 class Base(TestCase):
     def setUp(self) -> None:
@@ -289,6 +289,19 @@ class TestReserve(Base):
             [msg, response.url],
             [ReserveMessages.RESERVATION_FAIL, reverse('room', args=[self.room1.pk])]
         )
+    
+    @patch('reservations.views.support.verify_captcha')
+    def test_captcha_invalido_redireciona_para_reserve_com_msg_correta(self, fake_captcha):
+        """testa se caso o captcha for invalido redireciona novamente para a pagina de
+        reservar com a msg correta
+        """
+        fake_captcha.return_value = False
+        self.client.force_login(self.user)
+        response = self.client.post(self.url, self.valid_data)
+        msg = get_message(response)
+
+        self.assertEqual(msg, INVALID_RECAPTCHA_MESSAGE)
+        self.assertRedirects(response, self.url)
 
 
 class TestReservationsHistory(Base):

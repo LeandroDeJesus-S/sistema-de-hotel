@@ -1,3 +1,6 @@
+INVALID_RECAPTCHA_MESSAGE = 'Mr. Robot, é você???'
+
+
 class SignUpMessages:
     MISSING = 'Ainda há campos não preenchidos.'
     DUPLICATED_USER = 'Usuário já existe.'

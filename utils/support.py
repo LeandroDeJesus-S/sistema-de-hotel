@@ -200,5 +200,7 @@ def verify_captcha(captcha_resp) -> bool:
     }
     response = requests.post('https://www.google.com/recaptcha/api/siteverify', data=data)
     json_resp = response.json()
-    print(json_resp)
-    return True if json_resp.get('success', False) else False
+    success = json_resp.get('success', False)
+    good_score = json_resp.get('score', 0) > .8
+    is_valid = success and good_score
+    return True if is_valid else False

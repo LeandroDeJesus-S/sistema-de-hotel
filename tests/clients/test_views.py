@@ -177,6 +177,18 @@ class TestSignUp(BaseTestClient):
         result = self.client.login(username=self.user.email, password=userpass)
         self.assertTrue(result)
 
+    @patch('clients.views.support.verify_captcha')
+    def test_captcha_invalido_redireciona_para_signup_com_msg_correta(self, fake_captcha):
+        """testa se caso o captcha for invalido redireciona novamente para a pagina de
+        cadastro com a msg correta
+        """
+        fake_captcha.return_value = False
+        response = self.client.post(self.signup_url, self.valid_data)
+        msg = get_message(response)
+
+        self.assertEqual(msg, 'Mr. Robot, é você???')
+        self.assertRedirects(response, self.signup_url)
+
 
 class TestSignIn(BaseTestClient):
     def setUp(self) -> None:
@@ -217,7 +229,7 @@ class TestSignIn(BaseTestClient):
     
     @patch('clients.views.support.verify_captcha')
     def test_cliente_e_logado_se_username_e_senha_sao_validos(self, fake_captcha):
-        """testa se usuario é logado corretamente via username e senha
+        """testa se usuário é logado corretamente via username e senha
         sendo eles validos
         """
         fake_captcha.return_value = True
@@ -336,6 +348,19 @@ class TestSignIn(BaseTestClient):
 
         result = response.client.session.has_key('next_url')
         self.assertFalse(result)
+    
+    @patch('clients.views.support.verify_captcha')
+    def test_captcha_invalido_redireciona_para_signin_com_msg_correta(self, fake_captcha):
+        """testa se caso o captcha for invalido redireciona novamente para a pagina de
+        login com a msg correta
+        """
+        fake_captcha.return_value = False
+        data = {'username': self.user.username, 'password': self.user.password}
+        response = self.client.post(self.signin_url, data)
+        msg = get_message(response)
+
+        self.assertEqual(msg, 'Mr. Robot, é você???')
+        self.assertRedirects(response, self.signin_url)
 
 
 class TestLogout(BaseTestClient):

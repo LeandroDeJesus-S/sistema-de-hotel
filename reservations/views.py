@@ -13,7 +13,7 @@ from django.shortcuts import (
     render,
     get_object_or_404
 )
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from django.views import View
 from django.views.generic.detail import DetailView
@@ -29,7 +29,7 @@ from .models import (
 )
 from .validators import convert_date
 from utils import support
-from utils.supportviews import ReserveMessages, ReserveSupport
+from utils.supportviews import ReserveMessages, ReserveSupport, INVALID_RECAPTCHA_MESSAGE
 
 
 def get_user_reservations_on(request, context):
@@ -120,8 +120,8 @@ class Reserve(LoginRequired, View):
             OBS = self.request.POST.get('obs', '')
             captcha = request.POST.get('g-recaptcha-response')
             if not support.verify_captcha(captcha):
-                messages.error(request, 'Mr. Robot, é você???')
-                return redirect(request.META.get('HTTP_REFERER', 'reserve'))
+                messages.error(request, INVALID_RECAPTCHA_MESSAGE)
+                return redirect(request.META.get('HTTP_REFERER', reverse('reserve', args=(room_pk,))))
         
             with transaction.atomic():
                 reservation = Reservation(

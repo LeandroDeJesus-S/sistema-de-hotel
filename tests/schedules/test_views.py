@@ -10,7 +10,7 @@ from reservations.models import Room
 from schedules.models import Scheduling
 from reservations.models import Reservation
 from utils.supporttest import get_message
-from utils.supportviews import CheckoutMessages
+from utils.supportviews import CheckoutMessages, INVALID_RECAPTCHA_MESSAGE
 from utils.supportmodels import ReserveErrorMessages
 from payments.models import Payment
 from django_q.tasks import Schedule
@@ -164,6 +164,19 @@ class TestSchedules(Base, CommonTestsMixin):
         msg = get_message(response)
         self.assertEqual(msg, ReserveErrorMessages.INVALID_CHECKIN_DATE)
         self.assertTemplateUsed(response, self.template)
+    
+    @patch('schedules.views.support.verify_captcha')
+    def test_captcha_invalido_redireciona_para_schedule_com_msg_correta(self, fake_captcha):
+        """testa se caso o captcha for invalido redireciona novamente para a pagina de
+        agendamentos com a msg correta
+        """
+        fake_captcha.return_value = False
+        self.client.force_login(self.user)
+        response = self.client.post(self.url, self.schedule_form_data)
+        msg = get_message(response)
+
+        self.assertEqual(msg, INVALID_RECAPTCHA_MESSAGE)
+        self.assertRedirects(response, self.url)
 
 
 class TestScheduleSuccess(Base, CommonTestsMixin):

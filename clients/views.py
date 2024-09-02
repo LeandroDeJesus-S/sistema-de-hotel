@@ -11,7 +11,7 @@ from django.views.generic.edit import UpdateView, DeleteView
 from django.views.generic.detail import DetailView
 from clients.models import Client
 from utils import support
-from utils.supportviews import SignUpMessages, SignInMessages, PerfilChangePasswordMessages
+from utils.supportviews import SignUpMessages, SignInMessages, PerfilChangePasswordMessages, INVALID_RECAPTCHA_MESSAGE
 from django.contrib.auth import login, authenticate, logout
 from reservations.mixins import LoginRequired
 from .forms import UpdatePerfilForm
@@ -44,7 +44,7 @@ class SignUp(View):
         captcha = request.POST.get('g-recaptcha-response')
         if not support.verify_captcha(captcha):
             self.logger.debug(f'captcha response: {captcha}')
-            messages.error(request, 'Mr. Robot, é você???')
+            messages.error(request, INVALID_RECAPTCHA_MESSAGE)
             return redirect(request.META.get('HTTP_REFERER', 'signup'))
 
         if not all((username,password,name,surname, phone, email, birthdate, cpf)):
@@ -106,7 +106,7 @@ class SignIn(View):
         captcha = request.POST.get('g-recaptcha-response')
         if not support.verify_captcha(captcha):
             self.logger.debug(f'captcha response: {captcha}')
-            messages.error(request, 'Mr. Robot, é você???')
+            messages.error(request, INVALID_RECAPTCHA_MESSAGE)
             return redirect(request.META.get('HTTP_REFERER', 'signin'))
 
         user = authenticate(request, username=username, password=password)
@@ -195,7 +195,7 @@ class PerfilChangePassword(LoginRequired, View):
         pass_repeat = self.request.POST.get('password_repeat')
         captcha = request.POST.get('g-recaptcha-response')
         if not support.verify_captcha(captcha):
-            messages.error(request, 'Mr. Robot, é você???')
+            messages.error(request, INVALID_RECAPTCHA_MESSAGE)
             default_url = reverse('update_perfil_password', args=(request.user.pk,))
             return redirect(request.META.get('HTTP_REFERER', default_url))
 
@@ -219,14 +219,6 @@ class PerfilChangePassword(LoginRequired, View):
 class PerfilDelete(LoginRequired, DeleteView):
     model = Client
     template_name = 'perfil_delete.html'
-
-    def post(self, request: HttpRequest, *args: str, **kwargs: Any) -> HttpResponse:
-        captcha = request.POST.get('g-recaptcha-response')
-        if not support.verify_captcha(captcha):
-            messages.error(request, 'Mr. Robot, é você???')
-            return redirect(request.META.get('HTTP_REFERER', 'delete_perfil'))
-        
-        return super().post(request, *args, **kwargs)
 
     def get_success_url(self) -> str:
         return reverse_lazy('rooms')

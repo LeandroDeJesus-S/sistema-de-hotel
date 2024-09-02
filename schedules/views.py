@@ -17,7 +17,7 @@ from reservations.mixins import LoginRequired
 from reservations.decorators import check_reservation_ownership
 from django.contrib import messages
 from django.db import OperationalError
-from utils.supportviews import CheckoutMessages
+from utils.supportviews import CheckoutMessages, INVALID_RECAPTCHA_MESSAGE
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from utils import support
@@ -49,7 +49,7 @@ class Schedules(LoginRequired, View):
         OBS = self.request.POST.get('obs', '')
         captcha = request.POST.get('g-recaptcha-response')
         if not support.verify_captcha(captcha):
-            messages.error(request, 'Mr. Robot, é você???')
+            messages.error(request, INVALID_RECAPTCHA_MESSAGE)
             return redirect(request.META.get('HTTP_REFERER', reverse('schedule', args=(room_pk,))))
         
         try:
