@@ -1,0 +1,33 @@
+<nav class="navbar navbar-expand-lg navbar-dark mb-5">
+    <div class="container-fluid mx-3">
+
+        <a href="/" class="navbar-brand mb-0 h1" style="color: var(--realce-color);">
+            {% if hotel.logo %}
+                <img class="d-inline-block align-top" src="{{hotel.logo.url}}" alt="">
+            {% endif %}
+            {{hotel.name}}
+        </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Alterna navegação">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse justify-content-end mr-5" id="navbarNavAltMarkup">
+            <div class="navbar-nav">
+                <a class="nav-item nav-link active" href="/">Inicio</a>
+                <a class="nav-item nav-link" href="{% url "rooms" %}">Acomodações</a>
+
+                {% if request.user.is_authenticated %}
+                    <li class="navbar-item"><a href="{% url "reservations_history" %}" class="nav-link">Minhas reservas</a></li>
+                    <li class="navbar-item"><a href="{% url "perfil" request.user.pk %}" class="nav-link">Perfil</a></li>
+                    <li class="navbar-item"><a href="{% url "logout" %}" class="nav-link">Sair</a></li>
+
+                {% else %}
+                    <a href="{% url "signin" %}" class="nav-item nav-link">Entrar</a>
+                    <a href="{% url "signup" %}" class="nav-item nav-link">Criar conta</a>
+
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+</nav>

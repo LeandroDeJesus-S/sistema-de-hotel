@@ -1,0 +1,1 @@
+<small><span class="badge bg-{% if reservation.status == 'A' %}success {% elif reservation.status == 'S' %}info {% else %}danger {% endif %}">{{reservation.get_status_display}}</span></small>

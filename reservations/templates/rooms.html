@@ -1,80 +1,55 @@
 {% extends "base.html" %}
 {% load static %}
-{% load customfilters %}
 
-{% block head %}<link rel="stylesheet" href={% static "/reserva/css/reserva.css" %}>{% endblock head %}
+{% block css %}<link rel="stylesheet" href={% static "/reserva/css/rooms.css" %}>{% endblock css %}
+
+{% block title %}Acomodações{% endblock title %}
 
 {% block content %}
 
+<div class="container">
+    {% include "partials/_messages.html" %}        
 
-<div class="rooms container py-5">
-    <div class="row">
-        {% include "partials/_messages.html" %}
-        
-        {% for room in rooms %}
-            <div class="col-md-12 mb-2">
-                <!--card init-->
-                <div class="card room-card">
-
-                    <div class="row no-gutters">
-                        <div class="col-md-6 d-flex justify-content-center">
-                            {% if room.image %}
-                                <a href="{% url "room" room.pk %}">
-                                    <img class="card-img-top" src="{{ room.image.url }}" alt="{{ room.image.name }}">
-                                </a>
-                            {% endif %}
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="card-body">
-                                <h5 class="card-title fs-3">{{room.room_class}} nº<small>{{room.number}}</small></h5>
-                                
-                                <span><i class="fa-solid fa-person fs-5 text-light"></i> {{room.adult_capacity}}</span>
-                                <span ><i class="fa-solid fa-child"></i> {{room.child_capacity}}</span>
-                                <p class="card-text">
-                                    <div class="row">
-                                        
-                                        {% for benefit in benefits %}
-                                            <div class="col-md-6 form-check">
-                                                <input class="form-check-input" type="checkbox" id="flexCheckDisabled" disabled {% if benefit in room.benefit.all %} checked {% endif %}>
-                                                <label class="form-check-label text-light" for="{% if benefit in room.benefit.all %} flexCheckCheckedDisabled {% else %} flexCheckDisabled {% endif %} ">{{benefit}}</label>
-                                            </div>
-                                        {% endfor %}
-
-                                    </div>
-
-                                </p>
-                                <div class="whatsappLink col-md-12 d-flex justify-content-end mt-5">                                 
-                                    
-                                    {% if room.available %}
-                                        <a href="{% url "reserve" room.pk %}" class="btn btn-success btn-lg">Reservar {{room.daily_price_formatted}}</a>
-                                    {% elif reservation_on and room.pk == reservation_on.room.pk %}
-                                        <a href="{% url "reservation_history" reservation_on.pk %}" class="btn btn-info btn-lg mt-2">
-                                            Ver reserva
-                                        </a>
-                                    {% else %}
-                                        <a href="{% url "schedule" room.pk %}" class="btn btn-success btn-lg mt-2">
-                                            <i class="fa-brands fa-whatsapp"></i> 
-                                            Agendar {{room.daily_price_formatted}}
-                                        </a>
-                                    {% endif %}
-
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
-
+    {% for room in rooms %}
+        <div class="card room-card mb-5 p-3">
+            <div class="row">
+                <div class="col-md-4">
+                    <a href="{% url "room" room.pk %}">{% if room.image %}<img src="{{room.image.url}}" alt="" class="img-fluid rounded">{% endif %}</a>
                 </div>
-                <!--card end-->
-            </div> 
-        {% empty %}
-            Não há quartos disponíveis no momento.  
-        {% endfor %}
+                <div class="col-md-7">
+                    <div class="card-body">
+                        <h1 class="card-title"><a style="text-decoration: none;color: var(--realce-3-color);" href="{% url "room" room.pk %}">Quarto {{room.number}} | {{room.room_class|capfirst}}</a></h1>
+                        <span class="text-light"><i class="fa-solid fa-person fs-5"></i> {{room.adult_capacity}}</span>
+                        <span class="text-light"><i class="fa-solid fa-child "></i> {{room.child_capacity}}</span>
+
+                        <p class="card-text">
+                            <div class="row">
+
+                                {% for benefit in benefits %}
+                                    <div class="col-md-4 form-check">
+                                        <input class="form-check-input" type="checkbox" id="flexCheckDisabled" disabled {% if benefit in room.benefit.all %} checked {% endif %}>
+                                        <label class="form-check-label text-light" for="{% if benefit in room.benefit.all %} flexCheckCheckedDisabled {% else %} flexCheckDisabled {% endif %} ">{{benefit}}</label>
+                                    </div>
+                                {% endfor %}
+                                
+                            </div>
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-1 d-flex align-items-end justify-content-end">
+                    {% include "partials/_reserve_btn.html" %}
+                    
+                </div>
+            </div>
+
+        </div>
+    
+    {% empty %}
+        Não há quartos disponíveis no momento.
+
+    {% endfor %}
 
 
-    </div>
 </div>
 
 {% endblock content %}

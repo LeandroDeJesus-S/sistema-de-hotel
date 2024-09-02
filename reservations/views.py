@@ -13,7 +13,7 @@ from django.shortcuts import (
     render,
     get_object_or_404
 )
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from django.views import View
 from django.views.generic.detail import DetailView
@@ -28,7 +28,8 @@ from .models import (
     Reservation
 )
 from .validators import convert_date
-from utils.supportviews import ReserveMessages, ReserveSupport
+from utils import support
+from utils.supportviews import ReserveMessages, ReserveSupport, INVALID_RECAPTCHA_MESSAGE
 
 
 def get_user_reservations_on(request, context):
@@ -55,6 +56,9 @@ class Rooms(ListView):
     ordering = '-daily_price'
 
     def get_context_data(self, **kwargs):
+        """retorna todos os quartos, todos os benefícios e todas as reservas
+        ativas ou agendadas do cliente, caso tenha.
+        """
         context = super().get_context_data(**kwargs)
         context['benefits'] = Benefit.objects.all()
         self.logger.debug('add benefits to the context')
@@ -74,7 +78,9 @@ class RoomDetail(DetailView):
         self.logger = logging.getLogger('djangoLogger')
 
     def get_context_data(self, **kwargs):
-        """add os benefícios ao context para manuseio no html"""
+        """add os benefícios e reservas ativas ou agendadas do cliente
+        caso tenha
+        """
         context = super().get_context_data(**kwargs)
         context['benefits'] = Benefit.objects.all()
         self.logger.info('add benefits to context')
@@ -98,7 +104,7 @@ class Reserve(LoginRequired, View):
         if Reservation.objects.filter(client=request.user, status__in=['A', 'S']).exists():
             self.logger.info('user already have a reservation active ou scheduled')
             messages.info(request, ReserveMessages.ALREADY_HAVE_A_RESERVATION)
-            return redirect('room')
+            return redirect('rooms')
 
         self.context['room_pk'] = room_pk
         self.logger.debug(f'rendering {self.template_name}')
@@ -108,11 +114,15 @@ class Reserve(LoginRequired, View):
         self.logger.debug(f'reservation for room {room_pk} started')
         self.context['room_pk'] = room_pk
 
-        CHECK_IN = convert_date(self.request.POST.get('checkin', '0001-01-01'))
-        CHECKOUT = convert_date(self.request.POST.get('checkout', '0001-01-01'))
-        OBS = self.request.POST.get('obs', '')
-        
         try:
+            CHECK_IN = convert_date(self.request.POST.get('checkin', '0001-01-01'))
+            CHECKOUT = convert_date(self.request.POST.get('checkout', '0001-01-01'))
+            OBS = self.request.POST.get('obs', '')
+            captcha = request.POST.get('g-recaptcha-response')
+            if not support.verify_captcha(captcha):
+                messages.error(request, INVALID_RECAPTCHA_MESSAGE)
+                return redirect(request.META.get('HTTP_REFERER', reverse('reserve', args=(room_pk,))))
+        
             with transaction.atomic():
                 reservation = Reservation(
                     checkin=CHECK_IN, 
@@ -131,7 +141,8 @@ class Reserve(LoginRequired, View):
                 'reservations.tasks.release_room', 
                 reservation.pk,
                 repeats=1,
-                next_run=timezone.now() + timedelta(minutes=ReserveSupport.RESERVATION_PATIENCE_MINUTES)
+                next_run=timezone.now() + timedelta(minutes=ReserveSupport.RESERVATION_PATIENCE_MINUTES),
+                name=f'release_room : reservation {reservation.pk} : room {reservation.room.pk}'
             )
             self.logger.info(f'schedule {schd} created')
             self.logger.info(f'reservation {reservation.pk} registered. Redirecting to checkout')
@@ -159,7 +170,7 @@ class ReservationsHistory(LoginRequired, ListView):
 
     def get_queryset(self) -> QuerySet[Any]:
         qs = super().get_queryset()
-        return qs.filter(client__exact=self.request.user)
+        return qs.filter(client__exact=self.request.user, status__in=['A', 'S', 'C', 'F'])
 
 
 class ReservationHistory(LoginRequired, DetailView):
@@ -169,5 +180,6 @@ class ReservationHistory(LoginRequired, DetailView):
     template_name = 'reservation_history.html'
 
     def get_queryset(self) -> QuerySet[Any]:
+        """filtra por quartos do usuário ativo"""
         qs = super().get_queryset()
-        return qs.filter(client__exact=self.request.user)
+        return qs.filter(client__exact=self.request.user, status__in=['A', 'S', 'C', 'F'])

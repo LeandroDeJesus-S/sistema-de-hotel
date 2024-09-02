@@ -1,26 +1,25 @@
 {% extends "base.html" %}
+{% load humanize %}
 
+{% block title %}histórico - reserva {{reservation.created_at|date}}{% endblock title %}
 
 {% block content %}
 
-<div class="container mt-5 vh-100">
-    <div class="row ">
-        <div class="col-md-6">
-            <img src="{{ reservation.room.image.url }}" class="img-thumbnail" alt="{{ reservation.room.image.name }}">
+<div class="container p-5">
+    <div class="row mb-5">
+        <div class="col-md-4 d-flex justify-content-center">
+            <img src="{{reservation.room.image.url}}" alt="" class="img-fluid rounded">
         </div>
-        <div class="col-md-6 ml-3">
-            <h1>Quarto {{ reservation.room.room_class }}</h1>
-            <div class="row d-flex mt-5">
-                <p class="fs-5">Check-in: {{ reservation.checkin }}</p>
-                <p class="fs-5">Check-out: {{ reservation.checkout }}</p>
-                <p class="fs-5">Quarto: Nº{{ reservation.room.number }}</p>
-                <p class="fs-5">Custo: {{ reservation.formatted_price }}</p>
-                <p class="fs-5">Data de criação: {{ reservation.created_at }}</p>
-                <p class="fs-5">Status: {{ reservation.get_status_display|title }}</p>
+        <div class="col-md-8 d-flex align-items-center">
+            <div class="jubroton">
+                <h1 class="text-center display-4">Quarto {{reservation.room.number}} | {{reservation.room.room_class|capfirst}}</h1>
+                <div class="reservation-info ms-3 mt-3">
+                    <p class="fs-5">Data de estadia: {{reservation.checkin}} - {{reservation.checkout}}</p>
+                    <p class="fs-5">Valor total: {{reservation.formatted_price}}</p>
+                    <p class="fs-5">Data de emissão: {{reservation.created_at|naturaltime}}</p>
+                    <p class="fs-5">Status: {% include "partials/_reservation_status_badge.html" %}</small></p>
+                </div>
             </div>
-        </div>
-        <div class="col-md-12 my-3">
-            <p class="text-dark">{{room.long_desc}}</p>
         </div>
     </div>
 </div>

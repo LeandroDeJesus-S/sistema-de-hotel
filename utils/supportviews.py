@@ -1,3 +1,6 @@
+INVALID_RECAPTCHA_MESSAGE = 'Mr. Robot, é você???'
+
+
 class SignUpMessages:
     MISSING = 'Ainda há campos não preenchidos.'
     DUPLICATED_USER = 'Usuário já existe.'
@@ -17,8 +20,8 @@ class PerfilChangePasswordMessages:
 class CheckoutMessages:
     TRANSACTION_BLOCKING = 'Não foi possível prosseguir para o pagamento ou quarto não esta mais disponível.'
     PAYMENT_FAIL = (
-        'Não foi possível concluir o pagamento devido a um erro com o sistema de '
-        'pagamento externo, tente novamente ou contate o suporte caso o problema persista.'
+        'Não foi possível concluir o pagamento devido a um erro inesperado '
+        'tente novamente ou contate o suporte caso o problema persista.'
     )
 
 
@@ -29,3 +32,8 @@ class ReserveSupport:
 class ReserveMessages:
     RESERVATION_FAIL = 'Não foi possível realizar a reserva.'
     ALREADY_HAVE_A_RESERVATION = 'Você já possui uma reserva ativa ou agendada'
+
+
+class PaymentCancelMessages:
+    PAYMENT_DOES_NOT_EXISTS = 'Pagamento não existe.'
+    UNEXPECTED_ERROR = 'Tivemos um erro inesperado. Tente novamente mais tarde ou contate o desenvolvedor.'

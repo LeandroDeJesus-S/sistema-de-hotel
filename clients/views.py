@@ -10,7 +10,8 @@ from django.views import View
 from django.views.generic.edit import UpdateView, DeleteView
 from django.views.generic.detail import DetailView
 from clients.models import Client
-from utils.supportviews import SignUpMessages, SignInMessages, PerfilChangePasswordMessages
+from utils import support
+from utils.supportviews import SignUpMessages, SignInMessages, PerfilChangePasswordMessages, INVALID_RECAPTCHA_MESSAGE
 from django.contrib.auth import login, authenticate, logout
 from reservations.mixins import LoginRequired
 from .forms import UpdatePerfilForm
@@ -40,6 +41,11 @@ class SignUp(View):
         email = self.request.POST.get('email', '').strip()
         birthdate = self.request.POST.get('nascimento')
         cpf = self.request.POST.get('cpf', '').strip()
+        captcha = request.POST.get('g-recaptcha-response')
+        if not support.verify_captcha(captcha):
+            self.logger.debug(f'captcha response: {captcha}')
+            messages.error(request, INVALID_RECAPTCHA_MESSAGE)
+            return redirect(request.META.get('HTTP_REFERER', 'signup'))
 
         if not all((username,password,name,surname, phone, email, birthdate, cpf)):
             messages.error(request, SignUpMessages.MISSING)
@@ -83,8 +89,8 @@ class SignIn(View):
 
     def get(self, request: HttpRequest, *args, **kwargs):
         next_url = request.GET.get("next", self.next_url)
-        self.request.session['next_url'] = next_url
-        self.request.session.save()
+        request.session['next_url'] = next_url
+        request.session.save()
         self.logger.debug(f'next url: {next_url}')
 
         if request.user.is_authenticated:
@@ -97,6 +103,11 @@ class SignIn(View):
     def post(self, request: HttpRequest, *args, **kwargs):
         username = request.POST.get('username')
         password = request.POST.get('password')
+        captcha = request.POST.get('g-recaptcha-response')
+        if not support.verify_captcha(captcha):
+            self.logger.debug(f'captcha response: {captcha}')
+            messages.error(request, INVALID_RECAPTCHA_MESSAGE)
+            return redirect(request.META.get('HTTP_REFERER', 'signin'))
 
         user = authenticate(request, username=username, password=password)
         if user is None:
@@ -107,14 +118,27 @@ class SignIn(View):
         login(request, user)
 
         next_url = request.session.get('next_url')
+        self.logger.info(f'next url in the session: {next_url}')
         if next_url:
-            del request.session['next_url']
+            deleted = request.session.pop('next_url')
             request.session.save()
+            self.logger.debug(f'delete {deleted} from session')
         else:
             next_url = self.next_url
 
         self.logger.info(f'user logged with success. Redirecting to {next_url}')
         return redirect(next_url)
+
+
+def axes_locked_out(request, *args, **kwargs):
+    """callback que add uma msg e redireciona para a url referer
+    quando número de tentativas de fazer login é excedia"""
+    messages.error(
+        request,
+        'Número de tentativas excedida. Tente novamente mais tarde.'
+    )
+    redirect_url = request.META.get('HTTP_REFERER', 'signin')
+    return redirect(redirect_url)
 
 
 def logout_user(request: HttpRequest):
@@ -166,9 +190,14 @@ class PerfilChangePassword(LoginRequired, View):
         self.logger.debug(f'rendering {self.template}')    
         return render(self.request, self.template)
     
-    def post(self, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         new_pass = self.request.POST.get('new_password')
         pass_repeat = self.request.POST.get('password_repeat')
+        captcha = request.POST.get('g-recaptcha-response')
+        if not support.verify_captcha(captcha):
+            messages.error(request, INVALID_RECAPTCHA_MESSAGE)
+            default_url = reverse('update_perfil_password', args=(request.user.pk,))
+            return redirect(request.META.get('HTTP_REFERER', default_url))
 
         if new_pass == pass_repeat:
             self.request.user.set_password(new_pass)

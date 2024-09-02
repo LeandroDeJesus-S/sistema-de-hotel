@@ -10,45 +10,30 @@
 <section>
   <form action="{% url 'checkout' reservation.pk %}" method="POST">
     {% csrf_token %}
-    <div class="product d-flex justify-content-center">
-      <div class="row">
-        <div class="col-12">
-          {% include "partials/_messages.html" %}
 
-          <div class="card">
-    
-            <div class="card-img d-flex justify-content-center">
-              <img src="{{ reservation.room.image.url }}" alt="{{reservation.room.image.name}}" class="card-img expand">
-            </div>
-    
+      <div class="container d-flex justify-content-center align-items-center">
+        {% include "partials/_messages.html" %}
+        <div class="card p-2 d-flex text-center" >
+            <img src="{{ reservation.room.image.url }}" alt="" class="card-img img-fluid rounded" style="width: 300px;">
             <div class="card-body">
-              <h5 class="card-title text-center fs-2">{{reservation.room.room_class}}</h5>
-              <h6 class="card-title text-center fs-5">Nº{{reservation.room.number}}</h6>
-              <div class="row">
-                <div class="col-md-6">
-                  <p class="card-text text-center ">
-                    <span class=""><i class="fa-solid fa-person fs-5"></i> {{reservation.room.adult_capacity}}</span>
-                    <span class=""><i class="fa-solid fa-child"></i> {{reservation.room.child_capacity}}</span>
-                  </p>
+                <h1 class="display-6 fs-4">Quarto {{reservation.room.number}} | {{reservation.room.room_class|capfirst}}</h1>
+                <div class="d-flex justify-content-around">
+                  <span class="text-dark"><i class="fa-solid fa-person fs-5"></i> {{reservation.room.adult_capacity}}</span>
+                  <span class="text-dark"><i class="fa-solid fa-child "></i> {{reservation.room.child_capacity}}</span>
+                  <span class="text-dark">📐 25m²</span>
                 </div>
-                <div class="col-md-6">
-                  <p class="card-text text-center "><span class="">📐</span>: {{reservation.room.size}}m²</p>
-                </div>
-              </div>
-              <p class="card-text text-center fs-3">{{reservation.amount|money}}</p>
+                <p class="card-text">
+                    {{reservation.checkin}} <span class="text-secondary">-</span> {{reservation.checkout}}
+                </p>
+                <p class="card-text text-info fs-2">
+                    {{reservation.formatted_price}}
+                </p>
+                <button type="submit" class="btn btn-outline-info">Confirmar</button>
             </div>
-    
-            <div class="col-12 d-flex justify-content-center">
-              <button class="btn btn-success btn-lg" type="submit" id="checkout-button">Confirmar</button>
-            </div>
-          </div>
         </div>
 
-
-      </div>
-
-      </form>
     </div>
+
 </section>
 
 {% endblock content %}

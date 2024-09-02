@@ -1,61 +1,58 @@
 {% extends "base.html" %}
-
+{% load static %}
+{% block title %}Perfil{% endblock title %}
+{% block css %}
+    <link rel="stylesheet" href="{% static 'reserva/css/reserve.css' %}">
+{% endblock css %}
 
 {% block content %}
-<style>
-    form{
-        margin: 1%;
-        background-color: blueviolet;
-        padding: 2%;
-        border-radius: 15px;
-    }
-</style>
 
     <div class="container d-flex justify-content-center">
-        <form action="{% url 'update_perfil' request.user.pk %}" method="get">
-            {% include "partials/_messages.html" %}
-            
-            <div class="row d-flex justify-content-center">
-                <div class="col-md-12">
-                    <label class="form-label" for="username">Usuário: </label>
-                    <input name="username" class="form-control" type="text" disabled value="{{object.username}}">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label" for="firstname">Nome: </label>
-                    <input name="firstname" class="form-control" type="text" disabled value="{{object.first_name}}">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label" for="lastname">Sobrenome: </label>
-                    <input name="lastname" class="form-control" type="text" disabled value="{{object.last_name}}">
-                </div>
-                <div class="col-md-12">
-                    <label class="form-label" for="birthdate">Nascimento: </label>
-                    <input class="form-control" name="birthdate" type="text" disabled value="{{object.birthdate}}">
-                </div>
-                <div class="col-md-12">
-                    <label class="form-label" for="cpf">CPF: </label>
-                    <input class="form-control" name="cpf" type="text" disabled value="{{object.cpf}}">
-                </div>
-                <div class="col-md-12">
-                    <label class="form-label" for="email">E-mail: </label>
-                    <input class="form-control" name="email" type="email" disabled value="{{object.email}}">
-                </div>
-                <div class="col-md-12 d-flex justify-content-center mt-3">
-                    <button class="btn btn-outline-light" type="submit">Editar</button>
-                </div>
-                <div>
-                    <div class="row d-flex">
-                        <div class="col-md-6">
-                            <a href="{% url 'update_perfil_password' request.user.pk %}" class="btn btn-secondary">
+        <form action="{% url 'update_perfil' request.user.pk %}" method="get" class="reserve-form">
+            <div class="container text-light">
+                {% include "partials/_messages.html" %}
+                <div class="row d-flex justify-content-center">
+                    <div class="col-md-12">
+                        <label class="form-label" for="username">Usuário: </label>
+                        <input style="background-color: var(--realce-color);" name="username" class="form-control" type="text" disabled value="{{object.username}}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="firstname">Nome: </label>
+                        <input style="background-color: var(--realce-color);" name="firstname" class="form-control" type="text" disabled value="{{object.first_name}}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="lastname">Sobrenome: </label>
+                        <input style="background-color: var(--realce-color);" name="lastname" class="form-control" type="text" disabled value="{{object.last_name}}">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label" for="birthdate">Nascimento: </label>
+                        <input style="background-color: var(--realce-color);" class="form-control" name="birthdate" type="text" disabled value="{{object.birthdate}}">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label" for="cpf">CPF: </label>
+                        <input style="background-color: var(--realce-color);" class="form-control" name="cpf" type="text" disabled value="{{object.cpf}}">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label" for="email">E-mail: </label>
+                        <input style="background-color: var(--realce-color);" class="form-control" name="email" type="email" disabled value="{{object.email}}">
+                    </div>
+                    
+                    <div class="row d-flex justify-content-around mt-3">
+                        <div class="col-md-4">
+                            <a href="{% url 'update_perfil_password' request.user.pk %}" class="btn btn-outline-secondary">
                                 Alterar senha
                             </a>
                         </div>
-                        <div class="col-md-6 d-flex justify-content-end">
-                            <a href="{% url 'delete_perfil' request.user.pk %}" class="btn btn-danger">
+                        <div class="col-md-4 d-flex justify-content-center">
+                            <button class="btn btn-outline-info" type="submit">Editar dados</button>
+                        </div>
+                        <div class="col-md-4 d-flex justify-content-end">
+                            <a href="{% url 'delete_perfil' request.user.pk %}" class="btn btn-outline-danger">
                                 Deletar conta
                             </a>
                         </div>
                     </div>
+                    
                 </div>
             </div>
         </form>

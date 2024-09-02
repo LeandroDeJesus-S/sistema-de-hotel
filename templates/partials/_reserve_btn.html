@@ -1,0 +1,15 @@
+{% if room.available %}
+    <a href="{% url "reserve" room.pk %}" class="btn btn-outline-info">Reservar {{room.daily_price_formatted}}</a>
+
+{% elif reservation_on and room.pk == reservation_on.room.pk %}
+    <a href="{% url "reservation_history" reservation_on.pk %}" class="btn btn-outline-info">
+        Ver reserva
+    </a>
+
+{% else %}
+    <a href="{% url "schedule" room.pk %}" class="btn btn-outline-info">
+        <i class="fa-brands fa-whatsapp"></i> 
+        Agendar {{room.daily_price_formatted}}
+    </a>
+
+{% endif %}

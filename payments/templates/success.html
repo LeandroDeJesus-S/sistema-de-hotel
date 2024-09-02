@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 
-
 {% block content %}
 <div class="row">
 
@@ -17,3 +16,9 @@
 
 </div>
 {% endblock content %}
+
+{% block footer %}
+    <footer class="footer fixed-bottom">
+        {% include "partials/_footer.html" %}
+    </footer>
+{% endblock footer %}

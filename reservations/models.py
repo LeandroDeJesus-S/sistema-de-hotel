@@ -12,19 +12,19 @@ from django.core.validators import (
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from PIL import Image
 
 from clients.models import Client
 from home.models import Hotel
 from utils.supportmodels import (
-    ReservaRules, 
-    ReservaErrorMessages,
+    ReserveRules, 
+    ReserveErrorMessages,
     RoomRules,
     ClasseErrorMessages,
     RoomErrorMessages,
     BenefitRules,
     BenefitErrorMessages
 )
+from utils import support
 
 
 class Benefit(models.Model):
@@ -48,7 +48,7 @@ class Benefit(models.Model):
         blank=True,
         null=True,
         unique=False,
-        help_text='ícone com tamanho 32x32',
+        help_text='ícone com tamanho 64x64',
         upload_to='benefits/icon'
     )
     displayable_on_homepage = models.BooleanField(
@@ -230,31 +230,10 @@ class Room(models.Model):
         com api do stripe"""
         return int(self.daily_price * Decimal('100'))
 
-    @staticmethod
-    def resize_image(img_path, w, h=None):
-        """redimensiona imagem com tamanhos expecificados
-
-        Args:
-            img_path (Any): caminho da imagem
-            w (int): largura da imagem
-            h (int, optional): altura da imagem. Defaults to None.
-        """
-        img = Image.open(img_path)
-        original_w, original_h = img.size
-
-        if h is None: h = round(w * original_h / original_w)
-        if original_h <= h: return
-        
-        resized = img.resize((w, h), Image.Resampling.NEAREST)
-        resized.save(img_path, optimize=True, quality=70)
-
-        resized.close()
-        img.close()
-
     def save(self, *args, **kwargs) -> None:
         super().save(*args, **kwargs)
         if self.image:
-            self.resize_image(self.image.path, *RoomRules.IMAGE_SIZE)
+            support.resize_image(self.image.path, *RoomRules.IMAGE_SIZE)
 
 
 class Reservation(models.Model):
@@ -358,7 +337,7 @@ class Reservation(models.Model):
         super().clean()
         self.error_messages = {}
         if self.status == 'I':
-            self._validate_date_availability()
+            self._validate_date_availability(self.error_messages, 'checkin')
             self._validate_check_in()
             self._validate_room()
         
@@ -368,8 +347,15 @@ class Reservation(models.Model):
     @classmethod
     def get_free_dates(cls, reservations) -> str:
         """retorna as datas de reserva livres para um conjunto
-        de reservas, considerando os períodos de gap entre as datas
-        (e.g d/m/Y a d/m/Y, e d/m/Y para frente)"""
+        de reservas, considerando os períodos de gap entre as datas com 
+        número de dias de diferença maior que 1
+        Ex.:
+        >>> reservations = Reservation.objects.filter(status__in=['A', 'S'])
+        >>> [(r.checkin.strftime('%d/%m/%Y'), r.checkout.strftime('%d/%m/%Y')) for r in reservations]
+        >>> ('01/01/2024', '02/01/2024'), ('05/01/2024', '07/01/2024')
+        >>> Reservation.get_free_dates(reservations)
+        >>> '02/01/2024 a 04/01/2024, e 07/01/2024 para frente.'
+        """
         fmt_date = lambda d: d.strftime('%d/%m/%Y')
         dates = []
         lst = None
@@ -383,13 +369,17 @@ class Reservation(models.Model):
                 dates.append(f'{start} a {end}')
             
             lst = reserva
-        dates.append(f'e {fmt_date(reserva.checkout)} para frente.')
-        return ', '.join(dates)
+        
+        if dates:
+            dates.append(f'e {fmt_date(reserva.checkout)} para frente.')
+            return ', '.join(dates)
+        return f'de {fmt_date(reserva.checkout)} para frente'
 
     @classmethod
     def available_dates(cls, room) -> str:
         """retorna as datas de reservas disponíveis para o quarto especificado
-        considerando reserva ativa e agendamentos
+        considerando reserva ativa e agendamentos, chamando Reservation.get_free_dates
+        para reservas agendadas ou ativas
 
         Args:
             room (reservations.models.Quarto): uma instancia da model Quarto
@@ -403,7 +393,7 @@ class Reservation(models.Model):
         )
         return cls.get_free_dates(reservas)
         
-    def _validate_date_availability(self):
+    def _validate_date_availability(self, msg_dict, k) -> bool:
         """verifica se a data da reserva sobrepõe um reserva ativa ou agendada"""
         reservations = Reservation.objects.filter(
             room=self.room, 
@@ -413,23 +403,24 @@ class Reservation(models.Model):
         )
         if reservations.exists():
             dates = self.get_free_dates(reservations)
-            self.error_messages['checkin'] = ReservaErrorMessages.UNAVAILABLE_DATE.format_map({'dates': dates})
+            msg = ReserveErrorMessages.UNAVAILABLE_DATE.format_map({'dates': dates})
+            msg_dict[k] = msg
     
     def _validate_check_in(self):
         """realiza as validações relacionadas ao check-in"""
         if self.checkin < datetime.now().date():
-           self.error_messages['checkin'] = ReservaErrorMessages.INVALID_CHECKIN_DATE
+           self.error_messages['checkin'] = ReserveErrorMessages.INVALID_CHECKIN_DATE
 
-        elif self.checkin > ReservaRules.checkin_anticipation_offset():
-           self.error_messages['checkin'] = ReservaErrorMessages.INVALID_CHECKIN_ANTICIPATION
+        elif self.checkin > ReserveRules.checkin_anticipation_offset():
+           self.error_messages['checkin'] = ReserveErrorMessages.INVALID_CHECKIN_ANTICIPATION
         
-        elif not ReservaRules.MIN_RESERVATION_DAYS <= self.reservation_days <= ReservaRules.MAX_RESERVATION_DAYS:
-            self.error_messages['checkin'] = ReservaErrorMessages.INVALID_STAYED_DAYS
+        elif not ReserveRules.MIN_RESERVATION_DAYS <= self.reservation_days <= ReserveRules.MAX_RESERVATION_DAYS:
+            self.error_messages['checkin'] = ReserveErrorMessages.INVALID_STAYED_DAYS
 
     def _validate_room(self):
         """realiza as validações relacionadas ao quarto"""
         if not self.room.available:
-            self.error_messages['room'] = ReservaErrorMessages.UNAVAILABLE_ROOM
+            self.error_messages['room'] = ReserveErrorMessages.UNAVAILABLE_ROOM
 
     @property
     def reservation_days(self) -> int:

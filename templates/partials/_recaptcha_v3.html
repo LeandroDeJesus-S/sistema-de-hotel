@@ -1,0 +1,12 @@
+<script>
+    grecaptcha.ready(function() {
+        $('#form').submit(function(e){
+            var form = this;
+            e.preventDefault()
+            grecaptcha.execute('{{recaptcha_site_key}}', {action: 'generic'}).then(function(token) {
+                $('#g-recaptcha-response').val(token)
+                form.submit()
+            });
+        })
+    });
+</script>

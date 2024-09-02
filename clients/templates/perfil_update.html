@@ -1,16 +1,14 @@
 {% extends "base.html" %}
-
+{% load static %}
+{% block css %}
+    <link rel="stylesheet" href="{% static "reserva/css/reserve.css" %}">
+{% endblock css %}
+{% block title %}editar perfil{% endblock title %}
 {% block content %}
-<style>
-    form{
-        background-color: blueviolet;
-        padding: 2%;
-        border-radius: 15px;
-    }
-</style>
+
 
     <form class="form mx-5" method="post">{% csrf_token %}
-        <div class="container">
+        <div class="container text-light">
             <div class="row ">
                 {% for field in form %}
                     <div class="col-md-{% cycle 12 6 6 12 12 12 %}">
@@ -23,7 +21,7 @@
                 {% endfor %}
             </div>
             <div class="col-md-12 d-flex justify-content-center mt-3">
-                <input class="btn btn-outline-light" type="submit">
+                <input class="btn btn-outline-info" type="submit">
             </div>
         </div>
 

@@ -1,0 +1,12 @@
+[
+    {
+        "model": "services.service",
+        "pk": 1,
+        "fields": {
+            "name": "restaurant 1",
+            "presentation_text": "teste",
+            "logo": "test/test_icon.png",
+            "hotel": 1
+        }
+    }
+]

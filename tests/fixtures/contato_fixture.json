@@ -1,0 +1,15 @@
+[
+    {
+        "model": "home.contact",
+        "pk": 1,
+        "fields": {
+            "email": "hotel@email.com",
+            "phone": "2798746123",
+            "whatsapp": "2798746123",
+            "facebook": "",
+            "instagram": "",
+            "twitter": "",
+            "hotel": 1
+        }
+    }
+]

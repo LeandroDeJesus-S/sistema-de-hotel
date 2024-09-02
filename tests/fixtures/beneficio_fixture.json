@@ -1,0 +1,26 @@
+[
+    {
+        "model": "reservations.benefit",
+        "pk": 1,
+        "fields": {
+            "name": "beneficio_teste1",
+            "short_desc": "descricao_curta_teste"
+        }
+    },
+    {
+        "model": "reservations.benefit",
+        "pk": 2,
+        "fields": {
+            "name": "beneficio_teste2",
+            "short_desc": "descricao_curta_teste2"
+        }
+    },
+    {
+        "model": "reservations.benefit",
+        "pk":3,
+        "fields": {
+            "name": "beneficio_teste3",
+            "short_desc": "descricao_curta_teste3"
+        }
+    }
+]

@@ -9,12 +9,12 @@ def money(value):
     if isinstance(value, float|Decimal):
         return f'R${value:.2f}'
     
-    elif isinstance(value, str) and value.isnumeric():
+    elif isinstance(value, str):
         try:
+            value = value.replace(',', '.')
             float_value = float(value)
-            return f'R${float_value}'
-        except TypeError as e:
-            e.__annotations__['note'] = 'Erro ao converter a string para float'
-            raise e
+            return f'R${float_value:.2f}'
+        except ValueError as exc:
+            raise exc
     
-    raise TypeError
+    raise TypeError(f'value must be an instance of float, Decimal or str but have {value.__class__}')

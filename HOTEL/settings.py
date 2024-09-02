@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 from django.contrib.messages import constants as msg
 from dotenv import load_dotenv
+from datetime import timedelta
 import os
 
 load_dotenv()
@@ -35,17 +36,18 @@ ALLOWED_HOSTS = ['127.0.0.1']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
+    'clients',  # must be before auth to override createsuperuser command
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    'axes',
     'fontawesomefree',
     'django_q',
     'home',
-    'restaurants',
-    'clients',
+    'services',
     'reservations',
     'schedules',
     'payments',
@@ -59,9 +61,13 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'axes.middleware.AxesMiddleware',
 ]
 
-AUTHENTICATION_BACKENDS = ['clients.authenticator.UserEmailAuthBackend']
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'clients.authenticator.UserEmailAuthBackend'
+]
 
 ROOT_URLCONF = 'HOTEL.urls'
 
@@ -76,7 +82,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'home.context_processors.hotel'
+                'home.context_processors.hotel',
+                'home.context_processors.recaptcha',
             ],
         },
     },
@@ -211,6 +218,11 @@ LOGGING = {
     },
 }
 
-# website
-SITE_LOGO_ICON = STATICFILES_DIRS[0] / 'home/img/favicon_transparent_32x32.png'
-SITE_NAME = 'HOTEL'
+# django axes
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = timedelta(minutes=5)
+AXES_LOCKOUT_CALLABLE = 'clients.views.axes_locked_out'
+
+# google reCAPTCHA
+G_RECAPTCHA_KEY_SITE = os.getenv('G_RECAPTCHA_KEY_SITE')
+G_RECAPTCHA_KEY_SECRET = os.getenv('G_RECAPTCHA_KEY_SECRET')
