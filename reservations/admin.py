@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Benefit, Class, Room, Reservation
+
+from .models import Benefit, Class, Reservation, Room
 
 
 class BenefitAdmin(admin.ModelAdmin):
@@ -27,7 +28,7 @@ class RoomAdmin(admin.ModelAdmin):
         'child_capacity',
         'daily_price_formatted',
         'available',
-        'image'
+        'image',
     ]
     list_filter = ['hotel']
     list_editable = ['available']
@@ -36,6 +37,7 @@ class RoomAdmin(admin.ModelAdmin):
 @admin.display(description='Status')
 def status(obj):
     return obj.get_status_display().title()
+
 
 class ReservationAdmin(admin.ModelAdmin):
     list_display = [
@@ -46,9 +48,9 @@ class ReservationAdmin(admin.ModelAdmin):
         'active',
         status,
     ]
-    
+
+
 admin.site.register(Benefit, BenefitAdmin)
 admin.site.register(Class, ClassAdmin)
 admin.site.register(Room, RoomAdmin)
 admin.site.register(Reservation, ReservationAdmin)
- 

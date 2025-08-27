@@ -1,22 +1,21 @@
-from typing import Iterable
-from django.db import models
-from home.models import Hotel
 from django.core.validators import RegexValidator
+from django.db import models
+
+from home.models import Hotel
 from utils import support
 from utils.supportmodels import ServicesRules
 
 
 class Service(models.Model):
     """serviços de um determinado hotel"""
+
     name = models.CharField(
         'Nome',
         max_length=45,
         unique=True,
         null=False,
         blank=False,
-        validators=[
-            RegexValidator(r'[\w\s]+')
-        ]
+        validators=[RegexValidator(r'[\w\s]+')],
     )
     presentation_text = models.TextField(
         'Apresentação',
@@ -33,7 +32,7 @@ class Service(models.Model):
         Hotel,
         on_delete=models.CASCADE,
         related_name='hotel_services',
-        related_query_name='hotel_service'
+        related_query_name='hotel_service',
     )
 
     def __str__(self) -> str:

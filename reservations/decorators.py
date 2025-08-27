@@ -1,7 +1,8 @@
 from functools import wraps
+
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
-from django.http import HttpRequest
+
 from reservations.models import Reservation
 
 
@@ -12,4 +13,5 @@ def check_reservation_ownership(view):
         if reservation.client != request.user:
             raise PermissionDenied
         return view(request, *args, **kwargs)
+
     return _wrapped_view

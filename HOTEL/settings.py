@@ -10,11 +10,12 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
+from datetime import timedelta
 from pathlib import Path
+
 from django.contrib.messages import constants as msg
 from dotenv import load_dotenv
-from datetime import timedelta
-import os
 
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -66,7 +67,7 @@ MIDDLEWARE = [
 
 AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',
-    'clients.authenticator.UserEmailAuthBackend'
+    'clients.authenticator.UserEmailAuthBackend',
 ]
 
 ROOT_URLCONF = 'HOTEL.urls'
@@ -170,7 +171,7 @@ SESSION_SAVE_EVERY_REQUEST = False
 SESSION_COOKIE_HTTPONLY = True
 
 # emails
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # EMAIL_HOST = 'smtp.gmail.com'
 # EMAIL_PORT = 587
 # USE_TLS = True
@@ -185,7 +186,7 @@ Q_CLUSTER = {
     'workers': 2,
     'timeout': 30,
     'retry': 60,
-    'orm': 'default'
+    'orm': 'default',
 }
 
 # stripe api
@@ -194,26 +195,29 @@ STRIPE_API_KEY_PUBLIC = os.getenv('STRIPE_API_KEY_PUBLIC')
 
 # logging
 LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "file": {
-            "level": "DEBUG",
-            "class": "logging.FileHandler",
-            "filename": BASE_DIR / "debug.log",
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'debug.log',
             'formatter': 'verbose',
         },
     },
-    "loggers": {
-        "djangoLogger": {
-            "handlers": ["file"],
-            "level": "DEBUG",
-            "propagate": False,
+    'loggers': {
+        'djangoLogger': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': False,
         },
     },
     'formatters': {
         'verbose': {
-            'format': '%(asctime)s [%(levelname)s] %(pathname)s %(funcName)s.%(lineno)d | %(message)s'
+            'format': (
+                '%(asctime)s [%(levelname)s] %(pathname)s '
+                '%(funcName)s.%(lineno)d | %(message)s'
+            )
         },
     },
 }

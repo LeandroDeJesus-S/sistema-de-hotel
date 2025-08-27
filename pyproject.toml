@@ -63,11 +63,11 @@ bandit = {extras = ["toml"], version = "^1.8.6"}
 [tool.ruff]
 line-length = 95
 extend-exclude = [
-	"*migrations/*",
+	"*/migrations/*",
 	"*__init__*",
 	"*__pyc*",
     "media/",
-    "*templates/*",
+    "templates/*",
     "readme",
     "tests/",
     "*_test.py",
@@ -101,14 +101,13 @@ scan = 'bandit -c pyproject.toml -r .'
 
 [tool.mypy]
 exclude = [
-	"*migrations/*",
-	"*__init__*",
-	"*__pyc*",
+	"migrations/*",
+	"__init__*",
+	"__pyc*",
     "media/",
-    "*templates/*",
+    "templates/*",
     "readme",
     "tests/",
-    "*_test.py",
     "manage.py"
 ]
 ignore_missing_imports = true

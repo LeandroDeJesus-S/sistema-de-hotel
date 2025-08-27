@@ -1,22 +1,24 @@
 import re
+
 from django.core.exceptions import ValidationError
 from django.utils.deconstruct import deconstructible
+
 from utils.supportmodels import ContactErrorMessages
 
 
 def validate_phone_number(phone):
-    re_match = re.match(r"^[1-9]\d{0,1}9\d{7,8}$", phone)
+    re_match = re.match(r'^[1-9]\d{0,1}9\d{7,8}$', phone)
     if re_match is None:
         raise ValidationError(ContactErrorMessages.INVALID_PHONE)
 
 
 @deconstructible
-class CpfValidator:
+class CpfValidator:  # noqa: PLW1641  # TODO: refactoring needed
     def __init__(self, message) -> None:
         self._cpf = None
         self._verified_cpf = None
         self._message = message
-    
+
     def __call__(self, cpf):
         self._cpf = cpf
         self._verified_cpf = self.validate()
@@ -25,12 +27,12 @@ class CpfValidator:
 
     def __eq__(self, value: object) -> bool:
         return (
-            isinstance(value, CpfValidator) and 
-            value._cpf == self._cpf and 
-            self._verified_cpf == value._verified_cpf and
-            self._message == value._message
+            isinstance(value, CpfValidator)
+            and value._cpf == self._cpf
+            and self._verified_cpf == value._verified_cpf
+            and self._message == value._message
         )
-    
+
     def calculate_first_digit(self) -> str:
         """Calcula o primeiro digito do cpf
 
@@ -44,7 +46,7 @@ class CpfValidator:
             m -= 1
 
         final_result = str(11 - result % 11)
-        return final_result if int(final_result) <= 9 else '0'
+        return final_result if int(final_result) <= 9 else '0'  # noqa: PLR2004
 
     def calculate_second_digit(self) -> str:
         """Calcula o segundo digito do cpf
@@ -59,7 +61,7 @@ class CpfValidator:
             m -= 1
 
         final_result = str(11 - ac % 11)
-        return final_result if int(final_result) <= 9 else '0'
+        return final_result if int(final_result) <= 9 else '0'  # noqa: PLR2004
 
     def is_valid(self) -> bool:
         """verifica se o cpf enviado é valido. Precisa ser chamado depois de `validate`
@@ -68,7 +70,7 @@ class CpfValidator:
             bool: True se o cpf é valido ou False se não é valido.
         """
         return True if self._cpf == self._verified_cpf else False
-    
+
     def is_sequence(self) -> bool:
         """Verifica se o cpf enviado é uma sequencia Ex; 000.000.000-00
 
@@ -77,14 +79,14 @@ class CpfValidator:
         """
         verify = self._cpf[0] * 11
         return True if verify == self._cpf else False
-    
+
     def has_valid_length(self) -> bool:
         """Verifica se o comprimento do cpf enviado é valido.
 
         Returns:
             bool: True se o comprimento for valido ou False se não é valido.
         """
-        return True if len(self._cpf) == 11 else False
+        return True if len(self._cpf) == 11 else False  # noqa: PLR2004
 
     def validate(self) -> str:
         """Faz verificação de comprimento e sequencia, executa os cálculos do

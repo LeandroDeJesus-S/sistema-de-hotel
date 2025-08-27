@@ -5,10 +5,10 @@ class ReservationsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'reservations'
 
-    def ready(self) -> None:
+    def ready(self) -> None:  # noqa: PLR6301
         try:
-            from django.db.utils import OperationalError
-            from django_q.models import Schedule
+            from django.db.utils import OperationalError  # noqa: PLC0415
+            from django_q.models import Schedule  # noqa: PLC0415
 
             if not Schedule.objects.filter(name='checar finalização das reservas').exists():
                 Schedule.objects.create(

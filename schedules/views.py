@@ -1,36 +1,39 @@
 import logging
 from typing import Any
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.db import OperationalError, transaction
 from django.http import HttpRequest
-from django.views.decorators.http import require_GET
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse, reverse_lazy
 from django.views import View
+from django.views.decorators.http import require_GET
+from django_q.tasks import Schedule, Task, async_task
+
+from payments.models import Payment
+from payments.tasks import create_payment_pdf
+from reservations.decorators import check_reservation_ownership
+from reservations.mixins import LoginRequired
 from reservations.models import Reservation, Room
 from reservations.validators import convert_date
-from .models import Scheduling
-from payments.models import Payment
-from django_q.tasks import Schedule, Task, async_task
-from payments.tasks import create_payment_pdf
-from utils.support import ReservationStripePaymentCreator
-from django.urls import reverse_lazy, reverse
-from django.contrib.auth.decorators import login_required
-from reservations.mixins import LoginRequired
-from reservations.decorators import check_reservation_ownership
-from django.contrib import messages
-from django.db import OperationalError
-from utils.supportviews import CheckoutMessages, INVALID_RECAPTCHA_MESSAGE
-from django.db import transaction
-from django.core.exceptions import ValidationError
 from utils import support
+from utils.support import ReservationStripePaymentCreator
+from utils.supportviews import INVALID_RECAPTCHA_MESSAGE, CheckoutMessages
+
+from .models import Scheduling
 
 
 class Schedules(LoginRequired, View):
     """View responsável por gerenciar os dados de agendamentos
     e redirecionar para a página de pagamentos."""
+
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
         super().setup(request, *args, **kwargs)
         self.logger = logging.getLogger('djangoLogger')
         self.context = {}
-    
+
     def get(self, request, room_pk, *args, **kwargs):
         self.logger.debug(f'schedule for room {room_pk} received')
         self.context['room_pk'] = room_pk
@@ -50,17 +53,17 @@ class Schedules(LoginRequired, View):
         captcha = request.POST.get('g-recaptcha-response')
         if not support.verify_captcha(captcha):
             messages.error(request, INVALID_RECAPTCHA_MESSAGE)
-            return redirect(request.META.get('HTTP_REFERER', reverse('schedule', args=(room_pk,))))
-        
+            return redirect(
+                request.META.get('HTTP_REFERER', reverse('schedule', args=(room_pk,)))
+            )
+
         try:
             room = get_object_or_404(Room, pk__exact=room_pk)
             reservation = Reservation.objects.filter(
-                client=self.request.user,
-                checkin=CHECK_IN,
-                checkout=CHECKOUT
+                client=self.request.user, checkin=CHECK_IN, checkout=CHECKOUT
             ).first()
             self.logger.debug(f'existing reservation {reservation}')
-            
+
             if reservation is None:
                 self.logger.debug('creating a new reservation')
                 reservation = Reservation(
@@ -78,7 +81,7 @@ class Schedules(LoginRequired, View):
                 if reservation.error_messages:
                     self.logger.error(str(reservation.error_messages))
                     raise ValidationError(reservation.error_messages)
-                
+
                 reservation.clean_fields()
                 reservation.save()
                 self.logger.info(f'reservation {reservation.pk} created')
@@ -91,17 +94,10 @@ class Schedules(LoginRequired, View):
             )
             self.logger.debug(f'stripe payment created {stripe_payment}')
 
-            scheduling = Scheduling(
-                client=self.request.user, 
-                reservation=reservation
-            )
+            scheduling = Scheduling(client=self.request.user, reservation=reservation)
             scheduling.full_clean()
             self.logger.debug(f'schedule {scheduling} prepared')
-            payment = Payment(
-                status='P',
-                amount=reservation.amount,
-                reservation=reservation
-            )
+            payment = Payment(status='P', amount=reservation.amount, reservation=reservation)
             payment.full_clean()
             self.logger.debug(f'payment {payment} created')
 
@@ -109,22 +105,22 @@ class Schedules(LoginRequired, View):
             payment.save()
             self.logger.debug('models saved')
             return redirect(stripe_payment.session.url)
-        
+
         except ValidationError as exc:
             messages.error(request, exc.messages[0])
             self.logger.error(exc.error_dict)
             return render(request, 'schedule.html', self.context)
-        
+
         except OperationalError as exc:
             messages.info(request, CheckoutMessages.TRANSACTION_BLOCKING)
-            self.logger.warn(f"payment transaction fail: {str(exc)}")
-            redirect_url = request.META.get("HTTP_REFERER", reverse("rooms"))
+            self.logger.warn(f'payment transaction fail: {str(exc)}')
+            redirect_url = request.META.get('HTTP_REFERER', reverse('rooms'))
             return redirect(redirect_url)
 
         except Exception as exc:
             messages.error(request, CheckoutMessages.PAYMENT_FAIL)
-            self.logger.critical(f"payment unexpected fail: {str(exc)}")
-            redirect_url = request.META.get("HTTP_REFERER", reverse("rooms"))
+            self.logger.critical(f'payment unexpected fail: {str(exc)}')
+            redirect_url = request.META.get('HTTP_REFERER', reverse('rooms'))
             return redirect(redirect_url)
 
 
@@ -143,7 +139,7 @@ def schedule_success(request: HttpRequest, reservation_pk: int):
     if not payment.status == 'P':
         logger.warn('payment is not processing')
         return render(request, 'schedule_success.html', context)
-    
+
     payment.reservation.status = 'S'
     payment.status = 'F'
     payment.reservation.save()
@@ -151,7 +147,9 @@ def schedule_success(request: HttpRequest, reservation_pk: int):
     context['payment'] = payment
     logger.info(f'payment {payment} created')
 
-    schedule = get_object_or_404(Scheduling, client=request.user, reservation=payment.reservation)
+    schedule = get_object_or_404(
+        Scheduling, client=request.user, reservation=payment.reservation
+    )
     schedule_name = f'schedule {schedule}-{schedule.client}-{schedule.reservation}'
     if not Schedule.objects.filter(name=schedule_name).exists():
         Schedule.objects.create(
@@ -163,7 +161,7 @@ def schedule_success(request: HttpRequest, reservation_pk: int):
         )
         logger.info(f'schedule {schedule_name} created')
 
-    task_name = f"create_payment_pdf_{payment.pk}"
+    task_name = f'create_payment_pdf_{payment.pk}'
     if not Task.objects.filter(name=task_name).exists():
         async_task(create_payment_pdf, payment, task_name=task_name)
         logger.info(f'task {task_name} created')

@@ -1,5 +1,6 @@
-from django.core.mail import send_mass_mail
 from django.conf import settings
+from django.core.mail import send_mass_mail
+
 from clients.models import Client
 from reservations.models import Reservation, Room
 
@@ -10,7 +11,7 @@ def schedule_reservation(reservation_id):
         reservation.active = True
         reservation.status = 'A'
         reservation.save()
-        
+
         quarto = Room.objects.get(pk=reservation.room.pk)
         quarto.available = False
         quarto.save()
@@ -21,23 +22,26 @@ def schedule_reservation(reservation_id):
         send_mass_mail(
             datatuple=[
                 (
-                    "Agendamento de reserva",
-                    "Olá, passando pra avisar que a sua reserva agendada ativou!",
+                    'Agendamento de reserva',
+                    'Olá, passando pra avisar que a sua reserva agendada ativou!',
                     settings.DEFAULT_FROM_EMAIL,
                     [reservation.client.email],
                 ),
                 (
-                    "Agendamento de reserva",
-                    f"Olá, passando pra avisar que a reserva agendada de {reservation.client.complete_name} foi ativada!",
+                    'Agendamento de reserva',
+                    (
+                        f'Olá, passando pra avisar que a reserva agendada de '
+                        f'{reservation.client.complete_name} foi ativada!'
+                    ),
                     settings.DEFAULT_FROM_EMAIL,
                     [admin_emails],
                 ),
             ],
-            fail_silently=False
+            fail_silently=False,
         )
 
     except Reservation.DoesNotExist:
         print(f'reservation {reservation_id} does not exists')
-    
+
     except Room.DoesNotExist:
         print(f'room {reservation.room.pk} from reservation {reservation_id} does not exists')

@@ -1,6 +1,7 @@
-from .models import Hotel, Contact
 from django.conf import settings
 from dotenv import load_dotenv
+
+from .models import Contact, Hotel
 
 
 def hotel(*args, **kwargs):

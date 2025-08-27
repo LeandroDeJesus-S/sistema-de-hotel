@@ -1,7 +1,9 @@
-from typing import Any
-from django.core.management.base import BaseCommand, CommandError
-from getpass import getpass
 from datetime import datetime
+from getpass import getpass
+from typing import Any
+
+from django.core.management.base import BaseCommand, CommandError
+
 from clients.models import Client
 
 

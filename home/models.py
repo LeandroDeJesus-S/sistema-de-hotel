@@ -1,24 +1,13 @@
-from django.db import models
 from django.core.validators import validate_email
+from django.db import models
 
 
 class Hotel(models.Model):
     """classe que representa um hotel contendo as informações base
     do site"""
-    name = models.CharField(
-        'Nome',
-        max_length=45,
-        null=False,
-        blank=False,
-        unique=True
-    )
-    slogan = models.CharField(
-        'Slogan',
-        max_length=100,
-        blank=False,
-        null=False,
-        unique=True
-    )
+
+    name = models.CharField('Nome', max_length=45, null=False, blank=False, unique=True)
+    slogan = models.CharField('Slogan', max_length=100, blank=False, null=False, unique=True)
     logo = models.ImageField(
         'Logo',
         upload_to='hotel/logo',
@@ -34,45 +23,31 @@ class Hotel(models.Model):
 
     def __str__(self) -> str:
         return self.name
-    
+
     class Meta:
         verbose_name_plural = 'Hotéis'
 
 
 class Contact(models.Model):
     """representa os dados de contato de um hotel"""
+
     email = models.EmailField(
         'E-mail',
         max_length=155,
         unique=True,
         blank=False,
         null=False,
-        validators=[
-            validate_email
-        ]
+        validators=[validate_email],
     )
-    phone = models.CharField(
-        'Telefone', 
-        max_length=11,
-        null=False,
-        blank=False,
-        unique=True
-    )
+    phone = models.CharField('Telefone', max_length=11, null=False, blank=False, unique=True)
     whatsapp = models.CharField(
-        'Whatsapp', 
-        max_length=255,
-        null=False,
-        blank=False,
-        unique=True
+        'Whatsapp', max_length=255, null=False, blank=False, unique=True
     )
     instagram = models.CharField(
         'Instagram',
         max_length=255,
     )
-    facebook = models.CharField(
-        'Facebook',
-        max_length=255
-    )
+    facebook = models.CharField('Facebook', max_length=255)
     twitter = models.CharField(
         'Twitter',
         max_length=255,
@@ -82,7 +57,7 @@ class Contact(models.Model):
         on_delete=models.CASCADE,
         related_name='hotel_contacts',
         related_query_name='hotel_contact',
-        verbose_name='Hotel'
+        verbose_name='Hotel',
     )
 
     def __str__(self) -> str:
