@@ -40,7 +40,7 @@ class CpfValidator:  # noqa: PLW1641  # TODO: refactoring needed
             str: resultado do calculo do primeiro digito.
         """
         if not self._cpf:
-            raise ValueError('CPF não fornecido para validação')
+            raise ValidationError('CPF não fornecido para validação')
         result, m = 0, 10
         for c in self._cpf[:-2]:
             calc = int(c) * m
@@ -57,7 +57,7 @@ class CpfValidator:  # noqa: PLW1641  # TODO: refactoring needed
             str: resultado do calculo do segundo digito.
         """
         if not self._cpf:
-            raise ValueError('CPF não fornecido para validação')
+            raise ValidationError('CPF não fornecido para validação')
         m, ac = 11, 0
         for i in self._cpf[:-2] + self.calculate_first_digit():
             calc = int(i) * m
@@ -82,7 +82,7 @@ class CpfValidator:  # noqa: PLW1641  # TODO: refactoring needed
             bool: True se for uma sequencia de digitos, False se não for
         """
         if not self._cpf:
-            raise ValueError('CPF não fornecido para validação')
+            raise ValidationError('CPF não fornecido para validação')
         verify = self._cpf[0] * 11
         return True if verify == self._cpf else False
 
@@ -93,7 +93,7 @@ class CpfValidator:  # noqa: PLW1641  # TODO: refactoring needed
             bool: True se o comprimento for valido ou False se não é valido.
         """
         if not self._cpf:
-            raise ValueError('CPF não fornecido para validação')
+            raise ValidationError('CPF não fornecido para validação')
         return True if len(self._cpf) == 11 else False  # noqa: PLR2004
 
     def validate(self) -> str:
@@ -104,7 +104,7 @@ class CpfValidator:  # noqa: PLW1641  # TODO: refactoring needed
             str: cpf com calculo do primeiro e segundo digito para validar
         """
         if not self._cpf:
-            raise ValueError('CPF não fornecido para validação')
+            raise ValidationError('CPF não fornecido para validação')
 
         if self.is_sequence() or not self.has_valid_length():
             return ''
