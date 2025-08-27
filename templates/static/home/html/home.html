@@ -20,10 +20,15 @@
         <div class="d-flex justify-content-center">
             <a href="{% url "signup" %}" class="btn btn-outline-info signup_btn">Registrar-se</a>
         </div>
+    {% else %}
+    <div class="d-flex justify-content-center">
+            <a href="{% url "rooms" %}" class="btn btn-outline-info signup_btn">Ver acomodações</a>
+        </div>
     {% endif %}
 </section>
 
 <!--rooms section-->
+{% if rooms %}
 <section class="best-seller-rooms mb-5">
 
     <h1 class="text-center mb-5">Quartos mais procurados</h1>
@@ -49,8 +54,10 @@
     </div>
 
 </section>
+{% endif %}
 
 <!--services section-->
+{% if services %}
 <section class="services mb-5">
     <h1 class="text-center mb-4 ">Alguns de nossos serviços</h1>
 
@@ -90,8 +97,10 @@
         
     </div>
 </section>
+{% endif %}
 
 <!--benefits section-->
+{% if benefits%}
 <section class="benefits ">
     <h1 class="text-center">Benefícios Destaques</h1>
     <div class="container mt-4">
@@ -108,5 +117,6 @@
     </div>
 
 </section>
+{% endif %}
 
 {% endblock content %}
