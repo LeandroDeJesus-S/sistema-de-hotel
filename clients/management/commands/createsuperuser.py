@@ -28,9 +28,8 @@ class Command(BaseCommand):
 
         if password != pass_confirm:
             raise CommandError('passwords do not match')
-            
-        
-        c = Client.objects.create(
+
+        c = Client(
             username=username,
             password=password,
             first_name=name,
@@ -38,11 +37,20 @@ class Command(BaseCommand):
             birthdate=bdate,
             email=email,
             phone=phone,
-            cpf=cpf
+            cpf=cpf,
         )
-        self.stdout.write(f'created: {c.pk}')
+        try:
+            c.full_clean()
+        except Exception as exc:
+            raise CommandError(f'invalid data: {exc}') from exc
 
-    
+        c.set_password(password)
+        c.is_superuser = True
+        c.is_staff = True
+        c.save()
+
+        self.stdout.write(f'user successfully created: {c.username}')
+
     @staticmethod
     def input_date():
         date = input('birth date (yyy-mm-dd): ')
@@ -51,5 +59,6 @@ class Command(BaseCommand):
             return date
 
         except ValueError as exc:
-            raise CommandError('cannot convert birth date to the valid date format yyy-mm-dd') from exc
-
+            raise CommandError(
+                'cannot convert birth date to the valid date format yyy-mm-dd'
+            ) from exc
