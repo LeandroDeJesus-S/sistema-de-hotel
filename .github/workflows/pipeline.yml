@@ -1,0 +1,36 @@
+run-name: execute tests
+on:
+    push:
+        branches:
+            - main
+            - develop
+    pull_request:
+        branches:
+            - main
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - name: load repo
+              uses: actions/checkout@v4
+
+            - name: install poetry
+              run: curl -sSL https://install.python-poetry.org | python3 -
+
+            - name: install python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11.11"
+                  cache: "poetry"
+
+            - name: install dependencies
+              run: |
+                  poetry config virtualenvs.create false
+                  poetry install --no-root
+
+            - name: create .env
+              run: cp .env-example .env
+
+            - name: running tests
+              run: poetry run task test
