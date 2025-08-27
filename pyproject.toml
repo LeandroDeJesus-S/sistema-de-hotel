@@ -54,6 +54,76 @@ dependencies = [
 package-mode = false
 
 
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.17.1"
+ruff = "^0.12.10"
+taskipy = "^1.14.1"
+bandit = {extras = ["toml"], version = "^1.8.6"}
+
+[tool.ruff]
+line-length = 79
+extend-exclude = [
+	"*migrations/*",
+	"*__init__*",
+	"*__pyc*",
+    "media/",
+    "*templates/*",
+    "readme",
+    "tests/",
+    "*_test.py",
+    "manage.py"
+]
+indent-width = 4
+output-format = "grouped"
+
+[tool.ruff.lint]
+preview = true
+select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+
+[tool.ruff.format]
+preview = true
+quote-style = "single"
+docstring-code-format = true
+docstring-code-line-length = 72
+line-ending = "lf"
+
+[tool.taskipy.tasks]
+lint = 'ruff check . --diff --preview'
+format = 'ruff format --target-version py39 --respect-gitignore'
+run = 'python manage.py runserver'
+typecheck = 'mypy . --ignore-missing-imports'
+
+pre_test = 'task format && task typecheck'
+test = 'python manage.py test'
+post_test = 'task scan'
+
+scan = 'bandit -c pyproject.toml -r .'
+
+[tool.mypy]
+exclude = [
+	"*migrations/*",
+	"*__init__*",
+	"*__pyc*",
+    "media/",
+    "*templates/*",
+    "readme",
+    "tests/",
+    "*_test.py",
+    "manage.py"
+]
+ignore_missing_imports = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+pretty = true
+
+[tool.bandit]
+exclude_dirs = [
+    'tests',
+    'media',
+    'templates',
+]
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
