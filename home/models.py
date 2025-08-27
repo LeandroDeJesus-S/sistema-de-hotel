@@ -22,7 +22,7 @@ class Hotel(models.Model):
     )
 
     def __str__(self) -> str:
-        return self.name
+        return str(self.name)
 
     class Meta:
         verbose_name_plural = 'Hotéis'

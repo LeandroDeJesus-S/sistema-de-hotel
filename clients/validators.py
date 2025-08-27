@@ -6,7 +6,7 @@ from django.utils.deconstruct import deconstructible
 from utils.supportmodels import ContactErrorMessages
 
 
-def validate_phone_number(phone):
+def validate_phone_number(phone: str) -> None:
     re_match = re.match(r'^[1-9]\d{0,1}9\d{7,8}$', phone)
     if re_match is None:
         raise ValidationError(ContactErrorMessages.INVALID_PHONE)
@@ -14,12 +14,12 @@ def validate_phone_number(phone):
 
 @deconstructible
 class CpfValidator:  # noqa: PLW1641  # TODO: refactoring needed
-    def __init__(self, message) -> None:
-        self._cpf = None
-        self._verified_cpf = None
+    def __init__(self, message: str) -> None:
+        self._cpf = ''
+        self._verified_cpf = ''
         self._message = message
 
-    def __call__(self, cpf):
+    def __call__(self, cpf: str) -> None:
         self._cpf = cpf
         self._verified_cpf = self.validate()
         if not self.is_valid():
@@ -39,6 +39,8 @@ class CpfValidator:  # noqa: PLW1641  # TODO: refactoring needed
         Returns:
             str: resultado do calculo do primeiro digito.
         """
+        if not self._cpf:
+            raise ValueError('CPF não fornecido para validação')
         result, m = 0, 10
         for c in self._cpf[:-2]:
             calc = int(c) * m
@@ -54,6 +56,8 @@ class CpfValidator:  # noqa: PLW1641  # TODO: refactoring needed
         Returns:
             str: resultado do calculo do segundo digito.
         """
+        if not self._cpf:
+            raise ValueError('CPF não fornecido para validação')
         m, ac = 11, 0
         for i in self._cpf[:-2] + self.calculate_first_digit():
             calc = int(i) * m
@@ -77,6 +81,8 @@ class CpfValidator:  # noqa: PLW1641  # TODO: refactoring needed
         Returns:
             bool: True se for uma sequencia de digitos, False se não for
         """
+        if not self._cpf:
+            raise ValueError('CPF não fornecido para validação')
         verify = self._cpf[0] * 11
         return True if verify == self._cpf else False
 
@@ -86,6 +92,8 @@ class CpfValidator:  # noqa: PLW1641  # TODO: refactoring needed
         Returns:
             bool: True se o comprimento for valido ou False se não é valido.
         """
+        if not self._cpf:
+            raise ValueError('CPF não fornecido para validação')
         return True if len(self._cpf) == 11 else False  # noqa: PLR2004
 
     def validate(self) -> str:
@@ -95,8 +103,11 @@ class CpfValidator:  # noqa: PLW1641  # TODO: refactoring needed
         Returns:
             str: cpf com calculo do primeiro e segundo digito para validar
         """
+        if not self._cpf:
+            raise ValueError('CPF não fornecido para validação')
+
         if self.is_sequence() or not self.has_valid_length():
-            return False
+            return ''
         base = self._cpf[:-2]
         first_digit = self.calculate_first_digit()
         second_digit = self.calculate_second_digit()

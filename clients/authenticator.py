@@ -16,11 +16,12 @@ class UserEmailAuthBackend(BaseBackend):
             )
             if user.check_password(password):
                 return user
+            return None
         except UserModel.DoesNotExist:
-            return
+            return None
 
     def get_user(self, user_id: int) -> AbstractBaseUser | None:  # noqa: PLR6301
         try:
             return UserModel.objects.get(pk__exact=user_id)
         except UserModel.DoesNotExist:
-            return
+            return None

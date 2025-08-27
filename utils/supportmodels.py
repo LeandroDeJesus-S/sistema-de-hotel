@@ -58,7 +58,7 @@ class ClientRules:
     MAX_SURNAME_CHARS = 50
     MIN_SURNAME_CHARS = 2
 
-    PASSWORD_SUPPORTED_SYMBOLS = "@<>();'-+*;"
+    PASSWORD_SUPPORTED_SYMBOLS = "@<>();'-+*;"  # nosec
     PASSWORD_MIN_SIZE = 8
 
     CPF_MASK_RANGE = 2, -4

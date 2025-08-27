@@ -1,5 +1,5 @@
 import io
-from datetime import datetime
+from datetime import date
 from secrets import token_hex
 from typing import Any
 
@@ -16,8 +16,7 @@ from stripe.checkout import Session
 
 from home.models import Contact, Hotel
 from payments.models import Payment
-
-from .supportviews import ReserveSupport
+from utils.supportviews import ReserveSupport
 
 
 class PaymentPDFHandler:
@@ -186,19 +185,6 @@ def resize_image(img_path, w, h=None):
     img.close()
 
 
-def fmt_date(value: str, fmt='%d/%m/%Y') -> str:
-    """formata a data no formato especificado.
-
-    Args:
-        value (str): data a ser formatada
-        fmt (str, optional): padrão para a formatação. Defaults to '%d/%m/%Y'.
-
-    Returns:
-        str: data formatada.
-    """
-    return datetime.strftime(value, fmt)
-
-
 def verify_captcha(captcha_resp) -> bool:
     """realiza a validação do google recaptcha v3
 
@@ -213,9 +199,28 @@ def verify_captcha(captcha_resp) -> bool:
         'response': captcha_resp,
         'secret': settings.G_RECAPTCHA_KEY_SECRET,
     }
-    response = requests.post('https://www.google.com/recaptcha/api/siteverify', data=data)
+    try:
+        response = requests.post(
+            'https://www.google.com/recaptcha/api/siteverify', data=data, timeout=5
+        )
+    except requests.Timeout:
+        return False
+
     json_resp = response.json()
     success = json_resp.get('success', False)
     good_score = json_resp.get('score', 0) > MIN_SCORE
     is_valid = success and good_score
     return True if is_valid else False
+
+
+def fmt_date(value: date, fmt='%d/%m/%Y') -> str:
+    """formata a data no formato especificado.
+
+    Args:
+        value (date): data a ser formatada
+        fmt (str, optional): padrão para a formatação. Defaults to '%d/%m/%Y'.
+
+    Returns:
+        str: data formatada.
+    """
+    return value.strftime(fmt)

@@ -127,7 +127,7 @@ class Client(AbstractUser):
 
     def clean(self) -> None:
         super().clean()
-        self.error_messages = {}
+        self.error_messages: dict[str, str] = {}
         self._validate_username()
         self._validate_password_strength()
         self._validate_birthdate()
@@ -157,7 +157,7 @@ class Client(AbstractUser):
             self.error_messages['password'] = ClientErrorMessages.PASSWORD_WEAK
 
     def __str__(self) -> str:
-        return self.username
+        return str(self.username)
 
     @staticmethod
     def _create_mask(value: str, start: int, end: int, maskchar='*') -> str:
@@ -180,19 +180,19 @@ class Client(AbstractUser):
             raise ValueError('end must be a negative value')
 
         end = len(value) + end
-        mask = [maskchar if start <= i <= end else d for i, d in enumerate(value)]
-        mask = ''.join(mask)
-        return mask
+        mask_list = [maskchar if start <= i <= end else d for i, d in enumerate(value)]
+        masked_value = ''.join(mask_list)
+        return masked_value
 
     @property
     def complete_name(self) -> str:
         """retorna o nome completo do usuário com as primeiras letras maiúsculas"""
-        return self.get_full_name().title()
+        return str(self.get_full_name().title())
 
     @property
     def age(self) -> int:
         """retorna a idade do usuário"""
-        return now().year - self.birthdate.year
+        return int(now().year - self.birthdate.year)
 
     @property
     def formatted_phone(self) -> str:
@@ -214,7 +214,7 @@ class Client(AbstractUser):
         return self._create_mask(self.email, *ClientRules.EMAIL_MASK_RANGE)
 
     @property
-    def masked_cpf(self):
+    def masked_cpf(self) -> str:
         """cpf com dígitos mascarados"""
         masked = self._create_mask(self.cpf, *ClientRules.CPF_MASK_RANGE)
         return masked

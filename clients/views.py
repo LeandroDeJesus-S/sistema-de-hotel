@@ -140,7 +140,7 @@ class SignIn(View):
         if next_url:
             deleted = request.session.pop('next_url')
             request.session.save()
-            self.logger.debug(f'delete {deleted} from session')
+            self.logger.debug(f'delete {deleted} from session')  # nosec
         else:
             next_url = self.next_url
 
@@ -189,7 +189,7 @@ class PerfilUpdate(LoginRequired, UpdateView):
     form_class = UpdatePerfilForm
 
     def get_success_url(self) -> str:
-        return reverse_lazy('perfil', args=(self.object.pk,))
+        return str(reverse_lazy('perfil', args=(self.object.pk,)))
 
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         _check_perfil_ownership(request, kwargs.get('pk'))
@@ -242,7 +242,7 @@ class PerfilDelete(LoginRequired, DeleteView):
 
     @staticmethod
     def get_success_url() -> str:
-        return reverse_lazy('rooms')
+        return str(reverse_lazy('rooms'))
 
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         _check_perfil_ownership(request, kwargs.get('pk'))

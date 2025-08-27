@@ -13,6 +13,7 @@ class Command(BaseCommand):
             self.program(*args, **options)
         except KeyboardInterrupt:
             self.stderr.write('command stopped')
+        return None
 
     def program(self, *args, **options):
         self.stdout.write('Pass the requested informations')

@@ -62,7 +62,7 @@ class Benefit(models.Model):
 
     def clean(self) -> None:
         super().clean()
-        self.error_messages = {}
+        self.error_messages: dict[str, str] = {}
         self._validate_icon_size()
 
         if self.error_messages:
@@ -76,7 +76,7 @@ class Benefit(models.Model):
                 self.error_messages['icon'] = BenefitErrorMessages.INVALID_ICON_SIZE
 
     def __str__(self) -> str:
-        return self.name
+        return str(self.name)
 
 
 class Class(models.Model):
@@ -92,7 +92,7 @@ class Class(models.Model):
     )
 
     def __str__(self) -> str:
-        return self.name
+        return str(self.name)
 
     class Meta:
         verbose_name = 'Classe'
@@ -213,7 +213,7 @@ class Room(models.Model):
         """valor da diária do quarto no formato R$xn.xx"""
         return f'R${self.daily_price:.2f}'
 
-    daily_price_formatted.short_description = 'Preço da diária'
+    daily_price_formatted.short_description = 'Preço da diária'  # type: ignore[attr-defined]
 
     @property
     def daily_price_in_cents(self) -> int:
@@ -313,18 +313,18 @@ class Reservation(models.Model):
             return f'R${self.amount:.2f}'
         raise AttributeError('Custo não foi persistido.')
 
-    formatted_price.short_description = 'Valor total da reserva'
+    formatted_price.short_description = 'Valor total da reserva'  # type: ignore[attr-defined]
 
     def calc_reservation_value(self) -> Decimal:
         """ "calcula o valor da reserva atribuindo a model e retorna o valor
         em centavos."""
         days = Decimal(str((self.checkout - self.checkin).days))
         value = self.room.daily_price * days
-        return value
+        return Decimal(value)
 
     def clean(self) -> None:
         super().clean()
-        self.error_messages = {}
+        self.error_messages: dict[str, str] = {}
         if self.status == 'I':
             self._validate_date_availability(self.error_messages, 'checkin')
             self._validate_check_in()
@@ -400,6 +400,8 @@ class Reservation(models.Model):
             dates = self.get_free_dates(reservations)
             msg = ReserveErrorMessages.UNAVAILABLE_DATE.format_map({'dates': dates})
             msg_dict[k] = msg
+            return False
+        return True
 
     def _validate_check_in(self):
         """realiza as validações relacionadas ao check-in"""
@@ -424,7 +426,7 @@ class Reservation(models.Model):
     @property
     def reservation_days(self) -> int:
         """retorna a quantidade dias da reserva"""
-        return (self.checkout - self.checkin).days
+        return int((self.checkout - self.checkin).days)
 
     @property
     def coast_in_cents(self):

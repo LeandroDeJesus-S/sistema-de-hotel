@@ -32,7 +32,7 @@ class Schedules(LoginRequired, View):
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
         super().setup(request, *args, **kwargs)
         self.logger = logging.getLogger('djangoLogger')
-        self.context = {}
+        self.context: dict[str, Any] = {}
 
     def get(self, request, room_pk, *args, **kwargs):
         self.logger.debug(f'schedule for room {room_pk} received')

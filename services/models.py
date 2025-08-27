@@ -36,7 +36,7 @@ class Service(models.Model):
     )
 
     def __str__(self) -> str:
-        return self.name
+        return str(self.name)
 
     def save(self, *args, **kwargs) -> None:
         super().save(*args, **kwargs)

@@ -59,6 +59,7 @@ mypy = "^1.17.1"
 ruff = "^0.12.10"
 taskipy = "^1.14.1"
 bandit = {extras = ["toml"], version = "^1.8.6"}
+types-requests = "^2.32.4.20250809"
 
 [tool.ruff]
 line-length = 95
