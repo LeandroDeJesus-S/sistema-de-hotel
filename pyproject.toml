@@ -61,7 +61,7 @@ taskipy = "^1.14.1"
 bandit = {extras = ["toml"], version = "^1.8.6"}
 
 [tool.ruff]
-line-length = 79
+line-length = 95
 extend-exclude = [
 	"*migrations/*",
 	"*__init__*",
@@ -84,12 +84,12 @@ select = ['I', 'F', 'E', 'W', 'PL', 'PT']
 preview = true
 quote-style = "single"
 docstring-code-format = true
-docstring-code-line-length = 72
+docstring-code-line-length = 90
 line-ending = "lf"
 
 [tool.taskipy.tasks]
-lint = 'ruff check . --diff --preview'
-format = 'ruff format --target-version py39 --respect-gitignore'
+lint = 'ruff check . --preview'
+format = 'ruff check --fix && ruff format --target-version py39 --respect-gitignore'
 run = 'python manage.py runserver'
 typecheck = 'mypy . --ignore-missing-imports'
 
