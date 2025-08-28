@@ -1,12 +1,14 @@
 import logging
 from typing import Any
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpRequest
 from django.shortcuts import HttpResponse, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, UpdateView
@@ -15,7 +17,6 @@ from clients.models import Client
 from reservations.mixins import LoginRequired
 from utils import support
 from utils.supportviews import (
-    INVALID_RECAPTCHA_MESSAGE,
     PerfilChangePasswordMessages,
     SignInMessages,
     SignUpMessages,
@@ -23,7 +24,10 @@ from utils.supportviews import (
 
 from .forms import UpdatePerfilForm
 
+CAPTCHA_CTX = {'recaptcha_site_key': settings.G_RECAPTCHA_KEY_SITE}
 
+
+@method_decorator(support.captcha_required('signup'), name='post')
 class SignUp(View):
     """View responsável por realizar o registro de novos usuários"""
 
@@ -38,7 +42,7 @@ class SignUp(View):
             self.logger.info(f'user already logged in. Redirecting to {self._redirect.url}')
             return self._redirect
 
-        return render(request, self.template_name)
+        return render(request, self.template_name, CAPTCHA_CTX)
 
     def post(self, request: HttpRequest):
         username = self.request.POST.get('username', '').strip()
@@ -49,11 +53,6 @@ class SignUp(View):
         email = self.request.POST.get('email', '').strip()
         birthdate = self.request.POST.get('nascimento')
         cpf = self.request.POST.get('cpf', '').strip()
-        captcha = request.POST.get('g-recaptcha-response')
-        if not support.verify_captcha(captcha):
-            self.logger.debug(f'captcha response: {captcha}')
-            messages.error(request, INVALID_RECAPTCHA_MESSAGE)
-            return redirect(request.META.get('HTTP_REFERER', 'signup'))
 
         if not all((
             username,
@@ -96,6 +95,7 @@ class SignUp(View):
         return _redirect
 
 
+@method_decorator(support.captcha_required('signin'), name='post')
 class SignIn(View):
     """View responsável por realizar a autenticação do usuário"""
 
@@ -116,16 +116,11 @@ class SignIn(View):
             return redirect('rooms')
 
         self.logger.debug(f'rendering {self.template}')
-        return render(request, self.template)
+        return render(request, self.template, CAPTCHA_CTX)
 
     def post(self, request: HttpRequest, *args, **kwargs):
         username = request.POST.get('username')
         password = request.POST.get('password')
-        captcha = request.POST.get('g-recaptcha-response')
-        if not support.verify_captcha(captcha):
-            self.logger.debug(f'captcha response: {captcha}')
-            messages.error(request, INVALID_RECAPTCHA_MESSAGE)
-            return redirect(request.META.get('HTTP_REFERER', 'signin'))
 
         user = authenticate(request, username=username, password=password)
         if user is None:
@@ -181,6 +176,7 @@ class Perfil(LoginRequired, DetailView):
         return super().dispatch(request, *args, **kwargs)
 
 
+@method_decorator(support.captcha_required('update_perfil', params=('pk',)), name='post')
 class PerfilUpdate(LoginRequired, UpdateView):
     """view responsável por gerenciar a atualização dos dados do usuário."""
 
@@ -191,11 +187,17 @@ class PerfilUpdate(LoginRequired, UpdateView):
     def get_success_url(self) -> str:
         return str(reverse_lazy('perfil', args=(self.object.pk,)))
 
+    def get_context_data(self, **kwargs):
+        return {**super().get_context_data(**kwargs), **CAPTCHA_CTX}
+
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         _check_perfil_ownership(request, kwargs.get('pk'))
         return super().dispatch(request, *args, **kwargs)
 
 
+@method_decorator(
+    support.captcha_required('update_perfil_password', params=('pk',)), name='post'
+)
 class PerfilChangePassword(LoginRequired, View):
     """view responsável por gerenciar a alteração da senha do usuário"""
 
@@ -206,16 +208,11 @@ class PerfilChangePassword(LoginRequired, View):
 
     def get(self, *args, **kwargs):
         self.logger.debug(f'rendering {self.template}')
-        return render(self.request, self.template)
+        return render(self.request, self.template, CAPTCHA_CTX)
 
     def post(self, request, *args, **kwargs):
         new_pass = self.request.POST.get('new_password')
         pass_repeat = self.request.POST.get('password_repeat')
-        captcha = request.POST.get('g-recaptcha-response')
-        if not support.verify_captcha(captcha):
-            messages.error(request, INVALID_RECAPTCHA_MESSAGE)
-            default_url = reverse('update_perfil_password', args=(request.user.pk,))
-            return redirect(request.META.get('HTTP_REFERER', default_url))
 
         if new_pass == pass_repeat:
             self.request.user.set_password(new_pass)
@@ -236,6 +233,7 @@ class PerfilChangePassword(LoginRequired, View):
         return super().dispatch(request, *args, **kwargs)
 
 
+@method_decorator(support.captcha_required('delete_perfil', params=('pk',)), name='post')
 class PerfilDelete(LoginRequired, DeleteView):
     model = Client
     template_name = 'perfil_delete.html'
@@ -243,6 +241,9 @@ class PerfilDelete(LoginRequired, DeleteView):
     @staticmethod
     def get_success_url() -> str:
         return str(reverse_lazy('rooms'))
+
+    def get_context_data(self, **kwargs):
+        return {**super().get_context_data(**kwargs), **CAPTCHA_CTX}
 
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         _check_perfil_ownership(request, kwargs.get('pk'))

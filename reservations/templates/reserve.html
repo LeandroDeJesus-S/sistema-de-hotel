@@ -1,4 +1,3 @@
-
 {% extends 'base.html' %}
 {% load static %}
 
@@ -34,13 +33,13 @@
                         <textarea maxlength="100" name="obs" id="obs" class="form-control" placeholder="Ex.: Decoração de aniversário de casamento"></textarea>
                     </div>
                 </div>
-                {% include "partials/_recaptcha_input.html" %}
                 <div class="col-md-12 d-flex justify-content-center mt-3">
                     <button type="submit" class="btn btn-outline-info">Enviar</button>
                 </div>
             </div>
         </div>
-
+        
+        {% include "partials/_recaptcha_input.html" %}
     </form>
 
 </div>
@@ -48,8 +47,3 @@
 {% include "partials/_recaptcha_v3.html" %}
 {% endblock content %}
 
-{% block footer %}
-    <footer class="footer fixed-bottom">
-        {% include "partials/_footer.html" %}
-    </footer>
-{% endblock footer %}

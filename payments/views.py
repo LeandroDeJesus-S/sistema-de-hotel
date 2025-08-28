@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -9,19 +10,23 @@ from django.http import HttpRequest
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.http import require_GET
 from django_q.tasks import Task, async_task
 
 from reservations.decorators import check_reservation_ownership
 from reservations.models import Reservation
-from utils.support import ReservationStripePaymentCreator
+from utils.support import ReservationStripePaymentCreator, captcha_required
 from utils.supportviews import CheckoutMessages, PaymentCancelMessages
 
 from .models import Payment
 from .tasks import create_payment_pdf
 
+RECAPTCHA_CTX = {'recaptcha_site_key': settings.G_RECAPTCHA_KEY_SITE}
 
+
+@method_decorator(captcha_required('rooms'), name='post')
 class Checkout(LoginRequiredMixin, View):
     """view que renderiza a pagina de checkout para o usuário e
     cria a sessão de pagamento do stripe"""
@@ -36,7 +41,7 @@ class Checkout(LoginRequiredMixin, View):
     def get(self, request: HttpRequest, reservation_pk: int, *args, **kwargs):
         reservation = get_object_or_404(Reservation, pk__exact=reservation_pk)
         self.logger.debug(f'rendering {self.template}')
-        return render(request, self.template, {'reservation': reservation})
+        return render(request, self.template, {'reservation': reservation, **RECAPTCHA_CTX})
 
     @transaction.atomic
     def post(self, request: HttpRequest, reservation_pk: int, *args, **kwargs):
@@ -82,7 +87,7 @@ class Checkout(LoginRequiredMixin, View):
     def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         reservation = get_object_or_404(Reservation, pk=kwargs.get('reservation_pk'))
         if request.user.is_authenticated and reservation.client != request.user:
-            self.logger.warn(
+            self.logger.warning(
                 f'permission denied for user {request.user.pk} '
                 f'to access reservation {reservation.pk}'
             )

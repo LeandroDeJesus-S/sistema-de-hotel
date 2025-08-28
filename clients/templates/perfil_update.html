@@ -24,7 +24,9 @@
                 <input class="btn btn-outline-info" type="submit">
             </div>
         </div>
-
+        {% include "partials/_recaptcha_input.html" %}
     </form>
+
+    {% include "partials/_recaptcha_v3.html" %}
 
 {% endblock content %}

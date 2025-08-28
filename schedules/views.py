@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -8,6 +9,7 @@ from django.db import OperationalError, transaction
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.http import require_GET
 from django_q.tasks import Schedule, Task, async_task
@@ -20,11 +22,14 @@ from reservations.models import Reservation, Room
 from reservations.validators import convert_date
 from utils import support
 from utils.support import ReservationStripePaymentCreator
-from utils.supportviews import INVALID_RECAPTCHA_MESSAGE, CheckoutMessages
+from utils.supportviews import CheckoutMessages
 
 from .models import Scheduling
 
+CAPTCHA_CTX = {'recaptcha_site_key': settings.G_RECAPTCHA_KEY_SITE}
 
+
+@method_decorator(support.captcha_required('schedule'), name='post')
 class Schedules(LoginRequired, View):
     """View responsável por gerenciar os dados de agendamentos
     e redirecionar para a página de pagamentos."""
@@ -37,7 +42,7 @@ class Schedules(LoginRequired, View):
     def get(self, request, room_pk, *args, **kwargs):
         self.logger.debug(f'schedule for room {room_pk} received')
         self.context['room_pk'] = room_pk
-        return render(self.request, 'schedule.html', self.context)
+        return render(self.request, 'schedule.html', {**self.context, **CAPTCHA_CTX})
 
     @transaction.atomic
     def post(self, request, room_pk, *args, **kwargs):
@@ -50,12 +55,6 @@ class Schedules(LoginRequired, View):
         CHECK_IN = convert_date(self.request.POST.get('checkin', '0001-01-01'))
         CHECKOUT = convert_date(self.request.POST.get('checkout', '0001-01-01'))
         OBS = self.request.POST.get('obs', '')
-        captcha = request.POST.get('g-recaptcha-response')
-        if not support.verify_captcha(captcha):
-            messages.error(request, INVALID_RECAPTCHA_MESSAGE)
-            return redirect(
-                request.META.get('HTTP_REFERER', reverse('schedule', args=(room_pk,)))
-            )
 
         try:
             room = get_object_or_404(Room, pk__exact=room_pk)
@@ -109,7 +108,7 @@ class Schedules(LoginRequired, View):
         except ValidationError as exc:
             messages.error(request, exc.messages[0])
             self.logger.error(exc.error_dict)
-            return render(request, 'schedule.html', self.context)
+            return render(request, 'schedule.html', {**self.context, **CAPTCHA_CTX})
 
         except OperationalError as exc:
             messages.info(request, CheckoutMessages.TRANSACTION_BLOCKING)

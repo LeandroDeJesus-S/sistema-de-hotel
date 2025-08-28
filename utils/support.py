@@ -1,12 +1,15 @@
 import io
 from datetime import date
+from functools import wraps
 from secrets import token_hex
 from typing import Any
 
 import requests
 import stripe
 from django.conf import settings
+from django.contrib import messages
 from django.core.mail import EmailMessage
+from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.timezone import now, timedelta
 from PIL import Image
@@ -16,7 +19,7 @@ from stripe.checkout import Session
 
 from home.models import Contact, Hotel
 from payments.models import Payment
-from utils.supportviews import ReserveSupport
+from utils.supportviews import INVALID_RECAPTCHA_MESSAGE, ReserveSupport
 
 
 class PaymentPDFHandler:
@@ -211,6 +214,40 @@ def verify_captcha(captcha_resp) -> bool:
     good_score = json_resp.get('score', 0) > MIN_SCORE
     is_valid = success and good_score
     return True if is_valid else False
+
+
+def captcha_required(
+    on_fail_redirect: str, on_fail_message: str = INVALID_RECAPTCHA_MESSAGE, params=None
+):
+    """
+    Decorator that checks if the request contains a valid recaptcha response.
+
+    If the captcha is invalid, it redirects the user to the on_fail_redirect url.
+
+    Args:
+        on_fail_redirect (str): url to redirect the user if the captcha is invalid
+        on_fail_message (str, optional): message to display if the captcha is invalid.
+            Defaults to INVALID_RECAPTCHA_MESSAGE.
+    """
+    if not isinstance(params, tuple) and params is not None:
+        raise TypeError('params must be a tuple')
+    elif params is None:
+        params = ()
+
+    def decorator(func):
+        @wraps(func)
+        def decorated(request, *args, **kwargs):
+            captcha_resp = request.POST.get('g-recaptcha-response')
+
+            if not verify_captcha(captcha_resp):
+                messages.error(request, on_fail_message)
+                return redirect(on_fail_redirect, **{k: kwargs[k] for k in params})
+
+            return func(request, *args, **kwargs)
+
+        return decorated
+
+    return decorator
 
 
 def fmt_date(value: date, fmt='%d/%m/%Y') -> str:

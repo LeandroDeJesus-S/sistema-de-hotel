@@ -2,14 +2,16 @@ import logging
 from datetime import timedelta
 from typing import Any
 
+from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models.query import QuerySet
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
@@ -17,7 +19,6 @@ from django_q.tasks import schedule
 
 from utils import support
 from utils.supportviews import (
-    INVALID_RECAPTCHA_MESSAGE,
     ReserveMessages,
     ReserveSupport,
 )
@@ -85,6 +86,7 @@ class RoomDetail(DetailView):
         return context
 
 
+@method_decorator(support.captcha_required('reserve', params=('room_pk',)), name='post')
 class Reserve(LoginRequired, View):
     """gerencia a criação de novas reservas"""
 
@@ -105,6 +107,7 @@ class Reserve(LoginRequired, View):
             return redirect('rooms')
 
         self.context['room_pk'] = room_pk
+        self.context['recaptcha_site_key'] = settings.G_RECAPTCHA_KEY_SITE
         self.logger.debug(f'rendering {self.template_name}')
         return render(request, self.template_name, self.context)
 
@@ -116,12 +119,6 @@ class Reserve(LoginRequired, View):
             CHECK_IN = convert_date(self.request.POST.get('checkin', '0001-01-01'))
             CHECKOUT = convert_date(self.request.POST.get('checkout', '0001-01-01'))
             OBS = self.request.POST.get('obs', '')
-            captcha = request.POST.get('g-recaptcha-response')
-            if not support.verify_captcha(captcha):
-                messages.error(request, INVALID_RECAPTCHA_MESSAGE)
-                return redirect(
-                    request.META.get('HTTP_REFERER', reverse('reserve', args=(room_pk,)))
-                )
 
             with transaction.atomic():
                 reservation = Reservation(
