@@ -2,24 +2,19 @@ import io
 from datetime import date
 from functools import wraps
 from secrets import token_hex
-from typing import Any
 
 import requests
-import stripe
 from django.conf import settings
 from django.contrib import messages
 from django.core.mail import EmailMessage
 from django.shortcuts import redirect
-from django.urls import reverse
-from django.utils.timezone import now, timedelta
 from PIL import Image
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-from stripe.checkout import Session
 
 from home.models import Contact, Hotel
 from payments.models import Payment
-from utils.supportviews import INVALID_RECAPTCHA_MESSAGE, ReserveSupport
+from utils.supportviews import INVALID_RECAPTCHA_MESSAGE
 
 
 class PaymentPDFHandler:
@@ -106,64 +101,6 @@ class PaymentPDFHandler:
         )
         msg.attach(self.pdf_name, self.buffer.getvalue(), 'application/pdf')
         return msg.send(fail_silently=False)
-
-
-class ReservationStripePaymentCreator:
-    """Cria a session para pagamento da reserva pelo stripe"""
-
-    stripe.api_key = settings.STRIPE_API_KEY_SECRET
-
-    def __init__(self, request, reservation, success_url_name, cancel_url_name) -> None:
-        self.baseurl = f'http://{request.get_host()}'
-        self.success_url = self.baseurl + reverse(success_url_name, args=(reservation.pk,))
-        self.cancel_url = self.baseurl + reverse(cancel_url_name, args=(reservation.pk,))
-        self.expires_at = int(
-            (
-                now() + timedelta(minutes=ReserveSupport.RESERVATION_PATIENCE_MINUTES)
-            ).timestamp()
-        )
-        self.reservation = reservation
-
-        params = self._create_params()
-        self._session = self._create_session(**params)
-
-    @property
-    def session(self):
-        return self._session
-
-    def _create_params(self) -> dict[str, Any]:
-        prod_name = (
-            f'Reserva: Quarto Nº{self.reservation.room.number}, '
-            f'classe {self.reservation.room.room_class}.'
-        )
-        params = {
-            'mode': 'payment',
-            'success_url': self.success_url,
-            'cancel_url': self.cancel_url,
-            'expires_at': self.expires_at,
-            'line_items': [
-                {
-                    'adjustable_quantity': {
-                        'enabled': False,
-                    },
-                    'price_data': {
-                        'currency': 'brl',
-                        'product_data': {
-                            'name': prod_name,
-                        },
-                        'unit_amount': self.reservation.room.daily_price_in_cents,
-                    },
-                    'quantity': self.reservation.reservation_days,
-                }
-            ],
-        }
-        return params
-
-    def _create_session(self, **params) -> Session:  # noqa: PLR6301
-        return Session.create(**params)
-
-    def __str__(self) -> str:
-        return f'{self.__class__.__name__}({self.__dict__})'
 
 
 def resize_image(img_path, w, h=None):
