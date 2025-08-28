@@ -34,6 +34,8 @@ class Schedules(LoginRequired, View):
     """View responsável por gerenciar os dados de agendamentos
     e redirecionar para a página de pagamentos."""
 
+    payment_creator_cls = ReservationSessionBasedPaymentCreator
+
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
         super().setup(request, *args, **kwargs)
         self.logger = logging.getLogger('djangoLogger')
@@ -85,7 +87,7 @@ class Schedules(LoginRequired, View):
                 reservation.save()
                 self.logger.info(f'reservation {reservation.pk} created')
 
-            stripe_payment = ReservationSessionBasedPaymentCreator(
+            stripe_payment = self.payment_creator_cls(
                 request=self.request,
                 reservation=reservation,
                 success_url_name='schedule_success',
