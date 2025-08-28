@@ -89,18 +89,20 @@ class TestCheckout(Base):
         response = self.client.get(self.url_client2)
         self.assertIsInstance(response, HttpResponseForbidden)
 
-    @patch('payments.views.ReservationStripePaymentCreator')
-    def test_payment_created_successfully(self, fake_stripe_creator):
+    @patch('utils.support.verify_captcha')
+    @patch('payments.views.Checkout.payment_creator_cls')
+    def test_payment_created_successfully(self, fake_stripe_creator, _):
         """testa se redireciona para a pagina de pagamento com reserva enviada corretamente"""
-        fake_stripe_creator.return_value.session.url = 'http://stripepayment-hostedpage.url'
+        fake_stripe_creator.return_value.session.redirect_url = 'http://stripepayment-hostedpage.url'
 
         self.client.force_login(self.user)
         response = self.client.post(self.url, follow=True)
         self.assertIn(('http://stripepayment-hostedpage.url', HTTPStatus.FOUND), response.redirect_chain, get_message(response))
 
-    @patch('payments.views.ReservationStripePaymentCreator')
+    @patch('utils.support.verify_captcha')
+    @patch('payments.views.Checkout.payment_creator_cls')
     @patch('payments.views.Payment.save', side_effect=OperationalError('Database error'))
-    def test_redireciona_para_rooms_com_msg_correta_caso_operational_error_seja_levantado(self, mock_save, mock_stripe):
+    def test_redireciona_para_rooms_com_msg_correta_caso_operational_error_seja_levantado(self, mock_save, mock_stripe, _):
         """testa se ao levantar OperationalError ao salvar redireciona para a url dos quartos com a
         mensagem correta
         """
@@ -111,9 +113,10 @@ class TestCheckout(Base):
         self.assertRedirects(response, self.rooms_url)
         self.assertEqual(CheckoutMessages.TRANSACTION_BLOCKING, msg)
 
-    @patch('payments.views.ReservationStripePaymentCreator')
+    @patch('utils.support.verify_captcha')
+    @patch('payments.views.Checkout.payment_creator_cls')
     @patch('payments.views.Payment.save', side_effect=Exception('unexpected exception'))
-    def test_redireciona_para_rooms_com_msg_correta_caso__seja_levantada_uma_excecao_inesperada(self, mock_save, mock_stripe):
+    def test_redireciona_para_rooms_com_msg_correta_caso__seja_levantada_uma_excecao_inesperada(self, mock_save, mock_stripe, _):
         """testa se ao levantar exceção inesperada ao salvar redireciona para a url dos quartos com a
         mensagem correta
         """
@@ -124,10 +127,11 @@ class TestCheckout(Base):
         self.assertRedirects(response, self.rooms_url)
         self.assertEqual(CheckoutMessages.PAYMENT_FAIL, msg)
 
-    @patch('payments.views.ReservationStripePaymentCreator')
-    def test_status_reserva_muda_para_P_e_quarto_fica_indisponivel(self, fake_stripe_creator):
+    @patch('utils.support.verify_captcha')
+    @patch('payments.views.Checkout.payment_creator_cls')
+    def test_status_reserva_muda_para_P_e_quarto_fica_indisponivel(self, fake_stripe_creator, _):
         """testa se muda o status da reserva para processando e o quarto para indisponível"""
-        fake_stripe_creator.return_value.session.url = 'http://stripepayment-hostedpage.url'
+        fake_stripe_creator.return_value.session.redirect_url = 'http://stripepayment-hostedpage.url'
 
         self.client.force_login(self.user)
         self.client.post(self.url, follow=True)
@@ -140,16 +144,18 @@ class TestCheckout(Base):
             ['P', False]
         )
 
-    @patch('payments.views.ReservationStripePaymentCreator')
-    def test_status_cria_pagamento_corretamente(self, fake_stripe_creator):
+    @patch('utils.support.verify_captcha')
+    @patch('payments.views.Checkout.payment_creator_cls')
+    def test_status_cria_pagamento_corretamente(self, fake_stripe_creator, _):
         """testa se o pagamento é criado corretamente no banco de dados"""
-        fake_stripe_creator.return_value.session.url = 'http://stripepayment-hostedpage.url'
+        fake_stripe_creator.return_value.session.redirect_url = 'http://stripepayment-hostedpage.url'
 
         self.client.force_login(self.user)
         self.client.post(self.url, follow=True)
 
-        payment = Payment.objects.latest('date')
+        payment = Payment.objects.last()
 
+        self.assertIsNotNone(payment)
         self.assertListEqual(
             [
                 payment.reservation, payment.reservation.room, payment.reservation.client,
@@ -159,10 +165,7 @@ class TestCheckout(Base):
                 self.reservation, self.room, self.user,
                 'P', 'P', False
             ]
-        )
-    
-
-        
+        )       
 
 
 class TestPayementSuccess(Base):

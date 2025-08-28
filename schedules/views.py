@@ -15,13 +15,13 @@ from django.views.decorators.http import require_GET
 from django_q.tasks import Schedule, Task, async_task
 
 from payments.models import Payment
+from payments.stripe_payment import ReservationSessionBasedPaymentCreator
 from payments.tasks import create_payment_pdf
 from reservations.decorators import check_reservation_ownership
 from reservations.mixins import LoginRequired
 from reservations.models import Reservation, Room
 from reservations.validators import convert_date
 from utils import support
-from utils.support import ReservationStripePaymentCreator
 from utils.supportviews import CheckoutMessages
 
 from .models import Scheduling
@@ -29,7 +29,7 @@ from .models import Scheduling
 CAPTCHA_CTX = {'recaptcha_site_key': settings.G_RECAPTCHA_KEY_SITE}
 
 
-@method_decorator(support.captcha_required('schedule'), name='post')
+@method_decorator(support.captcha_required('schedule', params=('room_pk',)), name='post')
 class Schedules(LoginRequired, View):
     """View responsável por gerenciar os dados de agendamentos
     e redirecionar para a página de pagamentos."""
@@ -85,7 +85,7 @@ class Schedules(LoginRequired, View):
                 reservation.save()
                 self.logger.info(f'reservation {reservation.pk} created')
 
-            stripe_payment = ReservationStripePaymentCreator(
+            stripe_payment = ReservationSessionBasedPaymentCreator(
                 request=self.request,
                 reservation=reservation,
                 success_url_name='schedule_success',

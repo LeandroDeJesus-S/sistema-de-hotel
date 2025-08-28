@@ -15,9 +15,10 @@ from django.views import View
 from django.views.decorators.http import require_GET
 from django_q.tasks import Task, async_task
 
+from payments.stripe_payment import ReservationSessionBasedPaymentCreator
 from reservations.decorators import check_reservation_ownership
 from reservations.models import Reservation
-from utils.support import ReservationStripePaymentCreator, captcha_required
+from utils.support import captcha_required
 from utils.supportviews import CheckoutMessages, PaymentCancelMessages
 
 from .models import Payment
@@ -32,6 +33,7 @@ class Checkout(LoginRequiredMixin, View):
     cria a sessão de pagamento do stripe"""
 
     login_url = reverse_lazy('signin')
+    payment_creator_cls = ReservationSessionBasedPaymentCreator
 
     def setup(self, request: HttpRequest, *args, **kwargs) -> None:
         super().setup(request, *args, **kwargs)
@@ -47,7 +49,7 @@ class Checkout(LoginRequiredMixin, View):
     def post(self, request: HttpRequest, reservation_pk: int, *args, **kwargs):
         try:
             reservation = get_object_or_404(Reservation, pk=reservation_pk)
-            reservation_payment = ReservationStripePaymentCreator(
+            reservation_payment = self.payment_creator_cls(
                 request=request,
                 reservation=reservation,
                 success_url_name='payment_success',
@@ -69,8 +71,10 @@ class Checkout(LoginRequiredMixin, View):
             reservation.save()
             payment.save()
             self.logger.info(f'payment {payment.pk} created for reservation {reservation.pk}')
-            self.logger.debug(f'stripe payment session url: {reservation_payment.session.url}')
-            return redirect(reservation_payment.session.url)
+            self.logger.debug(
+                f'stripe payment session url: {reservation_payment.session.redirect_url}'
+            )
+            return redirect(reservation_payment.session.redirect_url)
 
         except OperationalError as exc:
             messages.info(request, CheckoutMessages.TRANSACTION_BLOCKING)
@@ -80,7 +84,7 @@ class Checkout(LoginRequiredMixin, View):
 
         except Exception as exc:
             messages.error(request, CheckoutMessages.PAYMENT_FAIL)
-            self.logger.critical(f'payment unexpected fail: {str(exc)}')
+            self.logger.critical(f'payment unexpected fail: {str(exc)}', exc_info=True)
             redirect_url = request.META.get('HTTP_REFERER', reverse('rooms'))
             return redirect(redirect_url)
 

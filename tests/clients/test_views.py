@@ -461,7 +461,8 @@ class TestPerfilUpdate(BaseTestClient):
         )
         self.assertIsInstance(response, HttpResponseForbidden)
 
-    def test_cliente_altera_os_dados_corretamente_se_tudo_ocorrer_como_esperado(self):
+    @patch('clients.views.support.verify_captcha')
+    def test_cliente_altera_os_dados_corretamente_se_tudo_ocorrer_como_esperado(self, _):
         """testa se um cliente logado consegue alterar seus dados corretamente
         como esperado.
         """
