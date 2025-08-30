@@ -1,7 +1,8 @@
-import pytest
-from django.urls import reverse
 from http import HTTPStatus
+
+import pytest
 from ddf import G
+from django.urls import reverse
 
 from clients.models import Client
 from utils.supporttest import get_message
@@ -151,7 +152,9 @@ def test_different_passwords_do_not_pass_validation_and_redirects_to_perfil(
 
 
 @pytest.mark.django_db
-def test_message_when_passwords_differ(mocker, authenticated_client, perfil_urls, change_password_data):
+def test_message_when_passwords_differ(
+    mocker, authenticated_client, perfil_urls, change_password_data
+):
     """
     Test if the message for different passwords is correct.
     """
@@ -171,7 +174,9 @@ def test_message_when_passwords_differ(mocker, authenticated_client, perfil_urls
 
 
 @pytest.mark.django_db
-def test_message_when_password_changed_successfully(mocker, authenticated_client, perfil_urls, change_password_data):
+def test_message_when_password_changed_successfully(
+    mocker, authenticated_client, perfil_urls, change_password_data
+):
     """
     Test if the password changed successfully message is correct.
     """
@@ -190,7 +195,9 @@ def test_message_when_password_changed_successfully(mocker, authenticated_client
 
 
 @pytest.mark.django_db
-def test_password_persisted_correctly_in_database(mocker, authenticated_client, perfil_urls, change_password_data, user):
+def test_password_persisted_correctly_in_database(
+    mocker, authenticated_client, perfil_urls, change_password_data, user
+):
     """
     Test if the password is validly persisted in the database.
     """

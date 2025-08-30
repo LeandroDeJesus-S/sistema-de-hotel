@@ -1,7 +1,10 @@
 """
 Tests for the payment custom tags.
 """
+
+
 import pytest
+
 from payments.templatetags import payment_customtags as tags
 
 

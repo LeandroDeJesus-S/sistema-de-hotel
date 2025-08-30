@@ -1,9 +1,9 @@
-import re
-import pytest
-from django.core.management import call_command
-from clients.models import Client
 from datetime import date
+
+import pytest
 from django.urls import reverse
+
+from clients.models import Client
 
 
 @pytest.fixture(scope='function')
@@ -19,8 +19,9 @@ def valid_signup_data():
         'telefone': '27988555689',
         'nascimento': date(2003, 5, 1),
         'email': 'email@email.com',
-        'cpf': '52753984093'
+        'cpf': '52753984093',
     }
+
 
 @pytest.fixture(scope='function')
 def existing_user_data(user):
@@ -35,7 +36,7 @@ def existing_user_data(user):
         'telefone': user.phone,
         'nascimento': user.birthdate,
         'email': user.email,
-        'cpf': user.cpf
+        'cpf': user.cpf,
     }
 
 
@@ -49,6 +50,7 @@ def signin_urls():
         'rooms_url': reverse('rooms'),
         'next_url_field_name': 'next',
     }
+
 
 @pytest.fixture(scope='function')
 def perfil_urls(user):
@@ -66,23 +68,6 @@ def perfil_urls(user):
         'perfil_delete_success_url': reverse('rooms'),
     }
 
-@pytest.fixture
-def valid_client_data(faker):
-    """
-    Provides a dictionary with valid data for creating a Client instance.
-    """
-    first_name = re.sub(r'[^a-zA-Z]', '', faker.first_name().split(' ')[0])
-    last_name = re.sub(r'[^a-zA-Z]', '', faker.last_name().split(' ')[0])
-    return {
-        'username': faker.user_name(),
-        'password': faker.password(length=12, special_chars=True, digits=True, upper_case=True, lower_case=True),
-        'first_name': first_name,
-        'last_name': last_name,
-        'birthdate': faker.date_of_birth(minimum_age=18, maximum_age=80),
-        'email': faker.email(),
-        'phone': '11999999999',
-        'cpf': faker.cpf().replace('.', '').replace('-', ''),
-    }
 
 @pytest.fixture
 def user(db, valid_client_data):

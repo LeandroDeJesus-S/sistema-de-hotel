@@ -1,17 +1,17 @@
 """
 Tests for the reservations tasks.
 """
+
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 import pytest
-from django.core.management import call_command
+from ddf import G
 
+from clients.models import Client
 from payments.models import Payment
-from reservations.models import Reservation
+from reservations.models import Reservation, Room
 from reservations.tasks import check_reservation_dates, release_room
-
-
-
 
 
 @pytest.mark.django_db
@@ -45,17 +45,28 @@ def test_release_room_makes_room_available_without_finalized_payment(db_setup):
     if it does not have a finalized payment.
     """
     # Arrange
-    for r in Reservation.objects.all():
-        r.room.available = False
-        r.room.save()
-        r.save()
+    # Create a new client and room for this test to ensure unique reservation_id
+    client = G(Client)
+    room = G(Room)
+    reservation = G(
+        Reservation,
+        client=client,
+        room=room,
+        checkin=datetime.now().date(),
+        checkout=datetime.now().date() + timedelta(days=1),
+        amount=Decimal('100.00'),
+    )
 
-        # Act
-        release_room(r.pk)
+    reservation.room.available = False
+    reservation.room.save()
+    reservation.save()
 
-        # Assert
-        r.refresh_from_db()
-        assert r.room.available
+    # Act
+    release_room(reservation.pk)
+
+    # Assert
+    reservation.refresh_from_db()
+    assert reservation.room.available
 
 
 @pytest.mark.django_db
@@ -64,19 +75,30 @@ def test_release_room_does_not_free_room_with_finalized_payment(db_setup):
     Tests if the release_room task does not release the room if it has a finalized payment.
     """
     # Arrange
-    for r in Reservation.objects.all():
-        r.room.available = False
-        r.room.save()
-        r.save()
+    # Create a new client and room for this test to ensure unique reservation_id
+    client = G(Client)
+    room = G(Room)
+    reservation = G(
+        Reservation,
+        client=client,
+        room=room,
+        checkin=datetime.now().date(),
+        checkout=datetime.now().date() + timedelta(days=1),
+        amount=Decimal('100.00'),
+    )
 
-        Payment.objects.create(reservation=r, amount=r.amount, status='F')
+    reservation.room.available = False
+    reservation.room.save()
+    reservation.save()
 
-        # Act
-        release_room(r.pk)
+    Payment.objects.create(reservation=reservation, amount=reservation.amount, status='F')
 
-        # Assert
-        r.refresh_from_db()
-        assert not r.room.available
+    # Act
+    release_room(reservation.pk)
+
+    # Assert
+    reservation.refresh_from_db()
+    assert not reservation.room.available
 
 
 def test_release_room_does_nothing_if_reservation_does_not_exist(mocker):
@@ -91,4 +113,4 @@ def test_release_room_does_nothing_if_reservation_does_not_exist(mocker):
     try:
         release_room(18)
     except Reservation.DoesNotExist:
-        pytest.fail("Reservation.DoesNotExist was raised unexpectedly")
+        pytest.fail('Reservation.DoesNotExist was raised unexpectedly')

@@ -1,6 +1,7 @@
 """
 Tests for the ReservationsHistory view.
 """
+
 import pytest
 from django.urls import reverse
 
@@ -22,9 +23,7 @@ def test_reservations_history_view_uses_correct_template(authenticated_client):
 
 
 @pytest.mark.django_db
-def test_reservations_history_view_sends_user_reservations_to_context(
-    authenticated_client
-):
+def test_reservations_history_view_sends_user_reservations_to_context(authenticated_client):
     """
     Tests if the logged-in user has access to their reservations."""
     # Arrange

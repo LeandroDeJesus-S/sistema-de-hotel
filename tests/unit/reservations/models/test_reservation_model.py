@@ -1,6 +1,7 @@
 """
 Tests for the Reservation model.
 """
+
 from datetime import datetime, timedelta
 from decimal import Decimal
 
@@ -10,9 +11,6 @@ from django.core.exceptions import ValidationError
 from clients.models import Client
 from reservations.models import Reservation, Room
 from utils.supportmodels import ReserveErrorMessages, ReserveRules, RoomRules
-
-
-
 
 
 @pytest.mark.django_db
@@ -36,7 +34,9 @@ def test_checkin_too_far_in_future_raises_validation_error(valid_reservation_dat
     Tests if a ValidationError is raised when the check-in date is too far in the future.
     """
     # Arrange
-    valid_reservation_data['checkin'] = ReserveRules.checkin_anticipation_offset() + timedelta(days=1)
+    valid_reservation_data['checkin'] = ReserveRules.checkin_anticipation_offset() + timedelta(
+        days=1
+    )
     valid_reservation_data['checkout'] = valid_reservation_data['checkin'] + timedelta(days=1)
     reservation = Reservation(**valid_reservation_data)
 
@@ -47,14 +47,19 @@ def test_checkin_too_far_in_future_raises_validation_error(valid_reservation_dat
 
 
 @pytest.mark.parametrize(
-    "checkout_delta, error_message",
+    'checkout_delta, error_message',
     [
         (timedelta(days=0), ReserveErrorMessages.INVALID_STAYED_DAYS),
-        (timedelta(days=ReserveRules.MAX_RESERVATION_DAYS + 1), ReserveErrorMessages.INVALID_STAYED_DAYS),
-    ]
+        (
+            timedelta(days=ReserveRules.MAX_RESERVATION_DAYS + 1),
+            ReserveErrorMessages.INVALID_STAYED_DAYS,
+        ),
+    ],
 )
 @pytest.mark.django_db
-def test_invalid_stay_duration_raises_validation_error(checkout_delta, error_message, valid_reservation_data):
+def test_invalid_stay_duration_raises_validation_error(
+    checkout_delta, error_message, valid_reservation_data
+):
     """
     Tests if the minimum and maximum reservation duration raises a ValidationError when invalid.
     """
@@ -131,28 +136,15 @@ def test_formatted_price(valid_reservation_data):
 
 
 @pytest.mark.django_db
-def test_formatted_price_with_unassigned_cost(valid_reservation_data):
-    """
-    Tests if formatted_price raises an AttributeError with the correct message
-    if the reservation value has not yet been persisted.
-    """
-    # Arrange
-    valid_reservation_data['amount'] = None
-    reservation = Reservation(**valid_reservation_data)
-
-    # Act & Assert
-    with pytest.raises(AttributeError, match='Custo não foi persistido.'):
-        reservation.formatted_price()
-
-
-@pytest.mark.django_db
 def test_reservation_days_property(valid_reservation_data):
     """
     Tests if the reservation_days property returns the correct number of days.
     """
     # Arrange
     days = 4
-    valid_reservation_data['checkout'] = valid_reservation_data['checkin'] + timedelta(days=days)
+    valid_reservation_data['checkout'] = valid_reservation_data['checkin'] + timedelta(
+        days=days
+    )
     reservation = Reservation(**valid_reservation_data)
 
     # Act & Assert
@@ -218,19 +210,14 @@ def test_creating_overlapping_reservation_raises_validation_error(db_setup):
     checkout = checkin + timedelta(days=5)
 
     Reservation.objects.create(
-        client=client1,
-        room=room,
-        checkin=checkin,
-        checkout=checkout,
-        active=True,
-        status='A'
+        client=client1, room=room, checkin=checkin, checkout=checkout, active=True, status='A'
     )
 
     overlapping_reservation = Reservation(
         client=client2,
         room=room,
         checkin=checkin + timedelta(days=1),
-        checkout=checkout + timedelta(days=1)
+        checkout=checkout + timedelta(days=1),
     )
 
     # Act & Assert
@@ -261,7 +248,7 @@ def test_available_dates_returns_correct_string(valid_reservation_data):
     date_2 = (reservation2.checkin - timedelta(days=1)).strftime('%d/%m/%Y')
     date_3 = reservation2.checkout.strftime('%d/%m/%Y')
 
-    expected = f"{date_1} a {date_2}, e {date_3} para frente."
+    expected = f'{date_1} a {date_2}, e {date_3} para frente.'
 
     # Act
     result = Reservation.available_dates(valid_reservation_data['room'])

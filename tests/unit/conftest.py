@@ -1,6 +1,8 @@
+import re
+
 import pytest
 from django.core.management import call_command
-from ddf import G
+
 from clients.models import Client
 
 
@@ -13,7 +15,7 @@ def auth_backend(settings):
     ]
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='session')
 def django_db_setup(django_db_setup, django_db_blocker):
     """Load data fixtures for all unit tests."""
     with django_db_blocker.unblock():
@@ -25,6 +27,7 @@ def django_db_setup(django_db_setup, django_db_blocker):
         call_command('loaddata', 'tests/fixtures/contato_fixture.json')
         call_command('loaddata', 'tests/fixtures/servico_fixture.json')
         call_command('loaddata', 'tests/fixtures/reserva_fixture.json')
+        call_command('loaddata', 'tests/fixtures/pagamento_fixture.json')
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -33,8 +36,33 @@ def faker_session_locale():
 
 
 @pytest.fixture
-def user(db):
-    return G(Client)
+def valid_client_data(faker):
+    """
+    Provides a dictionary with valid data for creating a Client instance.
+    """
+    first_name = re.sub(r'[^a-zA-Z]', '', faker.first_name().split(' ')[0])
+    last_name = re.sub(r'[^a-zA-Z]', '', faker.last_name().split(' ')[0])
+    return {
+        'username': faker.user_name(),
+        'password': faker.password(
+            length=12, special_chars=True, digits=True, upper_case=True, lower_case=True
+        ),
+        'first_name': first_name,
+        'last_name': last_name,
+        'birthdate': faker.date_of_birth(minimum_age=18, maximum_age=80),
+        'email': faker.email(),
+        'phone': '11999999999',
+        'cpf': faker.cpf().replace('.', '').replace('-', ''),
+    }
+
+
+@pytest.fixture(scope='function')
+def user(db, valid_client_data):
+    """
+    Provides a valid user instance.
+    """
+    return Client.objects.create_user(**valid_client_data)
+
 
 @pytest.fixture(scope='function')
 def authenticated_client(client, user):

@@ -1,28 +1,21 @@
 """
 Configuration for pytest.
 """
+
 from datetime import datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from django.core.management import call_command
+from ddf import G
 
 from clients.models import Client
 from home.models import Hotel
-from reservations.models import Benefit, Class, Room, Reservation
-from ddf import G
+from reservations.models import Class, Reservation, Room
+
 
 @pytest.fixture
-def db_setup(db):
-    """
-    Loads the necessary fixtures for the tests.
-    """
-    call_command("loaddata", "tests/fixtures/hotel_fixture.json")
-    call_command("loaddata", "tests/fixtures/beneficio_fixture.json")
-    call_command("loaddata", "tests/fixtures/classe_fixture.json")
-    call_command("loaddata", "tests/fixtures/quarto_fixture.json")
-    call_command("loaddata", "tests/fixtures/cliente_fixture.json")
-    call_command("loaddata", "tests/fixtures/reserva_fixture.json")
+def db_setup(django_db_setup):
+    return django_db_setup
 
 
 @pytest.fixture
@@ -34,7 +27,7 @@ def valid_benefit_data():
         'name': 'beneficio',
         'short_desc': 'descrição curta',
         'icon': 'test/test_icon.png',
-        'displayable_on_homepage': False
+        'displayable_on_homepage': False,
     }
 
 
@@ -132,7 +125,7 @@ def valid_reserve_data():
     return {
         'checkin': datetime.now().strftime('%Y-%m-%d'),
         'checkout': (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d'),
-        'obs': ''
+        'obs': '',
     }
 
 

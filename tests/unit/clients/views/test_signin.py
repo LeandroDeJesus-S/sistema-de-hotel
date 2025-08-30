@@ -1,14 +1,14 @@
-import pytest
-from django.urls import reverse
 from http import HTTPStatus
-from django.core.management import call_command
 
-from clients.models import Client
+import pytest
+from django.core.management import call_command
+from django.test import Client as DjClient
+from django.urls import reverse
+
 from reservations.models import Room
 from utils.supporttest import get_message
 from utils.supportviews import SignInMessages
 
-from django.test import Client as DjClient
 
 @pytest.fixture(scope='function')
 def room(db):
@@ -43,7 +43,7 @@ def signin_user(user):
     """
     Sets the user's password and saves it.
     """
-    plain_password = "test_password_123"
+    plain_password = 'test_password_123'
     user.set_password(plain_password)
     user.save()
     user.plain_password = plain_password
@@ -83,7 +83,9 @@ def test_authenticated_client_redirected_to_rooms(authenticated_client, signin_u
 
 
 @pytest.mark.django_db
-def test_client_logged_in_with_valid_username_and_password(mocker, client, signin_urls, signin_user):
+def test_client_logged_in_with_valid_username_and_password(
+    mocker, client, signin_urls, signin_user
+):
     """
     Test if the user is logged in correctly via valid username and password.
     """
@@ -100,7 +102,9 @@ def test_client_logged_in_with_valid_username_and_password(mocker, client, signi
 
 
 @pytest.mark.django_db
-def test_client_logged_in_with_valid_email_and_password(mocker, client, signin_urls, signin_user):
+def test_client_logged_in_with_valid_email_and_password(
+    mocker, client, signin_urls, signin_user
+):
     """
     Test if the user is logged in correctly using valid email and password.
     """

@@ -1,7 +1,8 @@
-import pytest
-from django.urls import reverse
 from http import HTTPStatus
+
+import pytest
 from ddf import G
+from django.urls import reverse
 
 from clients.models import Client
 
@@ -159,7 +160,9 @@ def test_client_updates_username_correctly(mocker, authenticated_client, perfil_
 
 
 @pytest.mark.django_db
-def test_client_cannot_change_password_in_perfil_update(mocker, authenticated_client, perfil_urls, user, valid_client_data):
+def test_client_cannot_change_password_in_perfil_update(
+    mocker, authenticated_client, perfil_urls, user, valid_client_data
+):
     """
     Test if the client tries to send a new password, it is not persisted in the database.
     """

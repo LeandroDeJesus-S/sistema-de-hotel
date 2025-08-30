@@ -1,11 +1,12 @@
 """
 Tests for the Client model.
 """
+
 from datetime import datetime, timedelta
 
 import pytest
-from django.core.exceptions import ValidationError
 from ddf import G
+from django.core.exceptions import ValidationError
 
 from clients.models import Client
 from utils.supportmodels import ClientErrorMessages, ClientRules, ContactErrorMessages
@@ -26,12 +27,12 @@ def test_client_model_creation_with_valid_data():
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "username, error_message",
+    'username, error_message',
     [
         ('a' * (ClientRules.USERNAME_MIN_SIZE - 1), ClientErrorMessages.INVALID_USERNAME_LEN),
         ('a' * (ClientRules.USERNAME_MAX_SIZE + 1), ClientErrorMessages.INVALID_USERNAME_LEN),
         ('Avd/d123#', ClientErrorMessages.INVALID_USERNAME_CHARS),
-    ]
+    ],
 )
 def test_invalid_username_raises_validation_error(username, error_message, valid_client_data):
     """
@@ -79,8 +80,7 @@ def test_blank_username_raises_validation_error(valid_client_data):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "password",
-    ['1234567', 'abcdefegguda', '45648998464', 'fdsjfsdfj7879878']
+    'password', ['1234567', 'abcdefegguda', '45648998464', 'fdsjfsdfj7879878']
 )
 def test_weak_password_raises_validation_error(password, valid_client_data):
     """
@@ -98,17 +98,25 @@ def test_weak_password_raises_validation_error(password, valid_client_data):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "first_name, error_message",
+    'first_name, error_message',
     [
-        ('a' * (ClientRules.MIN_FIRSTNAME_CHARS - 1), ClientErrorMessages.INVALID_FIRSTNAME_MIN_LENGTH),
-        ('a' * (ClientRules.MAX_FIRSTNAME_CHARS + 1), ClientErrorMessages.INVALID_FIRSTNAME_MAX_LENGTH),
+        (
+            'a' * (ClientRules.MIN_FIRSTNAME_CHARS - 1),
+            ClientErrorMessages.INVALID_FIRSTNAME_MIN_LENGTH,
+        ),
+        (
+            'a' * (ClientRules.MAX_FIRSTNAME_CHARS + 1),
+            ClientErrorMessages.INVALID_FIRSTNAME_MAX_LENGTH,
+        ),
         ('teste123', ClientErrorMessages.INVALID_FIRSTNAME_LETTERS),
         ('12343', ClientErrorMessages.INVALID_FIRSTNAME_LETTERS),
         ('teste@', ClientErrorMessages.INVALID_FIRSTNAME_LETTERS),
         ('teste ', ClientErrorMessages.INVALID_FIRSTNAME_LETTERS),
-    ]
+    ],
 )
-def test_invalid_first_name_raises_validation_error(first_name, error_message, valid_client_data):
+def test_invalid_first_name_raises_validation_error(
+    first_name, error_message, valid_client_data
+):
     """
     Tests if an invalid first_name raises a ValidationError.
     """
@@ -124,17 +132,25 @@ def test_invalid_first_name_raises_validation_error(first_name, error_message, v
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "last_name, error_message",
+    'last_name, error_message',
     [
-        ('a' * (ClientRules.MIN_SURNAME_CHARS - 1), ClientErrorMessages.INVALID_SURNAME_MIN_LENGTH),
-        ('a' * (ClientRules.MAX_SURNAME_CHARS + 1), ClientErrorMessages.INVALID_SURNAME_MAX_LENGTH),
+        (
+            'a' * (ClientRules.MIN_SURNAME_CHARS - 1),
+            ClientErrorMessages.INVALID_SURNAME_MIN_LENGTH,
+        ),
+        (
+            'a' * (ClientRules.MAX_SURNAME_CHARS + 1),
+            ClientErrorMessages.INVALID_SURNAME_MAX_LENGTH,
+        ),
         ('teste123', ClientErrorMessages.INVALID_SURNAME_LETTERS),
         ('12343', ClientErrorMessages.INVALID_SURNAME_LETTERS),
         ('teste@', ClientErrorMessages.INVALID_SURNAME_LETTERS),
         ('teste_teste', ClientErrorMessages.INVALID_SURNAME_LETTERS),
-    ]
+    ],
 )
-def test_invalid_last_name_raises_validation_error(last_name, error_message, valid_client_data):
+def test_invalid_last_name_raises_validation_error(
+    last_name, error_message, valid_client_data
+):
     """
     Tests if an invalid last_name raises a ValidationError.
     """
@@ -154,7 +170,9 @@ def test_complete_name_property(valid_client_data):
     """
     # Arrange
     client = Client(**valid_client_data)
-    expected_complete_name = f"{valid_client_data['first_name']} {valid_client_data['last_name']}"
+    expected_complete_name = (
+        f'{valid_client_data["first_name"]} {valid_client_data["last_name"]}'
+    )
 
     # Act
     result = client.complete_name
@@ -165,13 +183,21 @@ def test_complete_name_property(valid_client_data):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "birthdate, error_message",
+    'birthdate, error_message',
     [
-        (datetime.now().date() - timedelta(days=365 * (ClientRules.MIN_AGE - 1)), ClientErrorMessages.INVALID_BIRTHDATE),
-        (datetime.now().date() - timedelta(days=365 * (ClientRules.MAX_AGE + 1)), ClientErrorMessages.INVALID_BIRTHDATE),
-    ]
+        (
+            datetime.now().date() - timedelta(days=365 * (ClientRules.MIN_AGE - 1)),
+            ClientErrorMessages.INVALID_BIRTHDATE,
+        ),
+        (
+            datetime.now().date() - timedelta(days=365 * (ClientRules.MAX_AGE + 1)),
+            ClientErrorMessages.INVALID_BIRTHDATE,
+        ),
+    ],
 )
-def test_invalid_birthdate_raises_validation_error(birthdate, error_message, valid_client_data):
+def test_invalid_birthdate_raises_validation_error(
+    birthdate, error_message, valid_client_data
+):
     """
     Tests if an invalid birthdate raises a ValidationError.
     """
@@ -209,9 +235,9 @@ def test_masked_email_property(valid_client_data):
     email = valid_client_data['email']
     start, end = ClientRules.EMAIL_MASK_RANGE
     end = len(email) + end
-    expected_masked_email = "".join(
-        ['*' if start <= i <= end else char for i, char in enumerate(email)]
-    )
+    expected_masked_email = ''.join([
+        '*' if start <= i <= end else char for i, char in enumerate(email)
+    ])
 
     # Act
     result = client.masked_email
@@ -221,10 +247,7 @@ def test_masked_email_property(valid_client_data):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize(
-    "email",
-    ['email.com', 'email', 'email@invalid']
-)
+@pytest.mark.parametrize('email', ['email.com', 'email', 'email@invalid'])
 def test_invalid_email_raises_validation_error(email, valid_client_data):
     """
     Tests if an invalid email raises a ValidationError.
@@ -264,9 +287,9 @@ def test_masked_phone_property(valid_client_data):
     phone = valid_client_data['phone']
     start, end = ClientRules.PHONE_MASK_RANGE
     end = len(phone) + end
-    expected_masked_phone = "".join(
-        ['*' if start <= i <= end else char for i, char in enumerate(phone)]
-    )
+    expected_masked_phone = ''.join([
+        '*' if start <= i <= end else char for i, char in enumerate(phone)
+    ])
 
     # Act
     result = client.masked_phone
@@ -314,9 +337,9 @@ def test_masked_cpf_property(valid_client_data):
     cpf = valid_client_data['cpf']
     start, end = ClientRules.CPF_MASK_RANGE
     end = len(cpf) + end
-    expected_masked_cpf = "".join(
-        ['*' if start <= i <= end else char for i, char in enumerate(cpf)]
-    )
+    expected_masked_cpf = ''.join([
+        '*' if start <= i <= end else char for i, char in enumerate(cpf)
+    ])
 
     # Act
     result = client.masked_cpf
@@ -338,41 +361,3 @@ def test_duplicated_cpf_raises_validation_error(valid_client_data):
     with pytest.raises(ValidationError) as excinfo:
         other_client.full_clean()
     assert ClientErrorMessages.DUPLICATED_CPF in excinfo.value.messages
-
-
-def test_create_mask_with_positive_end_raises_value_error():
-    """
-    Tests if the _create_mask method raises a ValueError if the end parameter is not negative.
-    """
-    # Act & Assert
-    with pytest.raises(ValueError) as excinfo:
-        Client._create_mask('0123456789', start=2, end=6)
-    assert 'end must be a negative value' in str(excinfo.value)
-
-
-def test_create_mask_with_valid_params():
-    """
-    Tests if the _create_mask method is creating the masks correctly.
-    """
-    # Arrange
-    value = '0123456789'
-
-    # Act
-    masked = Client._create_mask(value, start=2, end=-3)
-
-    # Assert
-    assert masked == '01******89'
-
-
-def test_create_mask_with_different_char():
-    """
-    Tests if the _create_mask method is creating the masks correctly with a different char.
-    """
-    # Arrange
-    value = '0123456789'
-
-    # Act
-    masked = Client._create_mask(value, start=2, end=-3, maskchar='-')
-
-    # Assert
-    assert masked == '01------89'

@@ -1,13 +1,13 @@
 """
 Tests for the Room detail view.
 """
+
 from datetime import datetime, timedelta
 
 import pytest
 from django.urls import reverse
 
 from reservations.models import Benefit, Reservation
-from clients.models import Client
 
 
 @pytest.mark.django_db
@@ -96,7 +96,7 @@ def test_room_detail_view_reservation_on_not_in_context_for_user_with_no_reserva
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("status", ['A', 'S'])
+@pytest.mark.parametrize('status', ['A', 'S'])
 def test_room_detail_view_reservation_on_in_context_for_user_with_reservations(
     authenticated_client, room_view_setup, status
 ):

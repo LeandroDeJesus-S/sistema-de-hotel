@@ -1,6 +1,7 @@
 """
 Tests for the Reserve view.
 """
+
 from datetime import datetime, timedelta
 from decimal import Decimal
 
@@ -15,9 +16,7 @@ from utils.supportviews import INVALID_RECAPTCHA_MESSAGE, ReserveMessages
 
 
 @pytest.mark.django_db
-def test_reserve_view_uses_correct_template(
-    authenticated_client, room_view_setup
-):
+def test_reserve_view_uses_correct_template(authenticated_client, room_view_setup):
     """
     Tests if reserve view is rendering the correct template.
     """
@@ -56,7 +55,7 @@ def test_reserve_with_valid_data_redirects_to_checkout(
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "checkin_date, error_message",
+    'checkin_date, error_message',
     [
         (
             (datetime.now() - timedelta(days=1)).date(),
@@ -156,9 +155,7 @@ def test_reserve_calculates_cost_correctly(
     last_reservation = Reservation.objects.last()
 
     # Assert
-    expected_amount = (
-        Decimal(str(last_reservation.reservation_days)) * room.daily_price
-    )
+    expected_amount = Decimal(str(last_reservation.reservation_days)) * room.daily_price
     assert last_reservation.amount == expected_amount
 
 
@@ -184,7 +181,7 @@ def test_reserve_creates_django_q_schedule(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("status", ['A', 'S'])
+@pytest.mark.parametrize('status', ['A', 'S'])
 def test_reserve_with_existing_reservation_redirects_to_rooms_with_message(
     authenticated_client, room_view_setup, status
 ):
@@ -202,7 +199,7 @@ def test_reserve_with_existing_reservation_redirects_to_rooms_with_message(
         checkin=datetime.now().date(),
         checkout=(datetime.now() + timedelta(days=5)).date(),
         status=status,
-        amount=Decimal('500.00')
+        amount=Decimal('500.00'),
     )
 
     # Act

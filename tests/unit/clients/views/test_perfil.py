@@ -1,7 +1,8 @@
-import pytest
-from django.urls import reverse
 from http import HTTPStatus
+
+import pytest
 from ddf import G
+from django.urls import reverse
 
 from clients.models import Client
 

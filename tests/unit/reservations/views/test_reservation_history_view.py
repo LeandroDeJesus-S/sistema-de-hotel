@@ -1,6 +1,7 @@
 """
 Tests for the ReservationHistory detail view.
 """
+
 import pytest
 from django.urls import reverse
 
@@ -8,7 +9,9 @@ from reservations.models import Reservation
 
 
 @pytest.mark.django_db
-def test_reservation_history_view_uses_correct_template(authenticated_client, reservation_history_setup):
+def test_reservation_history_view_uses_correct_template(
+    authenticated_client, reservation_history_setup
+):
     """Tests if the correct template is rendered."""
     # Arrange
     client, _ = authenticated_client

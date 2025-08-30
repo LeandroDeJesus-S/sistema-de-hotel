@@ -1,7 +1,8 @@
-import pytest
-from django.urls import reverse
 from http import HTTPStatus
+
+import pytest
 from ddf import G
+from django.urls import reverse
 
 from clients.models import Client
 
@@ -130,7 +131,9 @@ def test_success_url_after_delete_is_correct(mocker, authenticated_client, perfi
 
 
 @pytest.mark.django_db
-def test_client_is_deleted_if_all_goes_as_expected(mocker, authenticated_client, perfil_urls, user):
+def test_client_is_deleted_if_all_goes_as_expected(
+    mocker, authenticated_client, perfil_urls, user
+):
     """
     Test the deletion of a client if everything goes as expected.
     """

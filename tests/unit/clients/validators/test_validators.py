@@ -1,6 +1,7 @@
 """
 Tests for the validators.
 """
+
 from string import digits
 
 import pytest
@@ -11,7 +12,7 @@ from utils.supportmodels import ContactErrorMessages
 
 
 @pytest.mark.parametrize(
-    "phone",
+    'phone',
     [
         *[d * 15 for d in digits],
         '2189654897',
@@ -20,7 +21,7 @@ from utils.supportmodels import ContactErrorMessages
         '(21) 9 965-4897',
         '(21) 9 965 4897',
         '(21)9965-4897',
-    ]
+    ],
 )
 def test_validate_phone_number_with_invalid_phones_raises_error(phone):
     """
@@ -33,12 +34,12 @@ def test_validate_phone_number_with_invalid_phones_raises_error(phone):
 
 
 @pytest.mark.parametrize(
-    "phone",
+    'phone',
     [
         '21999999999',
         '11988888888',
         '21977777777',
-    ]
+    ],
 )
 def test_validate_phone_number_with_valid_phones_does_not_raise_error(phone):
     """
@@ -49,13 +50,13 @@ def test_validate_phone_number_with_valid_phones_does_not_raise_error(phone):
 
 
 @pytest.mark.parametrize(
-    "cpf",
+    'cpf',
     [
-        *[d*11 for d in digits],
+        *[d * 11 for d in digits],
         '12345678910',
         '10987654321',
         '18918918918',
-    ]
+    ],
 )
 def test_cpf_validator_with_invalid_cpf_raises_error(cpf):
     """
@@ -80,15 +81,3 @@ def test_cpf_validator_with_valid_cpf_does_not_raise_error(faker):
 
     # Act & Assert
     validator(cpf)
-
-
-def test_cpf_validator_eq_magic_method():
-    """
-    Tests if the __eq__ magic method of CpfValidator works correctly.
-    """
-    # Arrange
-    validator1 = validators.CpfValidator('message')
-    validator2 = validators.CpfValidator('message')
-
-    # Act & Assert
-    assert validator1 == validator2

@@ -1,6 +1,7 @@
 """
 Tests for the Class model.
 """
+
 import pytest
 from django.core.exceptions import ValidationError
 
@@ -26,13 +27,13 @@ def test_class_creation_with_valid_name():
 
 
 @pytest.mark.parametrize(
-    "name",
+    'name',
     [
         'class #1',
         'class-1',
         'class @2',
         ' ',
-    ]
+    ],
 )
 @pytest.mark.django_db
 def test_class_creation_with_invalid_name(name):

@@ -1,8 +1,8 @@
-import pytest
-from django.urls import reverse
 from http import HTTPStatus
 
-from clients.models import Client
+import pytest
+from django.urls import reverse
+
 from utils.supportmodels import ClientErrorMessages, ClientRules, ContactErrorMessages
 from utils.supporttest import get_message
 from utils.supportviews import SignUpMessages

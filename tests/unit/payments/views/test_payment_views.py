@@ -1,24 +1,16 @@
 """
 Tests for the payments views.
 """
-from datetime import datetime, timedelta
-from decimal import Decimal
+
 from http import HTTPStatus
 
 import pytest
-from django.core.management import call_command
+from django.contrib.messages import get_messages
 from django.db import OperationalError
 from django.urls import reverse
-from django.contrib.messages import get_messages
 
-from clients.models import Client
 from payments.models import Payment
-from reservations.models import Reservation, Room
 from utils.supportviews import CheckoutMessages, PaymentCancelMessages
-
-
-
-
 
 # Checkout view tests
 
@@ -31,14 +23,14 @@ def test_checkout_view_uses_correct_template(client, view_setup):
     # Arrange
     user, _, reservation, _ = view_setup
     client.force_login(user)
-    url = reverse("checkout", args=[reservation.pk])
+    url = reverse('checkout', args=[reservation.pk])
 
     # Act
     response = client.get(url)
 
     # Assert
     assert response.status_code == 200
-    assert "checkout.html" in [t.name for t in response.templates]
+    assert 'checkout.html' in [t.name for t in response.templates]
 
 
 @pytest.mark.django_db
@@ -49,13 +41,13 @@ def test_reservation_in_context(client, view_setup):
     # Arrange
     user, _, reservation, _ = view_setup
     client.force_login(user)
-    url = reverse("checkout", args=[reservation.pk])
+    url = reverse('checkout', args=[reservation.pk])
 
     # Act
     response = client.get(url)
 
     # Assert
-    assert response.context["reservation"] == reservation
+    assert response.context['reservation'] == reservation
 
 
 @pytest.mark.django_db
@@ -65,13 +57,13 @@ def test_unauthenticated_user_is_redirected_from_checkout(client, view_setup):
     """
     # Arrange
     _, _, reservation, _ = view_setup
-    url = reverse("checkout", args=[reservation.pk])
+    url = reverse('checkout', args=[reservation.pk])
 
     # Act
     response = client.get(url)
 
     # Assert
-    redirect_url = reverse("signin") + f"?next={url}"
+    redirect_url = reverse('signin') + f'?next={url}'
     assert response.status_code == 302
     assert response.url == redirect_url
 
@@ -84,7 +76,7 @@ def test_user_accessing_another_users_checkout_gets_forbidden(client, view_setup
     # Arrange
     user, _, _, reservation2 = view_setup
     client.force_login(user)
-    url = reverse("checkout", args=[reservation2.pk])
+    url = reverse('checkout', args=[reservation2.pk])
 
     # Act
     response = client.get(url)
@@ -101,7 +93,7 @@ def test_payment_created_successfully(client, view_setup, mocker):
     # Arrange
     user, _, reservation, _ = view_setup
     client.force_login(user)
-    url = reverse("checkout", args=[reservation.pk])
+    url = reverse('checkout', args=[reservation.pk])
     mocker.patch('utils.support.verify_captcha', return_value=True)
     mock_creator = mocker.patch('payments.views.Checkout.payment_creator_cls')
     mock_creator.return_value.session.redirect_url = 'http://stripepayment-hostedpage.url'
@@ -121,7 +113,7 @@ def test_operational_error_redirects_to_rooms_with_message(client, view_setup, m
     # Arrange
     user, _, reservation, _ = view_setup
     client.force_login(user)
-    url = reverse("checkout", args=[reservation.pk])
+    url = reverse('checkout', args=[reservation.pk])
     mocker.patch('utils.support.verify_captcha', return_value=True)
     mocker.patch('payments.views.Checkout.payment_creator_cls')
     mocker.patch('payments.views.Payment.save', side_effect=OperationalError('Database error'))
@@ -132,7 +124,7 @@ def test_operational_error_redirects_to_rooms_with_message(client, view_setup, m
 
     # Assert
     assert response.status_code == 302
-    assert response.url == reverse("rooms")
+    assert response.url == reverse('rooms')
     assert len(messages) > 0
     assert messages[0].message == CheckoutMessages.TRANSACTION_BLOCKING
 
@@ -145,7 +137,7 @@ def test_unexpected_exception_redirects_to_rooms_with_message(client, view_setup
     # Arrange
     user, _, reservation, _ = view_setup
     client.force_login(user)
-    url = reverse("checkout", args=[reservation.pk])
+    url = reverse('checkout', args=[reservation.pk])
     mocker.patch('utils.support.verify_captcha', return_value=True)
     mocker.patch('payments.views.Checkout.payment_creator_cls')
     mocker.patch('payments.views.Payment.save', side_effect=Exception('unexpected exception'))
@@ -156,7 +148,7 @@ def test_unexpected_exception_redirects_to_rooms_with_message(client, view_setup
 
     # Assert
     assert response.status_code == 302
-    assert response.url == reverse("rooms")
+    assert response.url == reverse('rooms')
     assert len(messages) > 0
     assert messages[0].message == CheckoutMessages.PAYMENT_FAIL
 
@@ -169,7 +161,7 @@ def test_reservation_status_changes_and_room_becomes_unavailable(client, view_se
     # Arrange
     user, _, reservation, _ = view_setup
     client.force_login(user)
-    url = reverse("checkout", args=[reservation.pk])
+    url = reverse('checkout', args=[reservation.pk])
     mocker.patch('utils.support.verify_captcha', return_value=True)
     mocker.patch('payments.views.Checkout.payment_creator_cls')
 
@@ -191,7 +183,7 @@ def test_payment_is_created_correctly(client, view_setup, mocker):
     # Arrange
     user, _, reservation, _ = view_setup
     client.force_login(user)
-    url = reverse("checkout", args=[reservation.pk])
+    url = reverse('checkout', args=[reservation.pk])
     mocker.patch('utils.support.verify_captcha', return_value=True)
     mocker.patch('payments.views.Checkout.payment_creator_cls')
 
@@ -208,18 +200,6 @@ def test_payment_is_created_correctly(client, view_setup, mocker):
 # PaymentSuccess view tests
 
 
-@pytest.fixture
-def success_view_setup(view_setup):
-    """
-    Provides common setup for the PaymentSuccess view tests.
-    """
-    user, user2, reservation, reservation2 = view_setup
-    payment = Payment.objects.create(
-        reservation=reservation, status='P', amount=reservation.amount
-    )
-    return user, user2, reservation, reservation2, payment
-
-
 @pytest.mark.django_db
 def test_success_view_uses_correct_template(client, success_view_setup):
     """
@@ -228,14 +208,14 @@ def test_success_view_uses_correct_template(client, success_view_setup):
     # Arrange
     user, _, reservation, _, _ = success_view_setup
     client.force_login(user)
-    url = reverse("payment_success", args=[reservation.pk])
+    url = reverse('payment_success', args=[reservation.pk])
 
     # Act
     response = client.get(url)
 
     # Assert
     assert response.status_code == 200
-    assert "success.html" in [t.name for t in response.templates]
+    assert 'success.html' in [t.name for t in response.templates]
 
 
 @pytest.mark.django_db
@@ -246,7 +226,7 @@ def test_payment_status_updated_to_finished(client, success_view_setup):
     # Arrange
     user, _, reservation, _, payment = success_view_setup
     client.force_login(user)
-    url = reverse("payment_success", args=[reservation.pk])
+    url = reverse('payment_success', args=[reservation.pk])
 
     # Act
     client.get(url)
@@ -264,7 +244,7 @@ def test_reservation_is_activated(client, success_view_setup):
     # Arrange
     user, _, reservation, _, payment = success_view_setup
     client.force_login(user)
-    url = reverse("payment_success", args=[reservation.pk])
+    url = reverse('payment_success', args=[reservation.pk])
 
     # Act
     client.get(url)
@@ -282,13 +262,13 @@ def test_unauthenticated_user_is_redirected_from_success(client, success_view_se
     """
     # Arrange
     _, _, reservation, _, _ = success_view_setup
-    url = reverse("payment_success", args=[reservation.pk])
+    url = reverse('payment_success', args=[reservation.pk])
 
     # Act
     response = client.get(url)
 
     # Assert
-    redirect_url = reverse("signin") + f"?next={url}"
+    redirect_url = reverse('signin') + f'?next={url}'
     assert response.status_code == 302
     assert response.url == redirect_url
 
@@ -301,7 +281,7 @@ def test_user_accessing_another_users_success_page_gets_forbidden(client, succes
     # Arrange
     user, _, _, reservation2, _ = success_view_setup
     client.force_login(user)
-    url = reverse("payment_success", args=[reservation2.pk])
+    url = reverse('payment_success', args=[reservation2.pk])
 
     # Act
     response = client.get(url)
@@ -313,21 +293,6 @@ def test_user_accessing_another_users_success_page_gets_forbidden(client, succes
 # PaymentCancel view tests
 
 
-@pytest.fixture
-def cancel_view_setup(view_setup):
-    """
-    Provides common setup for the PaymentCancel view tests.
-    """
-    user, user2, reservation, reservation2 = view_setup
-    payment = Payment.objects.create(
-        reservation=reservation, status='P', amount=reservation.amount
-    )
-    Payment.objects.create(
-        reservation=reservation2, status='P', amount=reservation2.amount
-    )
-    return user, user2, reservation, reservation2, payment
-
-
 @pytest.mark.django_db
 def test_cancel_view_uses_correct_template(client, cancel_view_setup):
     """
@@ -336,14 +301,14 @@ def test_cancel_view_uses_correct_template(client, cancel_view_setup):
     # Arrange
     user, _, reservation, _, _ = cancel_view_setup
     client.force_login(user)
-    url = reverse("payment_cancel", args=[reservation.pk])
+    url = reverse('payment_cancel', args=[reservation.pk])
 
     # Act
     response = client.get(url)
 
     # Assert
     assert response.status_code == 200
-    assert "cancel.html" in [t.name for t in response.templates]
+    assert 'cancel.html' in [t.name for t in response.templates]
 
 
 @pytest.mark.django_db
@@ -354,7 +319,7 @@ def test_payment_and_reservation_status_change_to_cancelled(client, cancel_view_
     # Arrange
     user, _, reservation, _, payment = cancel_view_setup
     client.force_login(user)
-    url = reverse("payment_cancel", args=[reservation.pk])
+    url = reverse('payment_cancel', args=[reservation.pk])
 
     # Act
     client.get(url)
@@ -374,13 +339,13 @@ def test_unauthenticated_user_is_redirected_from_cancel(client, cancel_view_setu
     """
     # Arrange
     _, _, reservation, _, _ = cancel_view_setup
-    url = reverse("payment_cancel", args=[reservation.pk])
+    url = reverse('payment_cancel', args=[reservation.pk])
 
     # Act
     response = client.get(url)
 
     # Assert
-    redirect_url = reverse("signin") + f"?next={url}"
+    redirect_url = reverse('signin') + f'?next={url}'
     assert response.status_code == 302
     assert response.url == redirect_url
 
@@ -393,7 +358,7 @@ def test_user_accessing_another_users_cancel_page_gets_forbidden(client, cancel_
     # Arrange
     user, _, _, reservation2, _ = cancel_view_setup
     client.force_login(user)
-    url = reverse("payment_cancel", args=[reservation2.pk])
+    url = reverse('payment_cancel', args=[reservation2.pk])
 
     # Act
     response = client.get(url)
@@ -403,14 +368,16 @@ def test_user_accessing_another_users_cancel_page_gets_forbidden(client, cancel_
 
 
 @pytest.mark.django_db
-def test_unexpected_exception_in_cancel_view_redirects_with_message(client, cancel_view_setup, mocker):
+def test_unexpected_exception_in_cancel_view_redirects_with_message(
+    client, cancel_view_setup, mocker
+):
     """
     Tests if an unexpected exception redirects to the rooms page with the correct message.
     """
     # Arrange
     user, _, reservation, _, _ = cancel_view_setup
     client.force_login(user)
-    url = reverse("payment_cancel", args=[reservation.pk])
+    url = reverse('payment_cancel', args=[reservation.pk])
     mocker.patch('payments.views.get_object_or_404', side_effect=Exception)
 
     # Act
@@ -419,6 +386,6 @@ def test_unexpected_exception_in_cancel_view_redirects_with_message(client, canc
 
     # Assert
     assert response.status_code == 302
-    assert response.url == reverse("rooms")
+    assert response.url == reverse('rooms')
     assert len(messages) > 0
     assert messages[0].message == PaymentCancelMessages.UNEXPECTED_ERROR

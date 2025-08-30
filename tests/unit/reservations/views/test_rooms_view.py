@@ -1,13 +1,13 @@
 """
 Tests for the Rooms view.
 """
+
 from datetime import datetime, timedelta
 
 import pytest
 from django.urls import reverse
 
 from reservations.models import Benefit, Reservation, Room
-from clients.models import Client
 
 
 @pytest.mark.django_db
@@ -76,7 +76,7 @@ def test_rooms_view_reservation_on_not_in_context_for_unauthenticated_user(clien
 
 @pytest.mark.django_db
 def test_rooms_view_reservation_on_not_in_context_for_user_with_no_reservations(
-    authenticated_client
+    authenticated_client,
 ):
     """
     Tests that for an authenticated user with no active or scheduled reservations,
@@ -94,7 +94,7 @@ def test_rooms_view_reservation_on_not_in_context_for_user_with_no_reservations(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("status", ['A', 'S'])
+@pytest.mark.parametrize('status', ['A', 'S'])
 def test_rooms_view_reservation_on_in_context_for_user_with_reservations(
     authenticated_client, room1, status
 ):

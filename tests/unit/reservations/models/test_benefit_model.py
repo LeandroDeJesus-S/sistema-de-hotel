@@ -1,14 +1,12 @@
 """
 Tests for the Benefit model.
 """
+
 import pytest
 from django.core.exceptions import ValidationError
 
 from reservations.models import Benefit
 from utils.supportmodels import BenefitErrorMessages
-
-
-
 
 
 @pytest.mark.django_db

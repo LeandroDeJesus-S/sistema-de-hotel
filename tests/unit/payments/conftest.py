@@ -1,11 +1,11 @@
 """
 Configuration for pytest.
 """
+
 from datetime import datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from django.core.management import call_command
 
 from clients.models import Client
 from payments.models import Payment
@@ -13,17 +13,8 @@ from reservations.models import Reservation, Room
 
 
 @pytest.fixture
-def db_setup(db):
-    """
-    Loads the necessary fixtures for the tests.
-    """
-    call_command("loaddata", "tests/fixtures/hotel_fixture.json")
-    call_command("loaddata", "tests/fixtures/beneficio_fixture.json")
-    call_command("loaddata", "tests/fixtures/classe_fixture.json")
-    call_command("loaddata", "tests/fixtures/quarto_fixture.json")
-    call_command("loaddata", "tests/fixtures/cliente_fixture.json")
-    call_command("loaddata", "tests/fixtures/reserva_fixture.json")
-    call_command("loaddata", "tests/fixtures/pagamento_fixture.json")
+def db_setup(django_db_setup):
+    return django_db_setup
 
 
 @pytest.fixture
@@ -46,7 +37,7 @@ def payment_data(db_setup):
         room=room,
     )
     payment = Payment.objects.create(reservation=reservation, amount=reservation.amount)
-    return {"user": user, "room": room, "reservation": reservation, "payment": payment}
+    return {'user': user, 'room': room, 'reservation': reservation, 'payment': payment}
 
 
 @pytest.fixture
@@ -103,7 +94,5 @@ def cancel_view_setup(view_setup):
     payment = Payment.objects.create(
         reservation=reservation, status='P', amount=reservation.amount
     )
-    Payment.objects.create(
-        reservation=reservation2, status='P', amount=reservation2.amount
-    )
+    Payment.objects.create(reservation=reservation2, status='P', amount=reservation2.amount)
     return user, user2, reservation, reservation2, payment
