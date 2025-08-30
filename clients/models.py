@@ -99,7 +99,7 @@ class Client(AbstractUser):
     )
     phone = models.CharField(
         'Telefone',
-        max_length=11,
+        max_length=16,
         null=False,
         blank=False,
         unique=True,

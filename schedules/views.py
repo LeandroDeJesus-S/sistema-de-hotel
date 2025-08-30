@@ -98,6 +98,7 @@ class Schedules(LoginRequired, View):
             scheduling = Scheduling(client=self.request.user, reservation=reservation)
             scheduling.full_clean()
             self.logger.debug(f'schedule {scheduling} prepared')
+
             payment = Payment(status='P', amount=reservation.amount, reservation=reservation)
             payment.full_clean()
             self.logger.debug(f'payment {payment} created')
@@ -105,7 +106,7 @@ class Schedules(LoginRequired, View):
             scheduling.save()
             payment.save()
             self.logger.debug('models saved')
-            return redirect(stripe_payment.session.url)
+            return redirect(stripe_payment.session.redirect_url)
 
         except ValidationError as exc:
             messages.error(request, exc.messages[0])
@@ -114,7 +115,7 @@ class Schedules(LoginRequired, View):
 
         except OperationalError as exc:
             messages.info(request, CheckoutMessages.TRANSACTION_BLOCKING)
-            self.logger.warn(f'payment transaction fail: {str(exc)}')
+            self.logger.warning(f'payment transaction fail: {str(exc)}')
             redirect_url = request.META.get('HTTP_REFERER', reverse('rooms'))
             return redirect(redirect_url)
 

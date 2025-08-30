@@ -1,0 +1,185 @@
+import pytest
+from django.urls import reverse
+from http import HTTPStatus
+from ddf import G
+
+from clients.models import Client
+
+
+@pytest.mark.django_db
+def test_perfil_update_template_is_rendered(authenticated_client, perfil_urls):
+    """
+    Test if it renders the perfil_update.html template as expected.
+    """
+    # Arrange
+    client, _ = authenticated_client
+    url = perfil_urls['perfil_update_url']
+
+    # Act
+    response = client.get(url)
+
+    # Assert
+    assert 'perfil_update.html' in [t.name for t in response.templates]
+
+
+@pytest.mark.django_db
+def test_unauthenticated_client_is_redirected(client, perfil_urls):
+    """
+    Test if an unauthenticated user is redirected if they try to update their profile without being logged in.
+    """
+    # Arrange
+    url = perfil_urls['perfil_update_url']
+
+    # Act
+    response = client.get(url)
+
+    # Assert
+    assert response.status_code == HTTPStatus.FOUND
+
+
+@pytest.mark.django_db
+def test_unauthenticated_client_is_redirected_to_signin(client, perfil_urls):
+    """
+    Test if an unauthenticated user is redirected to signin if they try to update their profile without being logged in.
+    """
+    # Arrange
+    url = perfil_urls['perfil_update_url']
+    signin_url = reverse('signin')
+    next_url_field_name = perfil_urls['next_url_field_name']
+    expected_url = f'{signin_url}?{next_url_field_name}={url}'
+
+    # Act
+    response = client.get(url)
+
+    # Assert
+    assert response.url == expected_url
+
+
+@pytest.mark.django_db
+def test_authenticated_client_accessing_another_perfil_update_receives_http_forbidden(
+    authenticated_client,
+):
+    """
+    Test if a logged-in client trying to access another client's data update page receives HTTP Forbidden.
+    """
+    # Arrange
+    client, _ = authenticated_client
+    other_user = G(Client)
+    url = reverse('update_perfil', args=[other_user.pk])
+
+    # Act
+    response = client.get(url)
+
+    # Assert
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_authenticated_client_updating_another_perfil_receives_http_forbidden(
+    authenticated_client, user
+):
+    """
+    Test if a logged-in client trying to update another client's data receives HTTP Forbidden.
+    """
+    # Arrange
+    client, _ = authenticated_client
+    other_user = G(Client)
+    url = reverse('update_perfil', args=[other_user.pk])
+    data = {
+        'username': 'new username',
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'phone': user.phone,
+        'email': user.email,
+        'birthdate': user.birthdate,
+        'cpf': user.cpf,
+    }
+
+    # Act
+    response = client.post(url, data=data)
+
+    # Assert
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_client_updates_email_correctly(mocker, authenticated_client, perfil_urls, user):
+    """
+    Test if a logged-in client can update their email correctly as expected.
+    """
+    # Arrange
+    mocker.patch('clients.views.support.verify_captcha', return_value=True)
+    client, _ = authenticated_client
+    url = perfil_urls['perfil_update_url']
+    new_email = 'updated@email.com'
+    data = {
+        'username': user.username,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'phone': user.phone,
+        'email': new_email,
+        'birthdate': user.birthdate,
+        'cpf': user.cpf,
+    }
+
+    # Act
+    client.post(url, data=data)
+    updated_user = Client.objects.get(pk=user.pk)
+
+    # Assert
+    assert updated_user.email == new_email
+
+
+@pytest.mark.django_db
+def test_client_updates_username_correctly(mocker, authenticated_client, perfil_urls, user):
+    """
+    Test if a logged-in client can update their username correctly as expected.
+    """
+    # Arrange
+    mocker.patch('clients.views.support.verify_captcha', return_value=True)
+    client, _ = authenticated_client
+    url = perfil_urls['perfil_update_url']
+    new_username = 'updatedusername'
+    data = {
+        'username': new_username,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'phone': user.phone,
+        'email': user.email,
+        'birthdate': user.birthdate,
+        'cpf': user.cpf,
+    }
+
+    # Act
+    client.post(url, data=data)
+    updated_user = Client.objects.get(pk=user.pk)
+
+    # Assert
+    assert updated_user.username == new_username
+
+
+@pytest.mark.django_db
+def test_client_cannot_change_password_in_perfil_update(mocker, authenticated_client, perfil_urls, user, valid_client_data):
+    """
+    Test if the client tries to send a new password, it is not persisted in the database.
+    """
+    # Arrange
+    mocker.patch('utils.support.verify_captcha', return_value=True)
+    client, _ = authenticated_client
+    url = perfil_urls['perfil_update_url']
+    data = {
+        'username': user.username,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'phone': user.phone,
+        'email': user.email,
+        'birthdate': user.birthdate,
+        'cpf': user.cpf,
+    }
+
+    # Act
+    client.post(url, data=data)
+    updated_user = Client.objects.get(pk=user.pk)
+
+    # Assert
+    assert updated_user.check_password(valid_client_data['password'])

@@ -136,3 +136,5 @@ media/*.png
 
 .ruff_cache/
 .vscode/
+
+GEMINI.md

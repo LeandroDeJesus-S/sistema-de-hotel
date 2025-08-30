@@ -1,5 +1,6 @@
 import re
 
+import phonenumbers
 from django.core.exceptions import ValidationError
 from django.utils.deconstruct import deconstructible
 
@@ -7,8 +8,11 @@ from utils.supportmodels import ContactErrorMessages
 
 
 def validate_phone_number(phone: str) -> None:
-    re_match = re.match(r'^[1-9]\d{0,1}9\d{7,8}$', phone)
-    if re_match is None:
+    try:
+        parsed_phone = phonenumbers.parse(phone, "BR")
+        if not phonenumbers.is_valid_number(parsed_phone):
+            raise ValidationError(ContactErrorMessages.INVALID_PHONE)
+    except phonenumbers.NumberParseException:
         raise ValidationError(ContactErrorMessages.INVALID_PHONE)
 
 
@@ -21,6 +25,7 @@ class CpfValidator:  # noqa: PLW1641  # TODO: refactoring needed
 
     def __call__(self, cpf: str) -> None:
         self._cpf = cpf
+        self._cpf = re.sub(r'\D', '', self._cpf)
         self._verified_cpf = self.validate()
         if not self.is_valid():
             raise ValidationError(self._message)

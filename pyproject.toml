@@ -48,6 +48,7 @@ dependencies = [
     "urllib3==2.2.2",
     "vine==5.1.0",
     "wcwidth==0.2.13",
+    "phonenumbers (>=9.0.13,<10.0.0)",
 ]
 
 [tool.poetry]
@@ -60,6 +61,11 @@ ruff = "^0.12.10"
 taskipy = "^1.14.1"
 bandit = {extras = ["toml"], version = "^1.8.6"}
 types-requests = "^2.32.4.20250809"
+pytest-django = "^4.11.1"
+pytest-responses = "^0.5.1"
+pytest-mock = "^3.14.1"
+faker = "^37.6.0"
+django-dynamic-fixture = "^4.0.1"
 
 [tool.ruff]
 line-length = 95
@@ -122,6 +128,13 @@ exclude_dirs = [
     'tests',
     'media',
     'templates',
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "HOTEL.settings"
+python_files = "*/test_*.py"
+testpaths = [
+    "tests",
 ]
 
 [build-system]
