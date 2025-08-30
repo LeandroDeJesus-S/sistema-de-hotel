@@ -101,7 +101,7 @@ run = 'python manage.py runserver'
 typecheck = 'mypy . --ignore-missing-imports'
 
 pre_test = 'task format && task typecheck'
-test = 'python manage.py test'
+test = 'pytest tests/'
 post_test = 'task scan'
 
 scan = 'bandit -c pyproject.toml -r .'
