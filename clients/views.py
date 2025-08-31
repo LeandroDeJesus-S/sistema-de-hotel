@@ -4,9 +4,9 @@ from typing import Any
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ValidationError
 from django.http import HttpRequest
-from django.shortcuts import HttpResponse, redirect, render
+from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -22,6 +22,7 @@ from utils.supportviews import (
     SignUpMessages,
 )
 
+from .decorators import profile_ownership_required
 from .forms import UpdatePerfilForm
 
 CAPTCHA_CTX = {'recaptcha_site_key': settings.G_RECAPTCHA_KEY_SITE}
@@ -130,15 +131,7 @@ class SignIn(View):
 
         login(request, user)
 
-        next_url = request.session.get('next_url')
-        self.logger.info(f'next url in the session: {next_url}')
-        if next_url:
-            deleted = request.session.pop('next_url')
-            request.session.save()
-            self.logger.debug(f'delete {deleted} from session')  # nosec
-        else:
-            next_url = self.next_url
-
+        next_url = request.session.get('next_url', self.next_url)
         self.logger.info(f'user logged with success. Redirecting to {next_url}')
         return redirect(next_url)
 
@@ -157,26 +150,16 @@ def logout_user(request: HttpRequest):
     return redirect('signin')
 
 
-def _check_perfil_ownership(request, received_pk):
-    """função que verifica se o perfil recebido é o mesmo
-    perfil que enviou o request."""
-    if request.user.is_authenticated and request.user.pk != received_pk:
-        logging.getLogger('djangoLogger').warn(f'{request.user.pk} != {received_pk}')
-        raise PermissionDenied
-
-
+@method_decorator(profile_ownership_required(), name='dispatch')
 class Perfil(LoginRequired, DetailView):
     """view responsável de exibir os dados do usuário"""
 
     model = Client
     template_name = 'perfil.html'
 
-    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        _check_perfil_ownership(request, kwargs.get('pk'))
-        return super().dispatch(request, *args, **kwargs)
-
 
 @method_decorator(support.captcha_required('update_perfil', params=('pk',)), name='post')
+@method_decorator(profile_ownership_required(), name='dispatch')
 class PerfilUpdate(LoginRequired, UpdateView):
     """view responsável por gerenciar a atualização dos dados do usuário."""
 
@@ -190,14 +173,11 @@ class PerfilUpdate(LoginRequired, UpdateView):
     def get_context_data(self, **kwargs):
         return {**super().get_context_data(**kwargs), **CAPTCHA_CTX}
 
-    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        _check_perfil_ownership(request, kwargs.get('pk'))
-        return super().dispatch(request, *args, **kwargs)
-
 
 @method_decorator(
     support.captcha_required('update_perfil_password', params=('pk',)), name='post'
 )
+@method_decorator(profile_ownership_required(), name='dispatch')
 class PerfilChangePassword(LoginRequired, View):
     """view responsável por gerenciar a alteração da senha do usuário"""
 
@@ -228,12 +208,9 @@ class PerfilChangePassword(LoginRequired, View):
         self.logger.info('unmatched passwords')
         return redirect(redirect_url)
 
-    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        _check_perfil_ownership(request, kwargs.get('pk'))
-        return super().dispatch(request, *args, **kwargs)
-
 
 @method_decorator(support.captcha_required('delete_perfil', params=('pk',)), name='post')
+@method_decorator(profile_ownership_required(), name='dispatch')
 class PerfilDelete(LoginRequired, DeleteView):
     model = Client
     template_name = 'perfil_delete.html'
@@ -244,7 +221,3 @@ class PerfilDelete(LoginRequired, DeleteView):
 
     def get_context_data(self, **kwargs):
         return {**super().get_context_data(**kwargs), **CAPTCHA_CTX}
-
-    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        _check_perfil_ownership(request, kwargs.get('pk'))
-        return super().dispatch(request, *args, **kwargs)
