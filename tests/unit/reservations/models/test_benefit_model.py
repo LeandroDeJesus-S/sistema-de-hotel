@@ -6,7 +6,7 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from reservations.models import Benefit
-from utils.supportmodels import BenefitErrorMessages
+from reservations.error_messages import BenefitErrorMessages
 
 
 @pytest.mark.django_db

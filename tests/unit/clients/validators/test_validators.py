@@ -8,7 +8,7 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from clients import validators
-from utils.supportmodels import ContactErrorMessages
+from clients.error_messages import ContactErrorMessages
 
 
 @pytest.mark.parametrize(

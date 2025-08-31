@@ -2,8 +2,8 @@ from django.core.validators import RegexValidator
 from django.db import models
 
 from home.models import Hotel
+from services.rules import ServicesRules
 from utils import support
-from utils.supportmodels import ServicesRules
 
 
 class Service(models.Model):

@@ -16,13 +16,13 @@ from django.views.generic.edit import DeleteView, UpdateView
 from clients.models import Client
 from reservations.mixins import LoginRequired
 from utils import support
-from utils.supportviews import (
+
+from .decorators import profile_ownership_required
+from .error_messages import (
     PerfilChangePasswordMessages,
     SignInMessages,
     SignUpMessages,
 )
-
-from .decorators import profile_ownership_required
 from .forms import UpdatePerfilForm
 
 CAPTCHA_CTX = {'recaptcha_site_key': settings.G_RECAPTCHA_KEY_SITE}

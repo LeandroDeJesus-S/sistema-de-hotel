@@ -6,7 +6,8 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from reservations.models import Benefit, Room
-from utils.supportmodels import RoomErrorMessages, RoomRules
+from reservations.error_messages import RoomErrorMessages
+from reservations.rules import RoomRules
 
 
 @pytest.mark.django_db

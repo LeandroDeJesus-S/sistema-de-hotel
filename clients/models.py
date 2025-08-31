@@ -10,12 +10,8 @@ from django.core.validators import (
 from django.db import models
 from django.utils.timezone import now
 
-from utils.supportmodels import (
-    ClientErrorMessages,
-    ClientRules,
-    ContactErrorMessages,
-)
-
+from .error_messages import ClientErrorMessages, ContactErrorMessages
+from .rules import ClientRules
 from .validators import CpfValidator, validate_phone_number
 
 

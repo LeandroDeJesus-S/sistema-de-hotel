@@ -18,13 +18,11 @@ from django.views.generic.list import ListView
 from django_q.tasks import schedule
 
 from utils import support
-from utils.supportviews import (
-    ReserveMessages,
-    ReserveSupport,
-)
 
+from .error_messages import ReserveMessages
 from .mixins import LoginRequired
 from .models import Benefit, Class, Reservation, Room
+from .rules import ReserveSupport
 from .validators import convert_date
 
 

@@ -16,15 +16,14 @@ from django.utils import timezone
 from clients.models import Client
 from home.models import Hotel
 from utils import support
-from utils.supportmodels import (
+
+from .error_messages import (
     BenefitErrorMessages,
-    BenefitRules,
     ClasseErrorMessages,
     ReserveErrorMessages,
-    ReserveRules,
     RoomErrorMessages,
-    RoomRules,
 )
+from .rules import BenefitRules, ReserveRules, RoomRules
 
 
 class Benefit(models.Model):

@@ -7,7 +7,7 @@ from django.utils.timezone import now, timedelta
 from stripe.checkout import Session
 
 from payments.base import AbsSessionBasedPayment, PaymentSessionResponse
-from utils.supportviews import ReserveSupport
+from reservations.rules import ReserveSupport
 
 
 class ReservationSessionBasedPaymentCreator(AbsSessionBasedPayment):

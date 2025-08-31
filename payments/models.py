@@ -2,7 +2,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from reservations.models import Reservation
-from utils.supportmodels import PaymentErrorMessages
+
+from .error_messages import PaymentErrorMessages
 
 
 class Payment(models.Model):

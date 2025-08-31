@@ -12,9 +12,9 @@ from PIL import Image
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
+from clients.error_messages import INVALID_RECAPTCHA_MESSAGE
 from home.models import Contact, Hotel
 from payments.models import Payment
-from utils.supportviews import INVALID_RECAPTCHA_MESSAGE
 
 
 class PaymentPDFHandler:

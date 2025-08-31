@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from clients.models import Client
 from utils.supporttest import get_message
-from utils.supportviews import PerfilChangePasswordMessages
+from clients.error_messages import PerfilChangePasswordMessages
 
 
 @pytest.fixture(scope='function')

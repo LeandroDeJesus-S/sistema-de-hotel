@@ -3,7 +3,7 @@ Tests for the Service model.
 """
 import pytest
 from PIL import Image
-from utils.supportmodels import ServicesRules
+from services.rules import ServicesRules
 from services.models import Service
 import os
 from django.core.files.uploadedfile import SimpleUploadedFile

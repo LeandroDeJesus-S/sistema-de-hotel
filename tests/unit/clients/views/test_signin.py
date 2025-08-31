@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from reservations.models import Room
 from utils.supporttest import get_message
-from utils.supportviews import SignInMessages
+from clients.error_messages import SignInMessages
 
 
 @pytest.fixture(scope='function')

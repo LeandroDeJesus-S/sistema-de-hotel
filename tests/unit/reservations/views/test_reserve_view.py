@@ -10,9 +10,11 @@ from django.urls import reverse
 from django_q.models import Schedule
 
 from reservations.models import Reservation
-from utils.supportmodels import ReserveErrorMessages, ReserveRules
+from reservations.error_messages import ReserveErrorMessages
+from reservations.rules import ReserveRules
 from utils.supporttest import get_message
-from utils.supportviews import INVALID_RECAPTCHA_MESSAGE, ReserveMessages
+from clients.error_messages import INVALID_RECAPTCHA_MESSAGE
+from reservations.error_messages import ReserveMessages
 
 
 @pytest.mark.django_db

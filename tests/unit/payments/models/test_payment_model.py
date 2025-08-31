@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 from clients.models import Client
 from payments.models import Payment
 from reservations.models import Reservation, Room
-from utils.supportmodels import PaymentErrorMessages
+from payments.error_messages import PaymentErrorMessages
 
 
 @pytest.mark.django_db

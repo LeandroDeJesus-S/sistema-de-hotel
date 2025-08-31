@@ -1,0 +1,17 @@
+class ClientRules:
+    MAX_AGE = 122
+    MIN_AGE = 18
+    MAX_FIRSTNAME_CHARS = 25
+    MIN_FIRSTNAME_CHARS = 2
+    MAX_SURNAME_CHARS = 50
+    MIN_SURNAME_CHARS = 2
+
+    PASSWORD_SUPPORTED_SYMBOLS = "@<>();'-+*;"  # nosec
+    PASSWORD_MIN_SIZE = 8
+
+    CPF_MASK_RANGE = 2, -4
+    EMAIL_MASK_RANGE = 2, -2
+    PHONE_MASK_RANGE = 4, -4  # ends must be negative
+
+    USERNAME_MAX_SIZE = 150
+    USERNAME_MIN_SIZE = 2

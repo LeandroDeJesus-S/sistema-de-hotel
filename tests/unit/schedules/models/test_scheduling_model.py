@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 
 from reservations.models import Reservation
 from schedules.models import Scheduling
-from utils.supportmodels import ReserveErrorMessages
+from reservations.error_messages import ReserveErrorMessages
 
 
 @pytest.mark.django_db

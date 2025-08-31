@@ -19,8 +19,8 @@ from payments.stripe_payment import ReservationSessionBasedPaymentCreator
 from reservations.decorators import check_reservation_ownership
 from reservations.models import Reservation
 from utils.support import captcha_required
-from utils.supportviews import CheckoutMessages, PaymentCancelMessages
 
+from .error_messages import CheckoutMessages, PaymentCancelMessages
 from .models import Payment
 from .tasks import create_payment_pdf
 

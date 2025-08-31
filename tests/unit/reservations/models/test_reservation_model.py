@@ -10,7 +10,8 @@ from django.core.exceptions import ValidationError
 
 from clients.models import Client
 from reservations.models import Reservation, Room
-from utils.supportmodels import ReserveErrorMessages, ReserveRules, RoomRules
+from reservations.error_messages import ReserveErrorMessages
+from reservations.rules import ReserveRules, RoomRules
 
 
 @pytest.mark.django_db

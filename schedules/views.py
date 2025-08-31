@@ -14,6 +14,7 @@ from django.views import View
 from django.views.decorators.http import require_GET
 from django_q.tasks import Schedule, Task, async_task
 
+from payments.error_messages import CheckoutMessages
 from payments.models import Payment
 from payments.stripe_payment import ReservationSessionBasedPaymentCreator
 from payments.tasks import create_payment_pdf
@@ -22,7 +23,6 @@ from reservations.mixins import LoginRequired
 from reservations.models import Reservation, Room
 from reservations.validators import convert_date
 from utils import support
-from utils.supportviews import CheckoutMessages
 
 from .models import Scheduling
 

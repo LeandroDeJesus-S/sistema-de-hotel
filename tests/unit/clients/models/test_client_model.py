@@ -9,7 +9,8 @@ from ddf import G
 from django.core.exceptions import ValidationError
 
 from clients.models import Client
-from utils.supportmodels import ClientErrorMessages, ClientRules, ContactErrorMessages
+from clients.error_messages import ClientErrorMessages, ContactErrorMessages
+from clients.rules import ClientRules
 
 
 @pytest.mark.django_db

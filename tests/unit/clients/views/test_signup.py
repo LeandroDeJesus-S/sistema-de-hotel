@@ -3,9 +3,10 @@ from http import HTTPStatus
 import pytest
 from django.urls import reverse
 
-from utils.supportmodels import ClientErrorMessages, ClientRules, ContactErrorMessages
+from clients.error_messages import ClientErrorMessages, ContactErrorMessages
+from clients.rules import ClientRules
 from utils.supporttest import get_message
-from utils.supportviews import SignUpMessages
+from clients.error_messages import SignUpMessages
 
 
 @pytest.mark.django_db

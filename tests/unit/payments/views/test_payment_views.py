@@ -10,7 +10,7 @@ from django.db import OperationalError
 from django.urls import reverse
 
 from payments.models import Payment
-from utils.supportviews import CheckoutMessages, PaymentCancelMessages
+from payments.error_messages import CheckoutMessages, PaymentCancelMessages
 
 # Checkout view tests
 
