@@ -85,7 +85,7 @@ class AbsCaptchaService(Protocol):
         ...
 
 
-class SessionManager(Protocol):
+class AbsSessionManager(Protocol):
     """
     A port for managing user sessions, such as logging in and out.
     This is a driven port, implemented by an adapter that interacts with the
