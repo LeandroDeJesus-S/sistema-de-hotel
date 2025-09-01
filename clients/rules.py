@@ -8,6 +8,7 @@ class ClientRules:
 
     PASSWORD_SUPPORTED_SYMBOLS = "@<>();'-+*;"  # nosec
     PASSWORD_MIN_SIZE = 8
+    PASSWORD_MAX_SIZE = 300  # to hashing support
 
     CPF_MASK_RANGE = 2, -4
     EMAIL_MASK_RANGE = 2, -2
