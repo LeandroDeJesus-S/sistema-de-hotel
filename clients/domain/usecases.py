@@ -91,7 +91,7 @@ class LogoutUserUseCase(Protocol):
         Executes the logout process.
 
         Args:
-            request: The framework-specific request object containing the session to be cleared.
+            request: The framework-specific request object containing the session to be cleared
         """
         ...
 
