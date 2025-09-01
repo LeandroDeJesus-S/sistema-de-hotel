@@ -45,7 +45,7 @@ PhoneNumber = Annotated[
         max_length=ClientRules.PHONE_NUMBER_MAX_SIZE,
         strip_whitespace=True,
     ),
-    'Represents a phone number value object.'
+    'Represents a phone number value object.',
 ]
 
 CPF = Annotated[
@@ -56,7 +56,7 @@ CPF = Annotated[
         max_length=ClientRules.CPF_MAX_SIZE,
         strip_whitespace=True,
     ),
-    'Represents a CPF value object.'
+    'Represents a CPF value object.',
 ]
 
 Password = Annotated[
@@ -66,5 +66,5 @@ Password = Annotated[
         max_length=ClientRules.PASSWORD_MAX_SIZE,
         strip_whitespace=True,
     ),
-    'Represents a password value object.'
+    'Represents a password value object.',
 ]

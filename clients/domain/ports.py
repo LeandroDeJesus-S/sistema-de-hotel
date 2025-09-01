@@ -7,6 +7,7 @@ driven adapters (e.g., database repositories, external services) must adhere to.
 
 Entities are the core business objects of the domain.
 """
+
 from abc import abstractmethod
 from typing import Any, Protocol
 
