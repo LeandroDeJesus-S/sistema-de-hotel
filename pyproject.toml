@@ -49,6 +49,7 @@ dependencies = [
     "vine==5.1.0",
     "wcwidth==0.2.13",
     "phonenumbers (>=9.0.13,<10.0.0)",
+    "pydantic (>=2.11.7,<3.0.0)",
 ]
 
 [tool.poetry]
