@@ -51,14 +51,14 @@ def test_signup_missing_field_renders_signup_with_message(
     mocker.patch('clients.views.support.verify_captcha', return_value=True)
     url = reverse('signup')
     data = valid_signup_data.copy()
-    data[field] = ''
+    del data[field]
 
     # Act
     response = client.post(url, data)
     message = get_message(response)
 
     # Assert
-    assert message == SignUpMessages.MISSING
+    assert message == SignUpMessages.MISSING_FIELDS
 
 
 @pytest.mark.parametrize(
@@ -98,12 +98,12 @@ def test_signup_missing_field_renders_correct_template(
 
 
 @pytest.mark.parametrize(
-    ('field', 'expected_msg'),
+    'field',
     [
-        ('username', ClientErrorMessages.DUPLICATED_USERNAME),
-        ('telefone', ContactErrorMessages.DUPLICATED_PHONE),
-        ('email', ContactErrorMessages.DUPLICATED_EMAIL),
-        ('cpf', ClientErrorMessages.DUPLICATED_CPF),
+        'username', 
+        'telefone', 
+        'email', 
+        'cpf', 
     ],
 )
 @pytest.mark.django_db
@@ -113,7 +113,6 @@ def test_signup_duplicated_unique_field_renders_signup_with_message(
     valid_signup_data,
     existing_user_data,
     field,
-    expected_msg,
 ):
     """
     Test if fields that must be unique are validated correctly,
@@ -124,6 +123,7 @@ def test_signup_duplicated_unique_field_renders_signup_with_message(
     url = reverse('signup')
     data = valid_signup_data.copy()
     data[field] = existing_user_data[field]
+    expected_msg = 'Não foi possível criar a conta. Verifique seus dados e tente novamente.'
 
     # Act
     response = client.post(url, data)

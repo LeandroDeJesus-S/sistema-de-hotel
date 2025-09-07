@@ -4,7 +4,6 @@ from typing import Any
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
-from django.core.exceptions import ValidationError
 from django.http import HttpRequest
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
@@ -17,15 +16,29 @@ from clients.models import Client
 from reservations.mixins import LoginRequired
 from utils import support
 
+from .application.services import ClientService
 from .decorators import profile_ownership_required
+from .domain.entities import Client as DomainClient
 from .error_messages import (
     PerfilChangePasswordMessages,
     SignInMessages,
     SignUpMessages,
 )
 from .forms import UpdatePerfilForm
+from .infra.adapters import (
+    DjangoPasswordManager,
+    DjangoSessionManager,
+    GoogleRecaptchaV3Verifier,
+)
+from .infra.repo import ClientRepository
 
 CAPTCHA_CTX = {'recaptcha_site_key': settings.G_RECAPTCHA_KEY_SITE}
+svc = ClientService(
+    repo=ClientRepository(),
+    password_manager=DjangoPasswordManager(),
+    session_manager=DjangoSessionManager(),
+    captcha_service=GoogleRecaptchaV3Verifier(settings.G_RECAPTCHA_KEY_SECRET),
+)
 
 
 @method_decorator(support.captcha_required('signup'), name='post')
@@ -65,11 +78,10 @@ class SignUp(View):
             birthdate,
             cpf,
         )):
-            messages.error(request, SignUpMessages.MISSING)
-            self.logger.error('missing fields')
-            return render(request, self.template_name)
+            messages.error(request, SignUpMessages.MISSING_FIELDS)
+            return render(request, self.template_name, CAPTCHA_CTX)
 
-        client = Client(
+        client_entity, err = DomainClient.safe_create(
             username=username,
             password=password,
             first_name=name,
@@ -79,18 +91,25 @@ class SignUp(View):
             email=email,
             cpf=cpf,
         )
+        if err:
+            messages.error(request, err.msg)
+            self.logger.error(str(err))
+            return render(request, self.template_name, CAPTCHA_CTX)
 
-        try:
-            client.full_clean()
-        except ValidationError as e:
-            messages.error(request, e.messages[0])
-            self.logger.error(str(e.error_dict))
-            return render(request, self.template_name)
+        if client_entity is None:
+            messages.error(request, 'Unexpected error occurred. Please try again.')
+            self.logger.error('client entity is None after creation')
+            return render(request, self.template_name, CAPTCHA_CTX)
 
-        client.set_password(client.password)
-        client.save()
+        _, err = svc.signup(
+            request,
+            client_entity,
+        )
+        if err is not None:
+            messages.error(request, err.msg)
+            self.logger.error(err)
+            return render(request, self.template_name, CAPTCHA_CTX)
 
-        login(request, client)
         _redirect = self._redirect
         self.logger.debug(f'redirecting to {_redirect.url}')
         return _redirect
