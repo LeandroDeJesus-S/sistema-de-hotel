@@ -146,5 +146,5 @@ def test_client_is_deleted_if_all_goes_as_expected(
     client.post(url)
 
     # Assert
-    with pytest.raises(self._model.DoesNotExist):
+    with pytest.raises(Client.DoesNotExist):
         Client.objects.get(pk=user.pk)

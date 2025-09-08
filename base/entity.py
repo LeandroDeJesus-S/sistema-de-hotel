@@ -14,6 +14,7 @@ class BaseEntity(PydanticBaseModel):
     A custom Pydantic BaseModel that provides a safe validation method
     which returns a Result object instead of raising a ValidationError.
     """
+
     _messages: dict[str, dict[str, str]] = {}
 
     @classmethod

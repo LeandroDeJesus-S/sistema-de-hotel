@@ -49,7 +49,7 @@ class ClientRepository(AbsClientRepository):
             return Result(value=None, error=Error(msg=msg, src_error=e))
 
         except Exception as e:
-            logger.error(e)
+            logger.error(e, exc_info=True)
             return Result(value=None, error=Error(msg='Could not create client', src_error=e))
 
     def get_by_id(self, client_id: int) -> Result[ClientEntity | None]:
@@ -172,6 +172,7 @@ class ClientRepository(AbsClientRepository):
 
             return Result(value=exists, error=None)
         except Exception as e:
+            logger.error(e, exc_info=True)
             return Result(
                 value=False,
                 error=Error(msg='Could not check for duplicate client', src_error=e),
