@@ -48,13 +48,12 @@ class SignInUserUseCase:
 
 
 class SignUpUserUseCase:
-    """Handles new user registration and session creation."""
+    """Handles new user registration."""
 
     def __init__(
         self,
         repo: ports.AbsClientRepository,
         pw_mng: ports.AbsPasswordManager,
-        session_mng: ports.AbsSessionManager,
     ) -> None:
         """
         Initializes the use case with its dependencies.
@@ -62,24 +61,21 @@ class SignUpUserUseCase:
         Args:
             repo: The repository for persisting the new client.
             pw_mng: The port for hashing passwords.
-            session_mng: The port for managing user sessions.
         """
         self._repo = repo
         self._pw_mng = pw_mng
-        self._session_mng = session_mng
 
-    def __call__(self, request: Any, user: entities.Client) -> Result[entities.Client | None]:
+    def __call__(self, user: entities.Client) -> Result[entities.Client | None]:
         """
         Executes the sign-up process.
 
         Args:
-            request: The framework-specific request object containing the session to be managed
             user: The Client entity with the new user's information.
                   The `password` attribute should be the raw, unhashed password.
         Returns:
             A Result containing the created and persisted Client entity, or an Error on failure
         """
-        ok, _ = self._repo.check_duplicate(user)
+        ok, err = self._repo.check_duplicate(user)
         if ok:
             return Result(
                 value=None,
@@ -101,11 +97,6 @@ class SignUpUserUseCase:
 
         if u is None:
             return Result(value=None, error=Error('Failed to create user', err))
-
-        _, err = self._repo.get_by_id(u.id or 0)
-        _, err = self._session_mng.login(request, u)
-        if err is not None:
-            return Result(value=None, error=Error('Failed to login user', err))
 
         return Result(value=u, error=None)
 
