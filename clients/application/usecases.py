@@ -7,7 +7,7 @@ from exc import Error, Result
 from ..domain import ports
 
 
-class SignInUserUseCase:
+class AuthenticateUserUseCase:
     """Handles user authentication and session creation."""
 
     def __init__(
@@ -25,9 +25,7 @@ class SignInUserUseCase:
         self._repo = repo
         self._session_mng = session_mng
 
-    def __call__(
-        self, request: Any, username: str, password: str
-    ) -> Result[entities.Client | None]:
+    def __call__(self, username: str, password: str) -> Result[entities.Client | None]:
         """
         Executes the sign-in process.
 
@@ -43,11 +41,10 @@ class SignInUserUseCase:
         if err is not None or not client:
             return Result(value=None, error=Error('Authentication failed', src_error=err))
 
-        self._session_mng.login(request, client)
         return entities.Client.safe_validate(client)
 
 
-class SignUpUserUseCase:
+class CreateUserUseCase:
     """Handles new user registration."""
 
     def __init__(
@@ -75,7 +72,7 @@ class SignUpUserUseCase:
         Returns:
             A Result containing the created and persisted Client entity, or an Error on failure
         """
-        ok, err = self._repo.check_duplicate(user)
+        ok, _ = self._repo.check_duplicate(user)
         if ok:
             return Result(
                 value=None,

@@ -101,24 +101,27 @@ class SignUp(View):
             self.logger.error('client entity is None after creation')
             return render(request, self.template_name, CAPTCHA_CTX)
 
-        # 1. Chama o caso de uso de cadastro (que não conhece mais o 'request')
-        created_user_result = svc.signup(client_entity)
+        created_user_result = svc.create_user(client_entity)
 
         if created_user_result.error is not None:
             messages.error(request, created_user_result.error.msg)
             self.logger.error(created_user_result.error)
             return render(request, self.template_name, CAPTCHA_CTX)
 
-        # 2. Se o cadastro foi bem-sucedido, chama o login
-        # A view é a única que conhece o 'request'
-        login_result = svc.login(request, created_user_result.value)
+        if created_user_result.value is None:
+            messages.error(request, 'Unexpected error occurred. Please try again.')
+            self.logger.error('created user is None')
+            return render(request, self.template_name, CAPTCHA_CTX)
+
+        login_result = svc.session_manager.login(request, created_user_result.value)
+        _redirect = self._redirect
 
         if login_result.error is not None:
-            # Loga o erro, mas talvez não seja necessário notificar o usuário,
-            # pois o cadastro funcionou. Ele pode simplesmente logar manualmente.
-            self.logger.error(f"User created, but failed to log in automatically: {login_result.error}")
+            _redirect = reverse('signin')
+            self.logger.error(
+                f'User created, but failed to log in automatically: {login_result.error}'
+            )
 
-        _redirect = self._redirect
         self.logger.debug(f'redirecting to {_redirect.url}')
         return _redirect
 
