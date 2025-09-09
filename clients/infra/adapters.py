@@ -94,7 +94,7 @@ class DjangoSessionManager:
             return Result(value=None, error=Error('Invalid credentials'))
 
         try:
-            u = Client.model_validate(user)
+            u = Client.model_validate(user.__dict__)
             return Result(value=u, error=None)
         except Exception as e:
             return Result(value=None, error=Error('Failed to validate user', e))

@@ -1,10 +1,11 @@
 import logging
 from typing import Any
 
-from clients.domain import entities
 from exc import Error, Result
 
-from ..domain import ports
+from ..domain import entities, ports
+from ..error_messages import SignInMessages
+from .usecases_value_objects import SignInSchema
 
 
 class AuthenticateUserUseCase:
@@ -25,23 +26,37 @@ class AuthenticateUserUseCase:
         self._repo = repo
         self._session_mng = session_mng
 
-    def __call__(self, username: str, password: str) -> Result[entities.Client | None]:
+    def __call__(self, data: dict) -> Result[entities.Client | None]:
         """
         Executes the sign-in process.
 
         Args:
-            request: The framework-specific request object containing the session to be managed
-            username: The user's username.
-            password: The user's raw password.
+            data: A dictionary containing the user's credentials.
 
         Returns:
             A Result containing the authenticated Client entity, or an Error on failure.
         """
-        client, err = self._session_mng.authenticate(username, password)
-        if err is not None or not client:
-            return Result(value=None, error=Error('Authentication failed', src_error=err))
+        validated_data = SignInSchema.safe_validate(data)
+        if validated_data.error:
+            return Result(
+                value=None, error=Error(validated_data.error.msg, validated_data.error)
+            )
 
-        return entities.Client.safe_validate(client)
+        if validated_data.value is None:
+            return Result(
+                value=None,
+                error=Error('Validation failed', None),
+            )
+
+        client, err = self._session_mng.authenticate(
+            validated_data.value.username, validated_data.value.password
+        )
+        if err is not None or not client:
+            return Result(
+                value=None, error=Error(SignInMessages.INVALID_CREDENTIALS, src_error=err)
+            )
+
+        return entities.Client.safe_validate(client.__dict__)
 
 
 class CreateUserUseCase:

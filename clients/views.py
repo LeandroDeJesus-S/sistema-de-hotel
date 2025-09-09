@@ -3,7 +3,7 @@ from typing import Any
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import login, logout
 from django.http import HttpRequest
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
@@ -21,7 +21,6 @@ from .decorators import profile_ownership_required
 from .domain.entities import Client as DomainClient
 from .error_messages import (
     PerfilChangePasswordMessages,
-    SignInMessages,
     SignUpMessages,
 )
 from .forms import UpdatePerfilForm
@@ -33,12 +32,6 @@ from .infra.adapters import (
 from .infra.repo import ClientRepository
 
 CAPTCHA_CTX = {'recaptcha_site_key': settings.G_RECAPTCHA_KEY_SITE}
-svc = ClientService(
-    repo=ClientRepository(),
-    password_manager=DjangoPasswordManager(),
-    session_manager=DjangoSessionManager(),
-    captcha_service=GoogleRecaptchaV3Verifier(settings.G_RECAPTCHA_KEY_SECRET),
-)
 
 
 @method_decorator(support.captcha_required('signup'), name='post')
@@ -50,6 +43,12 @@ class SignUp(View):
         self.logger = logging.getLogger('djangoLogger')
         self.template_name = 'signup.html'
         self._redirect = redirect('rooms')
+        self.svc = ClientService(
+            repo=ClientRepository(),
+            password_manager=DjangoPasswordManager(),
+            session_manager=DjangoSessionManager(),
+            captcha_service=GoogleRecaptchaV3Verifier(settings.G_RECAPTCHA_KEY_SECRET),
+        )
 
     def get(self, request):
         if request.user.is_authenticated:
@@ -101,7 +100,7 @@ class SignUp(View):
             self.logger.error('client entity is None after creation')
             return render(request, self.template_name, CAPTCHA_CTX)
 
-        created_user_result = svc.create_user(client_entity)
+        created_user_result = self.svc.create_user(client_entity)
 
         if created_user_result.error is not None:
             messages.error(request, created_user_result.error.msg)
@@ -113,7 +112,7 @@ class SignUp(View):
             self.logger.error('created user is None')
             return render(request, self.template_name, CAPTCHA_CTX)
 
-        login_result = svc.session_manager.login(request, created_user_result.value)
+        login_result = self.svc.session_manager.login(request, created_user_result.value)
         _redirect = self._redirect
 
         if login_result.error is not None:
@@ -135,6 +134,12 @@ class SignIn(View):
         self.logger = logging.getLogger('djangoLogger')
         self.template = 'signin.html'
         self.next_url = reverse('rooms')
+        self.svc = ClientService(
+            repo=ClientRepository(),
+            password_manager=DjangoPasswordManager(),
+            session_manager=DjangoSessionManager(),
+            captcha_service=GoogleRecaptchaV3Verifier(settings.G_RECAPTCHA_KEY_SECRET),
+        )
 
     def get(self, request: HttpRequest, *args, **kwargs):
         next_url = request.GET.get('next', self.next_url)
@@ -150,19 +155,25 @@ class SignIn(View):
         return render(request, self.template, CAPTCHA_CTX)
 
     def post(self, request: HttpRequest, *args, **kwargs):
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+        post_data = {
+            'username': request.POST.get('username'),
+            'password': request.POST.get('password'),
+        }
 
-        user = authenticate(request, username=username, password=password)
+        user, err = self.svc.authenticate_user(post_data)
+        if err is not None:
+            messages.error(request, err.msg)
+            self.logger.error(err, exc_info=True)
+            return render(request, self.template, CAPTCHA_CTX)
+
         if user is None:
-            messages.error(request, SignInMessages.INVALID_CREDENTIALS)
-            self.logger.error(SignInMessages.INVALID_CREDENTIALS)
-            return render(request, self.template)
+            messages.error(request, 'Invalid credentials')
+            self.logger.error('user is None')
+            return render(request, self.template, CAPTCHA_CTX)
 
-        login(request, user)
-
+        self.svc.session_manager.login(request, user)
         next_url = request.session.get('next_url', self.next_url)
-        self.logger.info(f'user logged with success. Redirecting to {next_url}')
+        self.logger.info(f'User logged in successfully. Redirecting to {next_url}')
         return redirect(next_url)
 
 
