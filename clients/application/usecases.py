@@ -1,11 +1,10 @@
 import logging
-from typing import Any
 
 from exc import Error, Result
 
 from ..domain import entities, ports
 from ..error_messages import SignInMessages
-from .usecases_value_objects import SignInSchema
+from .usecases_value_objects import ChangePasswordInput, SignInInput
 
 
 class AuthenticateUserUseCase:
@@ -36,7 +35,7 @@ class AuthenticateUserUseCase:
         Returns:
             A Result containing the authenticated Client entity, or an Error on failure.
         """
-        validated_data = SignInSchema.safe_validate(data)
+        validated_data = SignInInput.safe_validate(data)
         if validated_data.error:
             return Result(
                 value=None, error=Error(validated_data.error.msg, validated_data.error)
@@ -113,31 +112,6 @@ class CreateUserUseCase:
         return Result(value=u, error=None)
 
 
-class LogoutUserUseCase:
-    """Handles user logout by clearing their session."""
-
-    def __init__(
-        self,
-        session_mng: ports.AbsSessionManager,
-    ) -> None:
-        """
-        Initializes the use case with its dependencies.
-
-        Args:
-            session_mng: The port for managing user sessions.
-        """
-        self._session_mng = session_mng
-
-    def __call__(self, request: Any) -> Result[None]:
-        """
-        Executes the logout process.
-
-        Args:
-            request: The framework-specific request object containing the session to be cleared
-        """
-        return self._session_mng.logout(request)
-
-
 class ChangePasswordUseCase:
     """Handles changing a user's password."""
 
@@ -159,9 +133,7 @@ class ChangePasswordUseCase:
         self._pw_mng = pw_mng
         self._session_mng = session_mng
 
-    def __call__(
-        self, request: Any, client_id: int, new_password: str
-    ) -> Result[entities.Client | None]:
+    def __call__(self, inp: ChangePasswordInput) -> Result[entities.Client | None]:
         """
         Executes the password change process.
 
@@ -173,6 +145,9 @@ class ChangePasswordUseCase:
         Returns:
             A Result containing the updated Client entity, or an Error on failure.
         """
+        client_id = inp.user_id
+        new_password = inp.password
+
         u, err = self._repo.get_by_id(client_id)
         if u is None:
             return Result(value=None, error=Error('Client not found', err))
@@ -184,10 +159,6 @@ class ChangePasswordUseCase:
         _, err = self._repo.update(client_id, password=hashed_password)
         if err is not None:
             return Result(value=None, error=Error('Failed to update password', err))
-        _, err = self._session_mng.login(request, u)
-
-        if err is not None:
-            return Result(value=None, error=Error('Failed to login user', err))
 
         return Result(value=u, error=None)
 

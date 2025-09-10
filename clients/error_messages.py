@@ -59,5 +59,5 @@ class SignInMessages:
 
 
 class PerfilChangePasswordMessages:
-    PASSWORDS_DIFFERS = 'As senhas não são iguais.'
+    PASSWORDS_DIFFER = 'As senhas não são iguais.'
     SUCCESS = 'Senha alterada com sucesso.'

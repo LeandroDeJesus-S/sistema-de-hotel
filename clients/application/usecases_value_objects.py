@@ -1,6 +1,10 @@
+from typing import Self
+
+from pydantic import model_validator
+
 from base.entity import BaseEntity
 from clients.domain.value_objects import Email, Password, Username
-from clients.error_messages import SignInMessages
+from clients.error_messages import PerfilChangePasswordMessages, SignInMessages
 
 _signin_msg = {
     'missing': SignInMessages.INVALID_CREDENTIALS,
@@ -11,7 +15,7 @@ _signin_msg = {
 }
 
 
-class SignInSchema(BaseEntity):
+class SignInInput(BaseEntity):
     """
     A Pydantic model to validate the sign-in data.
     This is our data contract.
@@ -24,3 +28,28 @@ class SignInSchema(BaseEntity):
 
     username: Username | Email
     password: Password
+
+
+class ChangePasswordInput(BaseEntity):
+    _messages = {
+        'password': {
+            'missing': 'Há campos obrigatórios que ainda não foram preenchidos.',
+            'value_error': PerfilChangePasswordMessages.PASSWORDS_DIFFER,
+            'assertion_error': PerfilChangePasswordMessages.PASSWORDS_DIFFER,
+        },
+        'password_repeat': {
+            'value_error': PerfilChangePasswordMessages.PASSWORDS_DIFFER,
+        },
+        '__root__': {
+            'value_error': PerfilChangePasswordMessages.PASSWORDS_DIFFER,
+        },
+    }
+    user_id: int
+    password: str
+    password_repeat: str
+
+    @model_validator(mode='after')
+    def _pw_repeat_validate(self) -> Self:
+        if self.password != self.password_repeat:
+            raise ValueError(PerfilChangePasswordMessages.PASSWORDS_DIFFER)
+        return self

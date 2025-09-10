@@ -2,7 +2,6 @@ from clients.application.usecases import (
     AuthenticateUserUseCase,
     ChangePasswordUseCase,
     CreateUserUseCase,
-    LogoutUserUseCase,
     VerifyCaptchaUseCase,
 )
 from clients.domain.ports import (
@@ -23,7 +22,6 @@ class ClientService:
     ):
         self.authenticate_user = AuthenticateUserUseCase(repo, session_manager)
         self.create_user = CreateUserUseCase(repo, password_manager)
-        self.logout = LogoutUserUseCase(session_manager)
         self.change_pw = ChangePasswordUseCase(repo, password_manager, session_manager)
         self.captcha = VerifyCaptchaUseCase(captcha_service)
         self.session_manager = session_manager

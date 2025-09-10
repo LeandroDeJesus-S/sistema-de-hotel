@@ -3,7 +3,7 @@ from typing import Any
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login, logout
+from django.contrib.auth import logout
 from django.http import HttpRequest
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
@@ -12,6 +12,7 @@ from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, UpdateView
 
+from clients.application.usecases_value_objects import ChangePasswordInput
 from clients.models import Client
 from reservations.mixins import LoginRequired
 from utils import support
@@ -226,28 +227,52 @@ class PerfilChangePassword(LoginRequired, View):
         super().setup(request, *args, **kwargs)
         self.logger = logging.getLogger('djangoLogger')
         self.template = 'perfil_update_password.html'
+        self.svc = ClientService(
+            repo=ClientRepository(),
+            password_manager=DjangoPasswordManager(),
+            session_manager=DjangoSessionManager(),
+            captcha_service=GoogleRecaptchaV3Verifier(settings.G_RECAPTCHA_KEY_SECRET),
+        )
 
     def get(self, *args, **kwargs):
         self.logger.debug(f'rendering {self.template}')
         return render(self.request, self.template, CAPTCHA_CTX)
 
     def post(self, request, *args, **kwargs):
-        new_pass = self.request.POST.get('new_password')
-        pass_repeat = self.request.POST.get('password_repeat')
+        _redirect = redirect(reverse('perfil', args=(self.request.user.pk,)))
+        data = {
+            'user_id': self.request.user.pk,
+            'password': self.request.POST.get('new_password', '').strip(),
+            'password_repeat': self.request.POST.get('password_repeat', '').strip(),
+        }
 
-        if new_pass == pass_repeat:
-            self.request.user.set_password(new_pass)
-            self.request.user.save()
-            messages.success(self.request, PerfilChangePasswordMessages.SUCCESS)
-            login(self.request, self.request.user)
-            return redirect(reverse('perfil', args=(self.request.user.pk,)))
+        inp, err = ChangePasswordInput.safe_validate(data)
+        if err is not None:
+            self.logger.error(err.msg)
+            messages.error(self.request, err.msg)
+            return _redirect
 
-        messages.error(self.request, PerfilChangePasswordMessages.PASSWORDS_DIFFERS)
-        redirect_url = self.request.META.get(
-            'HTTP_REFERER', reverse('perfil', args=(self.request.user.pk,))
-        )
-        self.logger.info('unmatched passwords')
-        return redirect(redirect_url)
+        if inp is None:
+            self.logger.error('input is None and err is not None')
+            messages.error(self.request, 'Dados inválidos')
+            return _redirect
+
+        entity, err = self.svc.change_pw(inp)
+        if err is not None:
+            self.logger.error(err.msg)
+            messages.error(self.request, err.msg)
+            return _redirect
+
+        if entity is None:
+            self.logger.error('input is None and err is not None')
+            messages.error(
+                self.request,
+                'Um error inesperado aconteceu. Por favor tente novamente mais tarde.',
+            )
+            return _redirect
+
+        messages.success(self.request, PerfilChangePasswordMessages.SUCCESS)
+        return _redirect
 
 
 @method_decorator(support.captcha_required('delete_perfil', params=('pk',)), name='post')

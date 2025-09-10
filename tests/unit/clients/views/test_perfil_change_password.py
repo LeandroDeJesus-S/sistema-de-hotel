@@ -170,7 +170,7 @@ def test_message_when_passwords_differ(
     message = get_message(response)
 
     # Assert
-    assert message == PerfilChangePasswordMessages.PASSWORDS_DIFFERS
+    assert message == PerfilChangePasswordMessages.PASSWORDS_DIFFER
 
 
 @pytest.mark.django_db
