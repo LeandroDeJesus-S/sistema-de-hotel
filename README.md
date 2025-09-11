@@ -4,7 +4,7 @@ Site de hotel construído com Python e Django.
 
 <img src="./readme/home.gif" type="gif" width=480 height=300>
 
-O objetivo é disponibilizar um site de hotel onde os clientes possam realizar e agendar suas reservas de forma autônoma sem necessidade de interação com um gerente intermediador (Ex.: por whatsapp como vi em muitos casos).
+Este projeto visa modernizar a gestão hoteleira por meio de uma plataforma digital que otimiza tanto a experiência do hóspede quanto a eficiência operacional do estabelecimento. A solução oferece ao cliente um canal direto e autônomo para consultar, reservar e pagar por acomodações de forma simples e segura. Para o hotel, o sistema centraliza e automatiza a administração de reservas e pagamentos, o que resulta na redução de tarefas manuais, no fortalecimento do relacionamento com o cliente e no aumento da receita através de um serviço mais ágil e moderno.
 
 <img src="./readme/acomodacoes.gif" type="gif" width=480 height=300>
 
