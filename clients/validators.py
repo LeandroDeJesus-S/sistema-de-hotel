@@ -4,7 +4,7 @@ import phonenumbers
 from django.core.exceptions import ValidationError
 from django.utils.deconstruct import deconstructible
 
-from clients.error_messages import ContactErrorMessages
+from .feedback_messages import ContactErrorMessages
 
 
 def validate_phone_number(phone: str) -> None:

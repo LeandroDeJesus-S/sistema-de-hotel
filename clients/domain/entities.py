@@ -1,6 +1,6 @@
 from base.entity import BaseEntity
 
-from ..error_messages import ClientErrorMessages, ContactErrorMessages
+from ..feedback_messages import ClientErrorMessages, ContactErrorMessages
 from .value_objects import CPF, Birthdate, Email, Password, PhoneNumber, Username
 
 

@@ -9,7 +9,7 @@ from ddf import G
 from django.core.exceptions import ValidationError
 
 from clients.models import Client
-from clients.error_messages import ClientErrorMessages, ContactErrorMessages
+from clients.feedback_messages import ClientErrorMessages, ContactErrorMessages
 from clients.rules import ClientRules
 
 
@@ -30,9 +30,24 @@ def test_client_model_creation_with_valid_data():
 @pytest.mark.parametrize(
     'username, error_message',
     [
-        ('a' * (ClientRules.USERNAME_MIN_SIZE - 1), ClientErrorMessages.INVALID_USERNAME_LEN),
-        ('a' * (ClientRules.USERNAME_MAX_SIZE + 1), ClientErrorMessages.INVALID_USERNAME_LEN),
-        ('Avd/d123#', ClientErrorMessages.INVALID_USERNAME_CHARS),
+        (
+            'a' * (ClientRules.USERNAME_MIN_SIZE - 1), 
+            ClientErrorMessages.INVALID_USERNAME_LEN % {
+                    'min_len': ClientRules.USERNAME_MIN_SIZE, 
+                    'max_len': ClientRules.USERNAME_MAX_SIZE,
+            },
+        ),
+        (
+            'a' * (ClientRules.USERNAME_MAX_SIZE + 1), 
+            ClientErrorMessages.INVALID_USERNAME_LEN % {
+                    'min_len': ClientRules.USERNAME_MIN_SIZE, 
+                    'max_len': ClientRules.USERNAME_MAX_SIZE,
+            },
+        ),
+        (
+            'Avd/d123#', 
+            ClientErrorMessages.INVALID_USERNAME_CHARS,
+        ),
     ],
 )
 def test_invalid_username_raises_validation_error(username, error_message, valid_client_data):
@@ -90,11 +105,16 @@ def test_weak_password_raises_validation_error(password, valid_client_data):
     # Arrange
     valid_client_data['password'] = password
     client = Client(**valid_client_data)
+    expected_msg = ClientErrorMessages.PASSWORD_WEAK % {
+        'min_len': ClientRules.PASSWORD_MIN_SIZE,
+        'max_len': ClientRules.PASSWORD_MAX_SIZE,
+        'symbols': ClientRules.PASSWORD_SUPPORTED_SYMBOLS,
+    }
 
     # Act & Assert
     with pytest.raises(ValidationError) as excinfo:
         client.full_clean()
-    assert ClientErrorMessages.PASSWORD_WEAK in excinfo.value.messages
+    assert expected_msg in excinfo.value.messages
 
 
 @pytest.mark.django_db

@@ -4,13 +4,14 @@ from typing import Annotated
 from pydantic import AfterValidator, EmailStr, PastDate, StringConstraints
 
 import exc
-from clients.error_messages import ClientErrorMessages
 from clients.rules import ClientRules
+
+from ..feedback_messages import ClientErrorMessages
 
 Username = Annotated[
     str,
     StringConstraints(
-        pattern=r'^[a-zA-Z0-9_]+$',
+        pattern=r'^[a-zA-Z0-9_@.+]+',
         min_length=ClientRules.USERNAME_MIN_SIZE,
         max_length=ClientRules.USERNAME_MAX_SIZE,
         strip_whitespace=True,

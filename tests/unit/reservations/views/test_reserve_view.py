@@ -13,7 +13,7 @@ from reservations.models import Reservation
 from reservations.error_messages import ReserveErrorMessages
 from reservations.rules import ReserveRules
 from utils.supporttest import get_message
-from clients.error_messages import INVALID_RECAPTCHA_MESSAGE
+from clients.feedback_messages import Recaptcha
 from reservations.error_messages import ReserveMessages
 
 
@@ -253,4 +253,4 @@ def test_reserve_invalid_captcha_redirects_to_reserve_with_message(
     message = get_message(response)
 
     # Assert
-    assert message == INVALID_RECAPTCHA_MESSAGE
+    assert message == Recaptcha.INVALID_MESSAGE

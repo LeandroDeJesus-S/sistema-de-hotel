@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.exceptions import ValidationError
 from django.core.validators import (
@@ -9,28 +10,36 @@ from django.core.validators import (
 )
 from django.db import models
 from django.utils.timezone import now
+from django.utils.translation import gettext_lazy as _
 
-from .error_messages import ClientErrorMessages, ContactErrorMessages
+from clients.infra.validators import PasswordValidator
+
+from .feedback_messages import ClientErrorMessages, ContactErrorMessages
+from .infra.validators import (
+    BirthDateValidator,
+    DjangoValidatorAdapter,
+    PhoneNumberValidator,
+    UsernameValidator,
+)
 from .rules import ClientRules
-from .validators import CpfValidator, validate_phone_number
+from .validators import CpfValidator
 
 
 class Client(AbstractUser):
     """model que representa o usuário final"""
 
+    _PW_VALIDATORS = [
+        PasswordValidator([validate_password]),
+    ]
+
     username = models.CharField(
+        _('username'),
         max_length=ClientRules.USERNAME_MAX_SIZE,
         unique=True,
         validators=[
-            MinLengthValidator(
-                ClientRules.USERNAME_MIN_SIZE,
-                ClientErrorMessages.INVALID_USERNAME_LEN,
+            DjangoValidatorAdapter(
+                UsernameValidator(dj_extra=[UnicodeUsernameValidator()]),
             ),
-            MaxLengthValidator(
-                ClientRules.USERNAME_MAX_SIZE,
-                ClientErrorMessages.INVALID_USERNAME_LEN,
-            ),
-            UnicodeUsernameValidator(),
         ],
         error_messages={
             'blank': ClientErrorMessages.NOT_PROVIDED_USERNAME,
@@ -40,7 +49,7 @@ class Client(AbstractUser):
         },
     )
     first_name = models.CharField(
-        'Nome',
+        _('Nome'),
         max_length=ClientRules.MAX_FIRSTNAME_CHARS,
         blank=False,
         null=False,
@@ -57,7 +66,7 @@ class Client(AbstractUser):
         ],
     )
     last_name = models.CharField(
-        'Sobrenome',
+        _('Sobrenome'),
         max_length=ClientRules.MAX_SURNAME_CHARS,
         blank=False,
         null=False,
@@ -76,9 +85,16 @@ class Client(AbstractUser):
             ),
         ],
     )
-    birthdate = models.DateField('Data de nascimento', blank=False, null=False)
+    birthdate = models.DateField(
+        _('Data de nascimento'),
+        blank=False,
+        null=False,
+        validators=[
+            DjangoValidatorAdapter(BirthDateValidator()),
+        ],
+    )
     email = models.EmailField(
-        'E-mail',
+        _('E-mail'),
         max_length=255,
         unique=True,
         null=False,
@@ -94,13 +110,13 @@ class Client(AbstractUser):
         },
     )
     phone = models.CharField(
-        'Telefone',
+        _('Telefone'),
         max_length=16,
         null=False,
         blank=False,
         unique=True,
         validators=[
-            validate_phone_number,
+            DjangoValidatorAdapter(PhoneNumberValidator()),
         ],
         error_messages={
             'blank': ClientErrorMessages.NOT_PROVIDED_PHONE,
@@ -110,7 +126,7 @@ class Client(AbstractUser):
         },
     )
     cpf = models.CharField(
-        'CPF',
+        _('CPF'),
         max_length=11,
         unique=True,
         blank=False,
@@ -119,41 +135,18 @@ class Client(AbstractUser):
             CpfValidator(message=ClientErrorMessages.INVALID_CPF),
         ],
         error_messages={'unique': ClientErrorMessages.DUPLICATED_CPF},
+        help_text=_('Seu CPF sem pontuação'),
     )
-
-    def clean(self) -> None:
-        super().clean()
-        self.error_messages: dict[str, str] = {}
-        self._validate_username()
-        self._validate_password_strength()
-        self._validate_birthdate()
-
-        if self.error_messages:
-            raise ValidationError(self.error_messages)
-
-    def _validate_username(self):
-        """faz todas as validações relacionadas ao username"""
-        if len(self.username) < ClientRules.USERNAME_MIN_SIZE:
-            self.error_messages['username'] = ClientErrorMessages.INVALID_USERNAME_LEN
-
-        elif self.username.isnumeric():
-            self.error_messages['username'] = ClientErrorMessages.INVALID_USERNAME_CHARS
-
-    def _validate_birthdate(self):
-        """faz todas as validações relacionadas a data de nascimento do usuário"""
-        if not ClientRules.MIN_AGE <= self.age <= ClientRules.MAX_AGE:
-            self.error_messages['birthdate'] = ClientErrorMessages.INVALID_BIRTHDATE
-
-    def _validate_password_strength(self):
-        """valida o tamanho da senha e se não há símbolos"""
-        so_small = len(self.password) < ClientRules.PASSWORD_MIN_SIZE
-        no_symbols = self.password.isnumeric() or self.password.isalnum()
-
-        if so_small or no_symbols:
-            self.error_messages['password'] = ClientErrorMessages.PASSWORD_WEAK
 
     def __str__(self) -> str:
         return str(self.username)
+
+    def clean(self):
+        super().clean()
+        for pw_validator in self._PW_VALIDATORS:
+            _, err = pw_validator.validate(self.password)
+            if err is not None:
+                raise ValidationError(err.msg)
 
     @staticmethod
     def _create_mask(value: str, start: int, end: int, maskchar='*') -> str:
@@ -216,5 +209,5 @@ class Client(AbstractUser):
         return masked
 
     class Meta:
-        verbose_name = 'Cliente'
-        verbose_name_plural = 'Clientes'
+        verbose_name = _('Cliente')
+        verbose_name_plural = _('Clientes')

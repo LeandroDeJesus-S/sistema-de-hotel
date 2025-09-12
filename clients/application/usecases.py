@@ -1,10 +1,10 @@
 import logging
 
+from clients.feedback_messages import SignIn as SignInMessages
 from exc import Error, Result
 
 from ..domain import entities, ports
-from ..error_messages import SignInMessages
-from .usecases_value_objects import ChangePasswordInput, SignInInput
+from .dtos import ChangePasswordInput, SignInInput
 
 
 class AuthenticateUserUseCase:

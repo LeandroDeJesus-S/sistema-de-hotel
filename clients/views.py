@@ -12,18 +12,15 @@ from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, UpdateView
 
-from clients.application.usecases_value_objects import ChangePasswordInput
+from clients.application.dtos import ChangePasswordInput
 from clients.models import Client
 from reservations.mixins import LoginRequired
 from utils import support
 
+from . import feedback_messages
 from .application.services import ClientService
 from .decorators import profile_ownership_required
 from .domain.entities import Client as DomainClient
-from .error_messages import (
-    PerfilChangePasswordMessages,
-    SignUpMessages,
-)
 from .forms import UpdatePerfilForm
 from .infra.adapters import (
     DjangoPasswordManager,
@@ -78,7 +75,7 @@ class SignUp(View):
             birthdate,
             cpf,
         )):
-            messages.error(request, SignUpMessages.MISSING_FIELDS)
+            messages.error(request, feedback_messages.SignUp.MISSING_FIELDS)
             return render(request, self.template_name, CAPTCHA_CTX)
 
         client_entity, err = DomainClient.safe_create(
@@ -97,7 +94,7 @@ class SignUp(View):
             return render(request, self.template_name, CAPTCHA_CTX)
 
         if client_entity is None:
-            messages.error(request, 'Unexpected error occurred. Please try again.')
+            messages.error(request, feedback_messages.Generic.UNEXPECTED_ERROR)
             self.logger.error('client entity is None after creation')
             return render(request, self.template_name, CAPTCHA_CTX)
 
@@ -109,7 +106,7 @@ class SignUp(View):
             return render(request, self.template_name, CAPTCHA_CTX)
 
         if created_user_result.value is None:
-            messages.error(request, 'Unexpected error occurred. Please try again.')
+            messages.error(request, feedback_messages.Generic.UNEXPECTED_ERROR)
             self.logger.error('created user is None')
             return render(request, self.template_name, CAPTCHA_CTX)
 
@@ -168,7 +165,7 @@ class SignIn(View):
             return render(request, self.template, CAPTCHA_CTX)
 
         if user is None:
-            messages.error(request, 'Invalid credentials')
+            messages.error(request, SignIn.INVALID_CREDENTIALS)
             self.logger.error('user is None')
             return render(request, self.template, CAPTCHA_CTX)
 
@@ -181,7 +178,7 @@ class SignIn(View):
 def axes_locked_out(request, *args, **kwargs):
     """callback que add uma msg e redireciona para a url referer
     quando número de tentativas de fazer login é excedia"""
-    messages.error(request, 'Número de tentativas excedida. Tente novamente mais tarde.')
+    messages.error(request, SignIn.LOCKOUT_MESSAGE)
     redirect_url = request.META.get('HTTP_REFERER', 'signin')
     return redirect(redirect_url)
 
@@ -254,7 +251,7 @@ class PerfilChangePassword(LoginRequired, View):
 
         if inp is None:
             self.logger.error('input is None and err is not None')
-            messages.error(self.request, 'Dados inválidos')
+            messages.error(self.request, feedback_messages.Generic.INVALID_DATA)
             return _redirect
 
         entity, err = self.svc.change_pw(inp)
@@ -267,11 +264,11 @@ class PerfilChangePassword(LoginRequired, View):
             self.logger.error('input is None and err is not None')
             messages.error(
                 self.request,
-                'Um error inesperado aconteceu. Por favor tente novamente mais tarde.',
+                feedback_messages.Generic.UNEXPECTED_ERROR,
             )
             return _redirect
 
-        messages.success(self.request, PerfilChangePasswordMessages.SUCCESS)
+        messages.success(self.request, feedback_messages.ChangePassword.SUCCESS)
         return _redirect
 
 

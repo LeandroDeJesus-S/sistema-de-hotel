@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from reservations.models import Room
 from utils.supporttest import get_message
-from clients.error_messages import SignInMessages
+from clients.feedback_messages import Recaptcha, SignIn
 
 
 @pytest.fixture(scope='function')
@@ -142,9 +142,9 @@ def test_client_redirected_to_rooms_after_login(mocker, client, signin_urls, sig
 @pytest.mark.parametrize(
     ('username', 'password', 'expected_message'),
     [
-        ('invalid_username', 'test_password_123', SignInMessages.INVALID_CREDENTIALS),
-        ('test_username', 'invalid_password', SignInMessages.INVALID_CREDENTIALS),
-        ('email@email.com', 'invalid_password', SignInMessages.INVALID_CREDENTIALS),
+        ('invalid_username', 'test_password_123', SignIn.INVALID_CREDENTIALS),
+        ('test_username', 'invalid_password', SignIn.INVALID_CREDENTIALS),
+        ('email@email.com', 'invalid_password', SignIn.INVALID_CREDENTIALS),
     ],
 )
 @pytest.mark.django_db
@@ -259,9 +259,9 @@ def test_client_redirected_to_reserve_after_login_from_next_url(
 @pytest.mark.parametrize(
     ('username', 'password', 'expected_message'),
     [
-        ('', 'test_password_123', SignInMessages.INVALID_CREDENTIALS),
-        ('test_username', '', SignInMessages.INVALID_CREDENTIALS),
-        ('email@email.com', '', SignInMessages.INVALID_CREDENTIALS),
+        ('', 'test_password_123', SignIn.INVALID_CREDENTIALS),
+        ('test_username', '', SignIn.INVALID_CREDENTIALS),
+        ('email@email.com', '', SignIn.INVALID_CREDENTIALS),
     ],
 )
 @pytest.mark.django_db
@@ -366,7 +366,7 @@ def test_signin_invalid_captcha_redirects_to_signin_with_message(
     message = get_message(response)
 
     # Assert
-    assert message == 'Mr. Robot, é você???'
+    assert message == Recaptcha.INVALID_MESSAGE
 
 
 @pytest.mark.django_db

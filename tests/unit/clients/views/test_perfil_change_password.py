@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from clients.models import Client
 from utils.supporttest import get_message
-from clients.error_messages import PerfilChangePasswordMessages
+from clients.feedback_messages import ChangePassword, Recaptcha
 
 
 @pytest.fixture(scope='function')
@@ -170,7 +170,7 @@ def test_message_when_passwords_differ(
     message = get_message(response)
 
     # Assert
-    assert message == PerfilChangePasswordMessages.PASSWORDS_DIFFER
+    assert message == ChangePassword.PASSWORDS_DIFFER
 
 
 @pytest.mark.django_db
@@ -191,7 +191,7 @@ def test_message_when_password_changed_successfully(
     message = get_message(response)
 
     # Assert
-    assert message == PerfilChangePasswordMessages.SUCCESS
+    assert message == ChangePassword.SUCCESS
 
 
 @pytest.mark.django_db
@@ -232,7 +232,7 @@ def test_invalid_captcha_redirects_with_message(
     message = get_message(response)
 
     # Assert
-    assert message == 'Mr. Robot, é você???'
+    assert message == Recaptcha.INVALID_MESSAGE
 
 
 @pytest.mark.django_db

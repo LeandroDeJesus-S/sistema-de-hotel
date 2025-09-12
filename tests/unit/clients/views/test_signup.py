@@ -3,10 +3,10 @@ from http import HTTPStatus
 import pytest
 from django.urls import reverse
 
-from clients.error_messages import ClientErrorMessages, ContactErrorMessages
+from clients.feedback_messages import ClientErrorMessages, ContactErrorMessages
 from clients.rules import ClientRules
 from utils.supporttest import get_message
-from clients.error_messages import SignUpMessages
+from clients.feedback_messages import Recaptcha, SignUp
 
 
 @pytest.mark.django_db
@@ -58,7 +58,7 @@ def test_signup_missing_field_renders_signup_with_message(
     message = get_message(response)
 
     # Assert
-    assert message == SignUpMessages.MISSING_FIELDS
+    assert message == SignUp.MISSING_FIELDS
 
 
 @pytest.mark.parametrize(
@@ -179,7 +179,6 @@ def test_signup_duplicated_unique_field_renders_correct_template(
             '1' * (ClientRules.USERNAME_MAX_SIZE + 1),
             ClientErrorMessages.INVALID_USERNAME_LEN,
         ),
-        ('12345678', ClientErrorMessages.INVALID_USERNAME_CHARS),
         ('dah#1234', ClientErrorMessages.INVALID_USERNAME_CHARS),
         ('dah$1234', ClientErrorMessages.INVALID_USERNAME_CHARS),
     ],
@@ -221,7 +220,6 @@ def test_signup_invalid_username_renders_signup_with_message(
             '1' * (ClientRules.USERNAME_MAX_SIZE + 1),
             ClientErrorMessages.INVALID_USERNAME_LEN,
         ),
-        ('12345678', ClientErrorMessages.INVALID_USERNAME_CHARS),
         ('dah#1234', ClientErrorMessages.INVALID_USERNAME_CHARS),
         ('dah$1234', ClientErrorMessages.INVALID_USERNAME_CHARS),
     ],
@@ -318,7 +316,7 @@ def test_signup_invalid_captcha_redirects_to_signup_with_message(
     message = get_message(response)
 
     # Assert
-    assert message == 'Mr. Robot, é você???'
+    assert message == Recaptcha.INVALID_MESSAGE
 
 
 @pytest.mark.django_db

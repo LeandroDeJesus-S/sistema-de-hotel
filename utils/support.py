@@ -12,7 +12,7 @@ from PIL import Image
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
-from clients.error_messages import INVALID_RECAPTCHA_MESSAGE
+from clients.feedback_messages import Recaptcha
 from home.models import Contact, Hotel
 from payments.models import Payment
 
@@ -154,7 +154,7 @@ def verify_captcha(captcha_resp) -> bool:
 
 
 def captcha_required(
-    on_fail_redirect: str, on_fail_message: str = INVALID_RECAPTCHA_MESSAGE, params=None
+    on_fail_redirect: str, on_fail_message: str = Recaptcha.INVALID_MESSAGE, params=None
 ):
     """
     Decorator that checks if the request contains a valid recaptcha response.

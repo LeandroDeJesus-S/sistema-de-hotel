@@ -10,7 +10,7 @@ from django_q.tasks import Schedule
 
 from schedules.models import Scheduling
 from reservations.error_messages import ReserveErrorMessages
-from clients.error_messages import INVALID_RECAPTCHA_MESSAGE
+from clients.feedback_messages import Recaptcha
 from payments.error_messages import CheckoutMessages
 
 
@@ -212,7 +212,7 @@ def test_invalid_captcha_redirects_to_schedule_with_correct_message(
     # Assert
     assert response.status_code == 302
     assert response.url == url
-    assert messages == [INVALID_RECAPTCHA_MESSAGE]
+    assert messages == [Recaptcha.INVALID_MESSAGE]
 
 
 # Tests for ScheduleSuccess View (from TestScheduleSuccess)
