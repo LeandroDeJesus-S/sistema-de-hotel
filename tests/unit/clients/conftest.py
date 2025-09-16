@@ -69,9 +69,4 @@ def perfil_urls(user):
     }
 
 
-@pytest.fixture
-def user(db, valid_client_data):
-    """
-    Provides a valid user instance.
-    """
-    return Client.objects.create_user(**valid_client_data)
+

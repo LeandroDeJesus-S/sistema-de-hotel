@@ -119,7 +119,7 @@ class SignUp(View):
                 f'User created, but failed to log in automatically: {login_result.error}'
             )
 
-        self.logger.debug(f'redirecting to {_redirect.url}')
+        self.logger.debug(f'redirecting to {_redirect}')
         return _redirect
 
 
@@ -153,23 +153,29 @@ class SignIn(View):
         return render(request, self.template, CAPTCHA_CTX)
 
     def post(self, request: HttpRequest, *args, **kwargs):
+        _std_rendering = render(request, self.template, CAPTCHA_CTX)
         post_data = {
-            'username': request.POST.get('username'),
-            'password': request.POST.get('password'),
+            'username': request.POST.get('username', ''),
+            'password': request.POST.get('password', ''),
         }
 
-        user, err = self.svc.authenticate_user(post_data)
+        user, err = self.svc.session_manager.authenticate(request, **post_data)
         if err is not None:
             messages.error(request, err.msg)
-            self.logger.error(err, exc_info=True)
-            return render(request, self.template, CAPTCHA_CTX)
+            self.logger.error(err, exc_info=err.src_error)
+            return _std_rendering
 
         if user is None:
-            messages.error(request, SignIn.INVALID_CREDENTIALS)
+            messages.error(request, feedback_messages.SignIn.INVALID_CREDENTIALS)
             self.logger.error('user is None')
-            return render(request, self.template, CAPTCHA_CTX)
+            return _std_rendering
 
-        self.svc.session_manager.login(request, user)
+        _, err = self.svc.session_manager.login(request, user)
+        if err is not None:
+            self.logger.error(err, exc_info=err.src_error)
+            messages.error(request, err.msg)
+            return _std_rendering
+
         next_url = request.session.get('next_url', self.next_url)
         self.logger.info(f'User logged in successfully. Redirecting to {next_url}')
         return redirect(next_url)
@@ -178,7 +184,7 @@ class SignIn(View):
 def axes_locked_out(request, *args, **kwargs):
     """callback que add uma msg e redireciona para a url referer
     quando número de tentativas de fazer login é excedia"""
-    messages.error(request, SignIn.LOCKOUT_MESSAGE)
+    messages.error(request, feedback_messages.SignIn.LOCKOUT_MESSAGE)
     redirect_url = request.META.get('HTTP_REFERER', 'signin')
     return redirect(redirect_url)
 

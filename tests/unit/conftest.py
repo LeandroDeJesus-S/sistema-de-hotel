@@ -57,11 +57,13 @@ def valid_client_data(faker):
 
 
 @pytest.fixture(scope='function')
-def user(db, valid_client_data):
+def user(db, valid_client_data, monkeypatch):
     """
     Provides a valid user instance.
     """
-    return Client.objects.create_user(**valid_client_data)
+    u = Client.objects.create_user(**valid_client_data)
+    monkeypatch.setattr(u, 'raw_password', valid_client_data['password'], raising=False)
+    return u
 
 
 @pytest.fixture(scope='function')
@@ -71,3 +73,16 @@ def authenticated_client(client, user):
     """
     client.force_login(user)
     return client, user
+
+
+@pytest.fixture
+def mock_recaptcha(responses):
+    responses.add(
+        responses.POST,
+        'https://www.google.com/recaptcha/api/siteverify',
+        json={'success': True, 'score': 0.9},
+        status=200,
+    )
+
+
+

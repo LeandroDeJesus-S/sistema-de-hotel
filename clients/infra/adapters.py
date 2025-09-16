@@ -1,15 +1,18 @@
+import logging
 from http import HTTPStatus
 from typing import Any
 
 import requests
 from django.contrib.auth import authenticate as django_authenticate
+from django.contrib.auth import get_user_model
 from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.contrib.auth.hashers import check_password, make_password
 
 from clients.domain.entities import Client
-from clients.models import Client as DjangoClient
 from exc import Error, Result
+
+logger = logging.getLogger('djangoLogger')
 
 
 class DjangoPasswordManager:
@@ -88,18 +91,33 @@ class GoogleRecaptchaV3Verifier:
 class DjangoSessionManager:
     """Manages user sessions using Django's built-in authentication system."""
 
-    def authenticate(self, username: str, password: str) -> Result[Client | None]:  # noqa: PLR6301
-        user = django_authenticate(username=username, password=password)
-        if user is None:
-            return Result(value=None, error=Error('Invalid credentials'))
+    DEFAULT_BACKEND = 'clients.authenticator.UserEmailAuthBackend'
 
+    def __init__(self, backend: str = DEFAULT_BACKEND) -> None:
+        self._backend = backend
+        self._usermodel = get_user_model()
+
+    def authenticate(
+        self, request: Any, username: str, password: str
+    ) -> Result[Client | None]:
+        logger.debug(f'authenticating user with backend: {self._backend}')
         try:
+            user = django_authenticate(
+                request,
+                username=username,
+                password=password,
+                backend=self._backend,
+            )
+            if user is None:
+                logger.debug(f'used credentials: {username} {password}')
+                return Result(value=None, error=Error('Invalid credentials'))
+
             u = Client.model_validate(user.__dict__)
             return Result(value=u, error=None)
         except Exception as e:
             return Result(value=None, error=Error('Failed to validate user', e))
 
-    def login(self, request: Any, user: Client) -> Result[None]:  # noqa: PLR6301
+    def login(self, request: Any, user: Client) -> Result[None]:
         """
         Logs a user in by creating a session.
 
@@ -110,12 +128,12 @@ class DjangoSessionManager:
         Returns:
             A Result indicating success or an Error on failure.
         """
-        db_u = DjangoClient.objects.filter(id=user.id).first()
+        db_u = self._usermodel.objects.filter(id=user.id).first()
         if db_u is None:
             return Result(value=None, error=Error('Invalid user'))
 
         try:
-            django_login(request, db_u)
+            django_login(request, db_u, backend=self._backend)
             return Result(value=None, error=None)
         except Exception as e:
             return Result(value=None, error=Error('Failed to login user', e))

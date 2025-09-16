@@ -101,7 +101,9 @@ class AbsSessionManager(Protocol):
     """
 
     @abstractmethod
-    def authenticate(self, username: str, password: str) -> Result[Client | None]:
+    def authenticate(
+        self, request: Any, username: str, password: str
+    ) -> Result[Client | None]:
         """
         Authenticates a user by their username and password.
         Returns the Client entity if authentication is successful, otherwise None.

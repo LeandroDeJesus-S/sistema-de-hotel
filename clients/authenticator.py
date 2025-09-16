@@ -8,7 +8,7 @@ UserModel = get_user_model()
 
 class UserEmailAuthBackend(BaseBackend):
     def authenticate(  # noqa: PLR6301
-        self, _, username: str, password: str
+        self, _, username: str, password: str, **kwargs
     ) -> AbstractBaseUser | None:
         try:
             user = UserModel.objects.get(

@@ -1,61 +1,9 @@
 import logging
 
-from clients.feedback_messages import SignIn as SignInMessages
 from exc import Error, Result
 
 from ..domain import entities, ports
-from .dtos import ChangePasswordInput, SignInInput
-
-
-class AuthenticateUserUseCase:
-    """Handles user authentication and session creation."""
-
-    def __init__(
-        self,
-        repo: ports.AbsClientRepository,
-        session_mng: ports.AbsSessionManager,
-    ) -> None:
-        """
-        Initializes the use case with its dependencies.
-
-        Args:
-            repo: The repository for accessing client data.
-            session_mng: The port for managing user sessions.
-        """
-        self._repo = repo
-        self._session_mng = session_mng
-
-    def __call__(self, data: dict) -> Result[entities.Client | None]:
-        """
-        Executes the sign-in process.
-
-        Args:
-            data: A dictionary containing the user's credentials.
-
-        Returns:
-            A Result containing the authenticated Client entity, or an Error on failure.
-        """
-        validated_data = SignInInput.safe_validate(data)
-        if validated_data.error:
-            return Result(
-                value=None, error=Error(validated_data.error.msg, validated_data.error)
-            )
-
-        if validated_data.value is None:
-            return Result(
-                value=None,
-                error=Error('Validation failed', None),
-            )
-
-        client, err = self._session_mng.authenticate(
-            validated_data.value.username, validated_data.value.password
-        )
-        if err is not None or not client:
-            return Result(
-                value=None, error=Error(SignInMessages.INVALID_CREDENTIALS, src_error=err)
-            )
-
-        return entities.Client.safe_validate(client.__dict__)
+from .dtos import ChangePasswordInput
 
 
 class CreateUserUseCase:
