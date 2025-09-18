@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 
 from clients.models import Client
 from reservations.models import Reservation, Room
-from reservations.error_messages import ReserveErrorMessages
+from reservations.feedback_messages import ReserveErrorMessages
 from reservations.rules import ReserveRules, RoomRules
 
 
@@ -194,8 +194,7 @@ def test_reservation_is_inactive_on_creation(valid_reservation_data):
     # Act
     reservation.save()
 
-    # Assert
-    assert not reservation.active
+    assert reservation.status == 'S'
 
 
 @pytest.mark.django_db
@@ -210,8 +209,11 @@ def test_creating_overlapping_reservation_raises_validation_error(db_setup):
     checkin = datetime.now().date()
     checkout = checkin + timedelta(days=5)
 
+    checkin = datetime.now().date()
+    checkout = checkin + timedelta(days=5)
+
     Reservation.objects.create(
-        client=client1, room=room, checkin=checkin, checkout=checkout, active=True, status='A'
+        client=client1, room=room, checkin=checkin, checkout=checkout, status='A'
     )
 
     overlapping_reservation = Reservation(
@@ -233,7 +235,7 @@ def test_available_dates_returns_correct_string(valid_reservation_data):
     """
     # Arrange
     reservation1 = Reservation.objects.create(
-        **valid_reservation_data, active=True, status='A'
+        **valid_reservation_data, status='A'
     )
 
     checkin2 = reservation1.checkout + timedelta(days=2)

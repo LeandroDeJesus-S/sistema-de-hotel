@@ -6,7 +6,7 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from reservations.models import Class
-from reservations.error_messages import ClasseErrorMessages
+from reservations.feedback_messages import ClasseErrorMessages
 
 
 @pytest.mark.django_db

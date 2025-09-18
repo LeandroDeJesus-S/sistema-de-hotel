@@ -45,7 +45,6 @@ class ReservationAdmin(admin.ModelAdmin):
         'room',
         'checkin',
         'checkout',
-        'active',
         status,
     ]
 

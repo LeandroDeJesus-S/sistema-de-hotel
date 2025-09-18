@@ -10,11 +10,11 @@ from django.urls import reverse
 from django_q.models import Schedule
 
 from reservations.models import Reservation
-from reservations.error_messages import ReserveErrorMessages
+from reservations.feedback_messages import ReserveErrorMessages
 from reservations.rules import ReserveRules
 from utils.supporttest import get_message
 from clients.feedback_messages import Recaptcha
-from reservations.error_messages import ReserveMessages
+from reservations.feedback_messages import ReservationMessages
 
 
 @pytest.mark.django_db
@@ -209,7 +209,7 @@ def test_reserve_with_existing_reservation_redirects_to_rooms_with_message(
     message = get_message(response)
 
     # Assert
-    assert message == ReserveMessages.ALREADY_HAVE_A_RESERVATION
+        assert message == ReservationMessages.ALREADY_HAVE_A_RESERVATION
 
 
 @pytest.mark.django_db
@@ -232,7 +232,7 @@ def test_reserve_unexpected_error_redirects_to_room_with_message(
     message = get_message(response)
 
     # Assert
-    assert message == ReserveMessages.RESERVATION_FAIL
+    assert message == ReservationMessages.RESERVATION_FAIL
 
 
 @pytest.mark.django_db

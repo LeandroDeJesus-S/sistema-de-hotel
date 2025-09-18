@@ -23,7 +23,7 @@ def test_check_reservation_dates_finalizes_past_reservations(db_setup):
     # Arrange
     for r in Reservation.objects.all():
         r.checkout = datetime.now().date() - timedelta(days=1)
-        r.active = True
+        r.status = 'A'
         r.room.available = False
         r.room.save()
         r.save()
@@ -33,7 +33,6 @@ def test_check_reservation_dates_finalizes_past_reservations(db_setup):
 
     # Assert
     for r in Reservation.objects.all():
-        assert not r.active
         assert r.status == 'F'
         assert r.room.available
 

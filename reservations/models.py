@@ -15,14 +15,14 @@ from django.utils import timezone
 
 from clients.models import Client
 from home.models import Hotel
-from utils import support
-
-from .error_messages import (
+from reservations.feedback_messages import (
     BenefitErrorMessages,
     ClasseErrorMessages,
     ReserveErrorMessages,
     RoomErrorMessages,
 )
+from utils import support
+
 from .rules import BenefitRules, ReserveRules, RoomRules
 
 
@@ -272,12 +272,6 @@ class Reservation(models.Model):
         validators=[
             MinValueValidator(RoomRules.MIN_DAILY_PRICE),
         ],
-    )
-    active = models.BooleanField(
-        'Ativa',
-        null=False,
-        blank=False,
-        default=False,
     )
     STATUS_CHOICES = (
         ('I', 'iniciada'),

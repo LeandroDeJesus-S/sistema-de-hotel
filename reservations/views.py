@@ -19,7 +19,7 @@ from django_q.tasks import schedule
 
 from utils import support
 
-from .error_messages import ReserveMessages
+from .feedback_messages import ReservationMessages
 from .mixins import LoginRequired
 from .models import Benefit, Class, Reservation, Room
 from .rules import ReserveSupport
@@ -101,7 +101,7 @@ class Reserve(LoginRequired, View):
         tenha uma reserva ativa ou agendada"""
         if Reservation.objects.filter(client=request.user, status__in=['A', 'S']).exists():
             self.logger.info('user already have a reservation active ou scheduled')
-            messages.info(request, ReserveMessages.ALREADY_HAVE_A_RESERVATION)
+            messages.info(request, ReservationMessages.ALREADY_HAVE_A_RESERVATION)
             return redirect('rooms')
 
         self.context['room_pk'] = room_pk
@@ -155,7 +155,7 @@ class Reserve(LoginRequired, View):
 
         except Exception as exc:
             self.logger.error(str(exc))
-            messages.error(request, ReserveMessages.RESERVATION_FAIL)
+            messages.error(request, ReservationMessages.RESERVATION_FAIL)
             room_url = reverse_lazy('room', args=(room_pk,))
             redirect_url = request.META.get('HTTP_REFERER', room_url)
             return redirect(redirect_url)
