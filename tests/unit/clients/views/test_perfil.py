@@ -24,7 +24,7 @@ def test_perfil_template_is_rendered(authenticated_client, perfil_urls):
 
 
 @pytest.mark.django_db
-def test_correct_client_data_is_shown(authenticated_client, perfil_urls, user):
+def test_correct_client_data_is_shown(authenticated_client, perfil_urls, client_model):
     """
     Test if the profile being shown is the correct client's profile.
     """
@@ -38,7 +38,7 @@ def test_correct_client_data_is_shown(authenticated_client, perfil_urls, user):
     perfil = response.context[context_obj_name]
 
     # Assert
-    assert perfil == user
+    assert perfil == client_model
 
 
 @pytest.mark.django_db

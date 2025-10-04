@@ -5,25 +5,17 @@ Tests for the Class model.
 import pytest
 from django.core.exceptions import ValidationError
 
-from reservations.models import Class
 from reservations.feedback_messages import ClasseErrorMessages
+from reservations.models import Class
 
 
 @pytest.mark.django_db
-def test_class_creation_with_valid_name():
+def test_class_creation_with_valid_name(room_class_model):
     """
     Tests if a class is created correctly with a valid name.
     """
-    # Arrange
-    name = 'The best class'
-    classe = Class(name=name)
-
-    # Act
-    classe.full_clean()
-    classe.save()
-
     # Assert
-    assert Class.objects.filter(pk=classe.pk).exists()
+    assert Class.objects.filter(pk=room_class_model.pk).exists()
 
 
 @pytest.mark.parametrize(
@@ -36,14 +28,14 @@ def test_class_creation_with_valid_name():
     ],
 )
 @pytest.mark.django_db
-def test_class_creation_with_invalid_name(name):
+def test_class_creation_with_invalid_name(name, room_class_model):
     """
     Tests if a class is not created if the name is invalid.
     """
     # Arrange
-    classe = Class(name=name)
+    room_class_model.name = name
 
     # Act & Assert
     with pytest.raises(ValidationError) as excinfo:
-        classe.full_clean()
+        room_class_model.full_clean()
     assert ClasseErrorMessages.INVALID_NAME in excinfo.value.messages

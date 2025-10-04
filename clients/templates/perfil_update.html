@@ -7,7 +7,7 @@
 {% block content %}
 
 
-    <form class="form mx-5" method="post">{% csrf_token %}
+    <form id="form" class="form mx-5" method="post">{% csrf_token %}
         <div class="container text-light">
             <div class="row ">
                 {% for field in form %}

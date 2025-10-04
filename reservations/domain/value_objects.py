@@ -1,3 +1,4 @@
+from decimal import Decimal
 from enum import Enum
 from typing import Annotated
 
@@ -30,6 +31,7 @@ BenefitName = Annotated[
     StringConstraints(
         min_length=1,
         max_length=rules.BenefitRules.NAME_MAX_LEN,
+        pattern=rules.BenefitRules.NAME_PATTERN,
     ),
     'Represents a benefit name value object.',
 ]
@@ -41,6 +43,14 @@ BenefitShortDesc = Annotated[
         max_length=rules.BenefitRules.SHORT_DESC_MAX_LEN,
     ),
     'Represents a benefit short description value object.',
+]
+
+BenefitIcon = Annotated[
+    str,
+    StringConstraints(
+        max_length=rules.BenefitRules.ICON_MAX_LEN,
+    ),
+    'Represents a benefit icon value object.',
 ]
 
 
@@ -71,7 +81,7 @@ RoomSize = Annotated[
     'the dimension of a room in meters',
 ]
 DailyPrice = Annotated[
-    int,
+    Decimal,
     Field(ge=rules.RoomRules.MIN_DAILY_PRICE, le=rules.RoomRules.MAX_DAILY_PRICE),
     'the price of a room per day',
 ]

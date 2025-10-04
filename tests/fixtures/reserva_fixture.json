@@ -5,7 +5,7 @@
         "fields": {
             "client": 1,
             "checkin": "2024-07-24",
-            "checkout": "2024-07-24",
+            "checkout": "2024-07-25",
             "amount": "100",
             "observations": "",
             "room": 1,
@@ -44,7 +44,7 @@
         "fields": {
             "client": 1,
             "checkin": "2024-07-24",
-            "checkout": "2024-07-24",
+            "checkout": "2024-07-25",
             "amount": "100",
             "observations": "",
             "room": 4,

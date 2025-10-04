@@ -15,6 +15,8 @@ from django.utils import timezone
 
 from clients.models import Client
 from home.models import Hotel
+from reservations.domain import entities
+from reservations.domain.value_objects import ReservationStatusEnum
 from reservations.feedback_messages import (
     BenefitErrorMessages,
     ClasseErrorMessages,
@@ -35,6 +37,9 @@ class Benefit(models.Model):
         blank=False,
         null=False,
         unique=True,
+        validators=[
+            RegexValidator(BenefitRules.NAME_PATTERN, BenefitErrorMessages.INVALID_PATTERN)
+        ],
     )
     short_desc = models.CharField(
         'Descrição curta',
@@ -119,7 +124,7 @@ class Room(models.Model):
             )
         ],
     )
-    adult_capacity = models.PositiveSmallIntegerField(
+    adults_capacity = models.PositiveSmallIntegerField(
         'Capacidade de adultos',
         blank=False,
         null=False,
@@ -129,7 +134,7 @@ class Room(models.Model):
             MinValueValidator(RoomRules.MIN_ADULTS, RoomErrorMessages.ADULTS_INSUFFICIENT),
         ],
     )
-    child_capacity = models.PositiveSmallIntegerField(
+    children_capacity = models.PositiveSmallIntegerField(
         'Capacidade crianças',
         blank=False,
         null=False,
@@ -159,7 +164,7 @@ class Room(models.Model):
             MaxValueValidator(RoomRules.MAX_DAILY_PRICE, RoomErrorMessages.PRICE_EXCEEDED),
         ],
     )
-    benefit = models.ManyToManyField(
+    benefits = models.ManyToManyField(
         Benefit,
         related_name='room_benefits',
         related_query_name='room_benefit',
@@ -199,7 +204,7 @@ class Room(models.Model):
     def clean(self) -> None:
         super().clean()
         error_messages = {}
-        if self.image and not re.match(r'^(\w+/?-?)+\.(jpg|png)$', self.image.name):
+        if self.image and not re.match(r'^[\w\-\/]+\.(jpg|png)$', self.image.name):
             error_messages['image'] = RoomErrorMessages.IMAGE_INVALID_NAME
 
         if error_messages:
@@ -258,7 +263,6 @@ class Reservation(models.Model):
         'Observações',
         max_length=100,
         blank=True,
-        null=True,
         validators=[
             RegexValidator(r'[\w\s]*'),
         ],
@@ -273,21 +277,22 @@ class Reservation(models.Model):
             MinValueValidator(RoomRules.MIN_DAILY_PRICE),
         ],
     )
-    STATUS_CHOICES = (
-        ('I', 'iniciada'),
-        ('P', 'processando'),
-        ('A', 'ativa'),
-        ('C', 'cancelada'),
-        ('F', 'finalizada'),
-        ('S', 'agendada'),
-    )
+
+    class Status(models.TextChoices):
+        INITIALIZED = ReservationStatusEnum.INITIALIZED.value, 'iniciada'
+        PROCESSING = ReservationStatusEnum.PROCESSING.value, 'processando'
+        ACTIVE = ReservationStatusEnum.ACTIVE.value, 'ativa'
+        CANCELLED = ReservationStatusEnum.CANCELLED.value, 'cancelada'
+        FINISHED = ReservationStatusEnum.FINISHED.value, 'finalizada'
+        SCHEDULED = ReservationStatusEnum.SCHEDULED.value, 'agendada'
+
     status = models.CharField(
         'Status',
-        max_length=2,
+        max_length=1,
         null=False,
         blank=False,
-        choices=STATUS_CHOICES,
-        default='I',
+        choices=Status.choices,
+        default=Status.INITIALIZED,
     )
     created_at = models.DateTimeField(
         'Criada em', null=False, blank=False, default=timezone.now
@@ -317,14 +322,10 @@ class Reservation(models.Model):
 
     def clean(self) -> None:
         super().clean()
-        self.error_messages: dict[str, str] = {}
-        if self.status == 'I':
-            self._validate_date_availability(self.error_messages, 'checkin')
-            self._validate_check_in()
-            self._validate_room()
 
-        if self.error_messages:
-            raise ValidationError(self.error_messages)
+        _, err = support.model_to_entity(self, entities.Reservation)
+        if err is not None:
+            raise ValidationError(err.msg)
 
     @classmethod
     def get_free_dates(cls, reservations) -> str:
@@ -378,7 +379,9 @@ class Reservation(models.Model):
         Returns:
             str: string com msg de datas disponíveis (e.g d/m/Y a d/m/Y, e d/m/Y para frente)
         """
-        reservas = Reservation.objects.filter(room=room, status__in=['A', 'S'])
+        reservas = Reservation.objects.filter(room=room, status__in=['A', 'S']).order_by(
+            'checkin'
+        )
         return cls.get_free_dates(reservas)
 
     def _validate_date_availability(self, msg_dict, k) -> bool:
@@ -429,3 +432,24 @@ class Reservation(models.Model):
     class Meta:
         verbose_name = 'Reserva'
         verbose_name_plural = 'Reservas'
+
+        constraints = [
+            models.CheckConstraint(
+                name='checkin_check',
+                check=models.Q(checkin__lte=models.F('checkout')),
+            ),
+            models.CheckConstraint(
+                name='min_stayed_days',
+                check=models.Q(
+                    checkout__gte=models.F('checkin')
+                    + timezone.timedelta(days=ReserveRules.MIN_RESERVATION_DAYS)
+                ),
+            ),
+            models.CheckConstraint(
+                name='max_stayed_days',
+                check=models.Q(
+                    checkout__lte=models.F('checkin')
+                    + timezone.timedelta(days=ReserveRules.MAX_RESERVATION_DAYS)
+                ),
+            ),
+        ]

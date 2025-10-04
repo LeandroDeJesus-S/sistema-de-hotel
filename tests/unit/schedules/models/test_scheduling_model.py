@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 
 from reservations.models import Reservation
 from schedules.models import Scheduling
-from reservations.error_messages import ReserveErrorMessages
+from reservations.feedback_messages import ReserveErrorMessages
 
 
 @pytest.mark.django_db
@@ -27,7 +27,6 @@ def test_scheduling_model_with_valid_data(client_fixture, room_fixture):
         checkin=occupied_checkin,
         checkout=occupied_checkout,
         status='A',
-        active=True,
     )
 
     # Create a new reservation that does not overlap with the occupied reservation
@@ -78,7 +77,6 @@ def test_scheduling_model_with_valid_data(client_fixture, room_fixture):
                     checkin=date.today() + timedelta(days=5),
                     checkout=date.today() + timedelta(days=10),
                     status='A',
-                    active=True,
                 ),
                 G(
                     Reservation,

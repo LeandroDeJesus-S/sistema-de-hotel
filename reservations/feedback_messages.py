@@ -24,6 +24,7 @@ class BenefitErrorMessages:
     NAME_EMPTY = _('O nome do benefício não pode ser vazio.')
     ICON_EMPTY = _('O ícone do benefício não pode ser vazio.')
     SHORT_DESC_EMPTY = _('A descrição curta do benefício não pode ser vazia.')
+    INVALID_PATTERN = _('O nome do benefício não pode conter caracteres especiais.')
 
 
 class RoomErrorMessages:

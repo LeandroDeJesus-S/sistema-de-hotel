@@ -24,19 +24,19 @@ def valid_signup_data():
 
 
 @pytest.fixture(scope='function')
-def existing_user_data(user):
+def existing_user_data(client_model):
     """
     Provides existing user data for signup tests.
     """
     return {
-        'username': user.username,
-        'password': user.password,
-        'nome': user.first_name,
-        'sobrenome': user.last_name,
-        'telefone': user.phone,
-        'nascimento': user.birthdate,
-        'email': user.email,
-        'cpf': user.cpf,
+        'username': client_model.username,
+        'password': client_model.password,
+        'nome': client_model.first_name,
+        'sobrenome': client_model.last_name,
+        'telefone': client_model.phone,
+        'nascimento': client_model.birthdate,
+        'email': client_model.email,
+        'cpf': client_model.cpf,
     }
 
 
@@ -53,18 +53,18 @@ def signin_urls():
 
 
 @pytest.fixture(scope='function')
-def perfil_urls(user):
+def perfil_urls(client_model):
     """
     Provides URLs related to perfil.
     """
     return {
-        'perfil_url': reverse('perfil', args=(user.pk,)),
-        'perfil_update_url': reverse('update_perfil', args=(user.pk,)),
-        'perfil_change_pw_url': reverse('update_perfil_password', args=(user.pk,)),
-        'perfil_delete_url': reverse('delete_perfil', args=(user.pk,)),
+        'perfil_url': reverse('perfil', args=(client_model.pk,)),
+        'perfil_update_url': reverse('update_perfil', args=(client_model.pk,)),
+        'perfil_change_pw_url': reverse('update_perfil_password', args=(client_model.pk,)),
+        'perfil_delete_url': reverse('delete_perfil', args=(client_model.pk,)),
         'next_url_field_name': 'next',
         'perfil_context_obj_name': 'object',
-        'perfil_update_success_url': reverse('perfil', args=(user.pk,)),
+        'perfil_update_success_url': reverse('perfil', args=(client_model.pk,)),
         'perfil_delete_success_url': reverse('rooms'),
     }
 

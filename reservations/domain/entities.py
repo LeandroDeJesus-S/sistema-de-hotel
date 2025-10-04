@@ -1,14 +1,14 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import Annotated
 
-from pydantic import StringConstraints, model_validator
+from pydantic import Field, model_validator
 
 from base.entity import BaseEntity
 from clients.domain.entities import Client
 from home.domain.entities import Hotel
 from reservations.domain.value_objects import (
     AdultsCapacity,
+    BenefitIcon,
     BenefitName,
     BenefitShortDesc,
     ChildrenCapacity,
@@ -29,17 +29,16 @@ from reservations.feedback_messages import (
 )
 from reservations.rules import ReserveRules
 
-from .value_objects import RoomNumber
+from .value_objects import ReservationStatusEnum, RoomNumber
 
 
 class Benefit(BaseEntity):
     """Represents a benefit from a room.
 
     Attributes:
-        name: BenefitName
-        icon: str
-        short_desc: BenefitShortDesc
-    """
+            name: BenefitName
+            icon: BenefitIcon
+            short_desc: BenefitShortDesc"""
 
     _messages = {
         'icon': {
@@ -54,8 +53,9 @@ class Benefit(BaseEntity):
         },
     }
     name: BenefitName
-    icon: Annotated[str, StringConstraints(min_length=1)]
+    icon: BenefitIcon
     short_desc: BenefitShortDesc
+    id: int | None = None
 
 
 class RoomClass(BaseEntity):
@@ -72,6 +72,7 @@ class RoomClass(BaseEntity):
         },
     }
     name: RoomClassName
+    id: int | None = None
 
 
 class Room(BaseEntity):
@@ -122,13 +123,14 @@ class Room(BaseEntity):
     size: RoomSize
     daily_price: DailyPrice
     available: bool = True
-    image: str
+    image: str = ''
     short_desc: RoomShortDesc
     long_desc: RoomLongDesc
 
-    benefits: list[Benefit]
+    benefits: list[Benefit] = []
     room_class: RoomClass
     hotel: Hotel
+    id: int | None = None
 
 
 class Reservation(BaseEntity):
@@ -141,7 +143,6 @@ class Reservation(BaseEntity):
         room: Room
         observations: str
         amount: Decimal
-        active: bool
         status: ReservationStatus
         created_at: date
     """
@@ -163,13 +164,23 @@ class Reservation(BaseEntity):
     room: Room
     observations: ReservationObservations
     amount: Decimal
-    status: ReservationStatus
-    created_at: date
+    status: ReservationStatus = ReservationStatusEnum.INITIALIZED
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    id: int | None = None
+
+    @model_validator(mode='after')
+    def validate_room(self):
+        if not self.id and not self.room.available:
+            raise ValueError(ReserveErrorMessages.UNAVAILABLE_ROOM)
+        return self
 
     @model_validator(mode='after')
     def validate_dates(self):
-        if self.checkin < date.today():
+        if self.id is None and self.checkin < date.today():
             raise ValueError(ReserveErrorMessages.INVALID_CHECKIN_DATE)
+
+        if self.id is None and self.checkin > ReserveRules.checkin_anticipation_offset():
+            raise ValueError(ReserveErrorMessages.INVALID_CHECKIN_ANTICIPATION)
 
         if self.checkin >= self.checkout:
             raise ValueError(ReserveErrorMessages.INVALID_CHECKIN_DATE)

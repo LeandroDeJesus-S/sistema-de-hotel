@@ -45,7 +45,7 @@ def room_fixture(room_class_fixture, benefit_fixture, hotel_fixture):
     room = G(
         Room, room_class=room_class_fixture, hotel=hotel_fixture, daily_price=Decimal('200.00')
     )  # Use Decimal
-    room.benefit.add(benefit_fixture)
+    room.benefits.add(benefit_fixture)
     return room
 
 
@@ -168,6 +168,5 @@ def active_room_fixture(room_fixture, client_fixture):
         checkin=date.today() + timedelta(days=5),
         checkout=date.today() + timedelta(days=10),
         status='A',
-        active=True,
     )
     return room_fixture

@@ -9,7 +9,7 @@ from django.urls import reverse
 from django_q.tasks import Schedule
 
 from schedules.models import Scheduling
-from reservations.error_messages import ReserveErrorMessages
+from reservations.feedback_messages import ReserveErrorMessages
 from clients.feedback_messages import Recaptcha
 from payments.error_messages import CheckoutMessages
 

@@ -175,16 +175,15 @@ def test_message_when_passwords_differ(
 
 @pytest.mark.django_db
 def test_message_when_password_changed_successfully(
-    mocker, authenticated_client, perfil_urls, change_password_data
+    authenticated_client, perfil_urls, mock_recaptcha
 ):
     """
     Test if the password changed successfully message is correct.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
-    client, user = authenticated_client
-    client.force_login(user)
+    client, _ = authenticated_client
     url = perfil_urls['perfil_change_pw_url']
+    change_password_data = {'new_password': 'Novasenha@01', 'password_repeat': 'Novasenha@01'}
 
     # Act
     response = client.post(url, change_password_data)
@@ -196,7 +195,7 @@ def test_message_when_password_changed_successfully(
 
 @pytest.mark.django_db
 def test_password_persisted_correctly_in_database(
-    mocker, authenticated_client, perfil_urls, change_password_data, user
+    mocker, authenticated_client, perfil_urls, change_password_data, client_model
 ):
     """
     Test if the password is validly persisted in the database.
@@ -209,10 +208,10 @@ def test_password_persisted_correctly_in_database(
 
     # Act
     client.post(url, change_password_data)
-    user.refresh_from_db()
+    client_model.refresh_from_db()
 
     # Assert
-    assert user.check_password(change_password_data['new_password'])
+    assert client_model.check_password(change_password_data['new_password'])
 
 
 @pytest.mark.django_db

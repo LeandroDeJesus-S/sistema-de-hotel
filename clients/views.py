@@ -262,7 +262,7 @@ class PerfilChangePassword(LoginRequired, View):
 
         entity, err = self.svc.change_pw(inp)
         if err is not None:
-            self.logger.error(err.msg)
+            self.logger.error(err.msg, exc_info=err.src_error)
             messages.error(self.request, err.msg)
             return _redirect
 

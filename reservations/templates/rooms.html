@@ -6,7 +6,6 @@
 {% block title %}Acomodações{% endblock title %}
 
 {% block content %}
-
 <div class="container">
     {% include "partials/_messages.html" %}        
 
@@ -14,21 +13,21 @@
         <div class="card room-card mb-5 p-3">
             <div class="row">
                 <div class="col-md-4">
-                    <a href="{% url "room" room.pk %}">{% if room.image %}<img src="{{room.image.url}}" alt="" class="img-fluid rounded">{% endif %}</a>
+                    <a href="{% url "room" room.id %}">{% if room.image %}<img src="{{ MEDIA_URL }}{{room.image}}" alt="" class="img-fluid rounded">{% endif %}</a>
                 </div>
                 <div class="col-md-7">
                     <div class="card-body">
-                        <h1 class="card-title"><a style="text-decoration: none;color: var(--realce-3-color);" href="{% url "room" room.pk %}">Quarto {{room.number}} | {{room.room_class|capfirst}}</a></h1>
-                        <span class="text-light"><i class="fa-solid fa-person fs-5"></i> {{room.adult_capacity}}</span>
-                        <span class="text-light"><i class="fa-solid fa-child "></i> {{room.child_capacity}}</span>
+                        <h1 class="card-title"><a style="text-decoration: none;color: var(--realce-3-color);" href="{% url "room" room.id %}">Quarto {{room.number}} | {{room.room_class.name|capfirst}}</a></h1>
+                        <span class="text-light"><i class="fa-solid fa-person fs-5"></i> {{room.adults_capacity}}</span>
+                        <span class="text-light"><i class="fa-solid fa-child "></i> {{room.children_capacity}}</span>
 
                         <p class="card-text">
                             <div class="row">
 
                                 {% for benefit in benefits %}
                                     <div class="col-md-4 form-check">
-                                        <input class="form-check-input" type="checkbox" id="flexCheckDisabled" disabled {% if benefit in room.benefit.all %} checked {% endif %}>
-                                        <label class="form-check-label text-light" for="{% if benefit in room.benefit.all %} flexCheckCheckedDisabled {% else %} flexCheckDisabled {% endif %} ">{{benefit}}</label>
+                                        <input class="form-check-input" type="checkbox" id="flexCheckDisabled" disabled {% if benefit in room.benefits %} checked {% endif %}>
+                                        <label class="form-check-label text-light" for="{% if benefit in room.benefits %} flexCheckCheckedDisabled {% else %} flexCheckDisabled {% endif %} ">{{benefit.name}}</label>
                                     </div>
                                 {% endfor %}
                                 

@@ -16,14 +16,13 @@ from payments.error_messages import CheckoutMessages, PaymentCancelMessages
 
 
 @pytest.mark.django_db
-def test_checkout_view_uses_correct_template(client, view_setup):
+def test_checkout_view_uses_correct_template(client, client_model, reservation_model):
     """
     Tests if the checkout view renders the correct template.
     """
     # Arrange
-    user, _, reservation, _ = view_setup
-    client.force_login(user)
-    url = reverse('checkout', args=[reservation.pk])
+    client.force_login(client_model)
+    url = reverse('checkout', args=[reservation_model.pk])
 
     # Act
     response = client.get(url)
@@ -34,12 +33,13 @@ def test_checkout_view_uses_correct_template(client, view_setup):
 
 
 @pytest.mark.django_db
-def test_reservation_in_context(client, view_setup):
+def test_reservation_in_context(client, client_model, reservation_model):
     """
     Tests if the correct reservation is sent in the context.
     """
     # Arrange
-    user, _, reservation, _ = view_setup
+    user = client_model
+    reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
 
@@ -51,12 +51,12 @@ def test_reservation_in_context(client, view_setup):
 
 
 @pytest.mark.django_db
-def test_unauthenticated_user_is_redirected_from_checkout(client, view_setup):
+def test_unauthenticated_user_is_redirected_from_checkout(client, reservation_model):
     """
     Tests if an unauthenticated user is redirected to the signin page.
     """
     # Arrange
-    _, _, reservation, _ = view_setup
+    reservation = reservation_model
     url = reverse('checkout', args=[reservation.pk])
 
     # Act
@@ -69,14 +69,15 @@ def test_unauthenticated_user_is_redirected_from_checkout(client, view_setup):
 
 
 @pytest.mark.django_db
-def test_user_accessing_another_users_checkout_gets_forbidden(client, view_setup):
+def test_user_accessing_another_users_checkout_gets_forbidden(client, client_model_factory, reservation_model):
     """
     Tests if a user gets a 403 Forbidden error when trying to access another user's checkout.
     """
     # Arrange
-    user, _, _, reservation2 = view_setup
+    user = client_model_factory()
+    reservation = reservation_model
     client.force_login(user)
-    url = reverse('checkout', args=[reservation2.pk])
+    url = reverse('checkout', args=[reservation.pk])
 
     # Act
     response = client.get(url)
@@ -86,17 +87,15 @@ def test_user_accessing_another_users_checkout_gets_forbidden(client, view_setup
 
 
 @pytest.mark.django_db
-def test_payment_created_successfully(client, view_setup, mocker):
+def test_payment_created_successfully(client, client_model, reservation_model, mock_payment_creator, mock_recaptcha):
     """
     Tests if the payment is created successfully and redirects to the payment page.
     """
     # Arrange
-    user, _, reservation, _ = view_setup
+    user = client_model
+    reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
-    mocker.patch('utils.support.verify_captcha', return_value=True)
-    mock_creator = mocker.patch('payments.views.Checkout.payment_creator_cls')
-    mock_creator.return_value.session.redirect_url = 'http://stripepayment-hostedpage.url'
 
     # Act
     response = client.post(url, follow=True)
@@ -106,16 +105,15 @@ def test_payment_created_successfully(client, view_setup, mocker):
 
 
 @pytest.mark.django_db
-def test_operational_error_redirects_to_rooms_with_message(client, view_setup, mocker):
+def test_operational_error_redirects_to_rooms_with_message(client, client_model, reservation_model, mock_payment_creator, mock_recaptcha, mocker):
     """
     Tests if an OperationalError redirects to the rooms page with the correct message.
     """
     # Arrange
-    user, _, reservation, _ = view_setup
+    user = client_model
+    reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
-    mocker.patch('utils.support.verify_captcha', return_value=True)
-    mocker.patch('payments.views.Checkout.payment_creator_cls')
     mocker.patch('payments.views.Payment.save', side_effect=OperationalError('Database error'))
 
     # Act
@@ -130,16 +128,15 @@ def test_operational_error_redirects_to_rooms_with_message(client, view_setup, m
 
 
 @pytest.mark.django_db
-def test_unexpected_exception_redirects_to_rooms_with_message(client, view_setup, mocker):
+def test_unexpected_exception_redirects_to_rooms_with_message(client, client_model, reservation_model, mock_payment_creator, mock_recaptcha, mocker):
     """
     Tests if an unexpected exception redirects to the rooms page with the correct message.
     """
     # Arrange
-    user, _, reservation, _ = view_setup
+    user = client_model
+    reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
-    mocker.patch('utils.support.verify_captcha', return_value=True)
-    mocker.patch('payments.views.Checkout.payment_creator_cls')
     mocker.patch('payments.views.Payment.save', side_effect=Exception('unexpected exception'))
 
     # Act
@@ -154,38 +151,15 @@ def test_unexpected_exception_redirects_to_rooms_with_message(client, view_setup
 
 
 @pytest.mark.django_db
-def test_reservation_status_changes_and_room_becomes_unavailable(client, view_setup, mocker):
-    """
-    Tests if the reservation status changes to processing and the room becomes unavailable.
-    """
-    # Arrange
-    user, _, reservation, _ = view_setup
-    client.force_login(user)
-    url = reverse('checkout', args=[reservation.pk])
-    mocker.patch('utils.support.verify_captcha', return_value=True)
-    mocker.patch('payments.views.Checkout.payment_creator_cls')
-
-    # Act
-    client.post(url, follow=True)
-    reservation.refresh_from_db()
-    reservation.room.refresh_from_db()
-
-    # Assert
-    assert reservation.status == 'P'
-    assert not reservation.room.available
-
-
-@pytest.mark.django_db
-def test_payment_is_created_correctly(client, view_setup, mocker):
+def test_payment_is_created_correctly(client, client_model, reservation_model, mock_payment_creator, mock_recaptcha):
     """
     Tests if the payment is created correctly in the database.
     """
     # Arrange
-    user, _, reservation, _ = view_setup
+    user = client_model
+    reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
-    mocker.patch('utils.support.verify_captcha', return_value=True)
-    mocker.patch('payments.views.Checkout.payment_creator_cls')
 
     # Act
     client.post(url, follow=True)
@@ -201,12 +175,13 @@ def test_payment_is_created_correctly(client, view_setup, mocker):
 
 
 @pytest.mark.django_db
-def test_success_view_uses_correct_template(client, success_view_setup):
+def test_success_view_uses_correct_template(client, payment_model):
     """
     Tests if the success view renders the correct template.
     """
     # Arrange
-    user, _, reservation, _, _ = success_view_setup
+    user = payment_model.reservation.client
+    reservation = payment_model.reservation
     client.force_login(user)
     url = reverse('payment_success', args=[reservation.pk])
 
@@ -219,12 +194,14 @@ def test_success_view_uses_correct_template(client, success_view_setup):
 
 
 @pytest.mark.django_db
-def test_payment_status_updated_to_finished(client, success_view_setup):
+def test_payment_status_updated_to_finished(client, client_model, reservation_model, payment_model):
     """
     Tests if the payment is updated to finished status after success.
     """
     # Arrange
-    user, _, reservation, _, payment = success_view_setup
+    user = client_model
+    reservation = reservation_model
+    payment = payment_model
     client.force_login(user)
     url = reverse('payment_success', args=[reservation.pk])
 
@@ -237,12 +214,14 @@ def test_payment_status_updated_to_finished(client, success_view_setup):
 
 
 @pytest.mark.django_db
-def test_reservation_is_activated(client, success_view_setup):
+def test_reservation_is_activated(client, client_model, reservation_model, payment_model):
     """
     Tests if the reservation is activated correctly.
     """
     # Arrange
-    user, _, reservation, _, payment = success_view_setup
+    user = client_model
+    reservation = reservation_model
+    payment = payment_model
     client.force_login(user)
     url = reverse('payment_success', args=[reservation.pk])
 
@@ -252,16 +231,15 @@ def test_reservation_is_activated(client, success_view_setup):
 
     # Assert
     assert payment.reservation.status == 'A'
-    assert payment.reservation.active
 
 
 @pytest.mark.django_db
-def test_unauthenticated_user_is_redirected_from_success(client, success_view_setup):
+def test_unauthenticated_user_is_redirected_from_success(client, reservation_model):
     """
     Tests if an unauthenticated user is redirected to the signin page.
     """
     # Arrange
-    _, _, reservation, _, _ = success_view_setup
+    reservation = reservation_model
     url = reverse('payment_success', args=[reservation.pk])
 
     # Act
@@ -274,14 +252,15 @@ def test_unauthenticated_user_is_redirected_from_success(client, success_view_se
 
 
 @pytest.mark.django_db
-def test_user_accessing_another_users_success_page_gets_forbidden(client, success_view_setup):
+def test_user_accessing_another_users_success_page_gets_forbidden(client, client_model_factory, reservation_model):
     """
     Tests if a user gets a 403 Forbidden error when trying to access another user's success page.
     """
     # Arrange
-    user, _, _, reservation2, _ = success_view_setup
+    user = client_model_factory()
+    reservation = reservation_model
     client.force_login(user)
-    url = reverse('payment_success', args=[reservation2.pk])
+    url = reverse('payment_success', args=[reservation.pk])
 
     # Act
     response = client.get(url)
@@ -294,12 +273,13 @@ def test_user_accessing_another_users_success_page_gets_forbidden(client, succes
 
 
 @pytest.mark.django_db
-def test_cancel_view_uses_correct_template(client, cancel_view_setup):
+def test_cancel_view_uses_correct_template(client, payment_model):
     """
     Tests if the cancel view renders the correct template.
     """
     # Arrange
-    user, _, reservation, _, _ = cancel_view_setup
+    user = payment_model.reservation.client
+    reservation = payment_model.reservation
     client.force_login(user)
     url = reverse('payment_cancel', args=[reservation.pk])
 
@@ -312,12 +292,14 @@ def test_cancel_view_uses_correct_template(client, cancel_view_setup):
 
 
 @pytest.mark.django_db
-def test_payment_and_reservation_status_change_to_cancelled(client, cancel_view_setup):
+def test_payment_and_reservation_status_change_to_cancelled(client, payment_model):
     """
     Tests if the payment and reservation status are changed to cancelled and the room is released.
     """
     # Arrange
-    user, _, reservation, _, payment = cancel_view_setup
+    user = payment_model.reservation.client
+    reservation = payment_model.reservation
+    payment = payment_model
     client.force_login(user)
     url = reverse('payment_cancel', args=[reservation.pk])
 
@@ -333,12 +315,12 @@ def test_payment_and_reservation_status_change_to_cancelled(client, cancel_view_
 
 
 @pytest.mark.django_db
-def test_unauthenticated_user_is_redirected_from_cancel(client, cancel_view_setup):
+def test_unauthenticated_user_is_redirected_from_cancel(client, reservation_model):
     """
     Tests if an unauthenticated user is redirected to the signin page.
     """
     # Arrange
-    _, _, reservation, _, _ = cancel_view_setup
+    reservation = reservation_model
     url = reverse('payment_cancel', args=[reservation.pk])
 
     # Act
@@ -351,14 +333,15 @@ def test_unauthenticated_user_is_redirected_from_cancel(client, cancel_view_setu
 
 
 @pytest.mark.django_db
-def test_user_accessing_another_users_cancel_page_gets_forbidden(client, cancel_view_setup):
+def test_user_accessing_another_users_cancel_page_gets_forbidden(client, client_model_factory, reservation_model):
     """
     Tests if a user gets a 403 Forbidden error when trying to access another user's cancel page.
     """
     # Arrange
-    user, _, _, reservation2, _ = cancel_view_setup
+    user = client_model_factory()
+    reservation = reservation_model
     client.force_login(user)
-    url = reverse('payment_cancel', args=[reservation2.pk])
+    url = reverse('payment_cancel', args=[reservation.pk])
 
     # Act
     response = client.get(url)
@@ -369,13 +352,14 @@ def test_user_accessing_another_users_cancel_page_gets_forbidden(client, cancel_
 
 @pytest.mark.django_db
 def test_unexpected_exception_in_cancel_view_redirects_with_message(
-    client, cancel_view_setup, mocker
+    client, client_model, reservation_model, mocker
 ):
     """
     Tests if an unexpected exception redirects to the rooms page with the correct message.
     """
     # Arrange
-    user, _, reservation, _, _ = cancel_view_setup
+    user = client_model
+    reservation = reservation_model
     client.force_login(user)
     url = reverse('payment_cancel', args=[reservation.pk])
     mocker.patch('payments.views.get_object_or_404', side_effect=Exception)

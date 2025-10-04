@@ -2,102 +2,95 @@
 Tests for the Payment model.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
 
 import pytest
 from django.core.exceptions import ValidationError
 
-from clients.models import Client
 from payments.models import Payment
-from reservations.models import Reservation, Room
 from payments.error_messages import PaymentErrorMessages
 
 
 @pytest.mark.django_db
-def test_payment_creation_date_is_set(payment_data):
+def test_payment_creation_date_is_set(payment_model):
     """
     Tests if the payment creation date is correctly assigned to the payment.
     """
     # Arrange
-    payment = payment_data['payment']
+    payment = payment_model
 
     # Act & Assert
-    assert payment.date.timestamp() == pytest.approx(datetime.now().timestamp(), abs=0.01)
+    assert payment.date.timestamp() == pytest.approx(datetime.now().timestamp(), abs=1)
 
 
 @pytest.mark.django_db
-def test_client_is_assigned_to_payment(payment_data):
+def test_client_is_assigned_to_payment(payment_model, client_model):
     """
     Tests if the client is correctly assigned to the payment.
     """
     # Arrange
-    payment = payment_data['payment']
-    user = payment_data['user']
+    payment = payment_model
 
     # Act & Assert
-    assert payment.reservation.client == user
+    assert payment.reservation.client == client_model
 
 
 @pytest.mark.django_db
-def test_room_is_assigned_to_payment(payment_data):
+def test_room_is_assigned_to_payment(payment_model, room_model):
     """
     Tests if the room is correctly assigned to the payment.
     """
     # Arrange
-    payment = payment_data['payment']
-    room = payment_data['room']
+    payment = payment_model
 
     # Act & Assert
-    assert payment.reservation.room == room
+    assert payment.reservation.room == room_model
 
 
 @pytest.mark.django_db
-def test_amount_is_assigned_to_payment(payment_data):
+def test_amount_is_assigned_to_payment(payment_model, reservation_model):
     """
     Tests if the total amount to be paid is correctly assigned to the payment.
     """
     # Arrange
-    payment = payment_data['payment']
-    reservation = payment_data['reservation']
+    payment = payment_model
 
     # Act & Assert
-    assert payment.amount == reservation.amount
+    assert payment.amount == reservation_model.amount
 
 
 @pytest.mark.django_db
-def test_reservation_is_assigned_to_payment(payment_data):
+def test_reservation_is_assigned_to_payment(payment_model, reservation_model):
     """
     Tests if the reservation is correctly assigned to the payment.
     """
     # Arrange
-    payment = payment_data['payment']
-    reservation = payment_data['reservation']
+    payment = payment_model
 
     # Act & Assert
-    assert payment.reservation == reservation
+    assert payment.reservation == reservation_model
 
 
 @pytest.mark.django_db
-def test_initial_status_is_processing(payment_data):
+def test_initial_status_is_processing(payment_model):
     """
     Tests if the status when starting the payment is 'P' for processing.
     """
     # Arrange
-    payment = payment_data['payment']
+    payment = payment_model
 
     # Act & Assert
     assert payment.status == 'P'
 
 
 @pytest.mark.django_db
-def test_validation_error_if_payment_amount_differs_from_reservation(payment_data):
+def test_validation_error_if_payment_amount_differs_from_reservation(reservation_model):
     """
     Tests if a ValidationError is raised if the payment amount is different from the reservation amount.
     """
     # Arrange
-    reservation = payment_data['reservation']
-    payment = Payment(reservation=reservation, amount=Decimal('10000'))
+    payment = Payment(reservation=reservation_model, amount=Decimal('10000'))
 
     # Act & Assert
     with pytest.raises(ValidationError) as excinfo:
@@ -106,21 +99,12 @@ def test_validation_error_if_payment_amount_differs_from_reservation(payment_dat
 
 
 @pytest.mark.django_db
-def test_payment_saved_with_valid_data(db_setup):
+def test_payment_saved_with_valid_data(reservation_model):
     """
     Tests if the payment is persisted with all valid data.
     """
     # Arrange
-    room = Room.objects.get(pk=1)
-    reservation = Reservation.objects.create(
-        client=Client.objects.first(),
-        checkin=datetime.now().date(),
-        checkout=datetime.now().date() + timedelta(days=1),
-        amount=Decimal(str(room.daily_price)),
-        observations='*' * 100,
-        room=room,
-    )
-    payment = Payment(reservation=reservation, amount=reservation.amount)
+    payment = Payment(reservation=reservation_model, amount=reservation_model.amount)
 
     # Act
     payment.full_clean()

@@ -99,6 +99,7 @@ line-ending = "lf"
 lint = 'ruff check . --preview'
 format = 'ruff check --fix && ruff format --target-version py39 --respect-gitignore'
 run = 'python manage.py runserver'
+Q = 'python manage.py qcluster'
 typecheck = 'mypy . --ignore-missing-imports'
 
 pre_test = 'task format && task typecheck'

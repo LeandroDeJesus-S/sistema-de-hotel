@@ -3,10 +3,11 @@ Tests for the Rooms view.
 """
 
 from datetime import datetime, timedelta
-
 import pytest
+from ddf import G
 from django.urls import reverse
 
+from exc import Result
 from reservations.models import Benefit, Reservation, Room
 
 
@@ -24,48 +25,73 @@ def test_rooms_view_uses_correct_template(client):
 
 
 @pytest.mark.django_db
-def test_rooms_view_sends_all_rooms_to_context_ordered_by_price(client):
+def test_rooms_view_sends_all_rooms_to_context_ordered_by_price(mocker, client):
     """
     Tests if all rooms are passed to the context ordered by daily_price descending.
     """
     # Arrange
     url = reverse('rooms')
-    room = Room.objects.get(pk=2)
+    G(Room, n=3)
+    room = Room.objects.first()
     room.available = False
     room.save()
     expected_rooms = list(Room.objects.all().order_by('-daily_price'))
+    mocker.patch(
+        'reservations.views.svc.room_repo.fetch_all',
+        return_value=Result(value=expected_rooms, error=None),
+    )
 
     # Act
     response = client.get(url)
-    result_rooms = list(response.context['rooms'])
+    result_rooms = response.context['rooms']
 
     # Assert
-    assert result_rooms == expected_rooms
+    assert len(result_rooms) == len(expected_rooms)
+    assert [r.id for r in result_rooms] == [r.id for r in expected_rooms]
 
 
 @pytest.mark.django_db
-def test_rooms_view_benefits_are_sent_to_context(client):
+def test_rooms_view_benefits_are_sent_to_context(authenticated_client, mocker):
     """
-    Tests if all benefits are sent to the context in rooms view."""
+    Tests if all benefits are sent to the context in rooms view.
+    """
     # Arrange
+    client, _ = authenticated_client
     url = reverse('rooms')
-    expected_benefits = list(Benefit.objects.all())
+    benefits = G(Benefit, n=3)
+    expected_benefits = list(benefits)
+    mocker.patch(
+        'reservations.views.svc.room_repo.fetch_all_benefits',
+        return_value=type('Result', (), {'value': expected_benefits, 'error': None})(),
+    )
 
     # Act
     response = client.get(url)
-    result_benefits = list(response.context['benefits'])
+    result_benefits = response.context.get('benefits')
 
     # Assert
-    assert result_benefits == expected_benefits
+    assert 'benefits' in response.context, f'context {response.context}'
+    assert list(result_benefits) == expected_benefits
 
 
 @pytest.mark.django_db
-def test_rooms_view_reservation_on_not_in_context_for_unauthenticated_user(client):
+def test_rooms_view_reservation_on_not_in_context_for_unauthenticated_user(
+    mocker, client
+):
     """
     Tests that for an unauthenticated user, 'reservation_on' is not added to the context in rooms view.
     """
     # Arrange
     url = reverse('rooms')
+    G(Room)
+    mocker.patch(
+        'reservations.views.svc.room_repo.fetch_all_benefits',
+        return_value=Result(value=[], error=None),
+    )
+    mocker.patch(
+        'reservations.views.svc.room_repo.fetch_all',
+        return_value=Result(value=list(Room.objects.all()), error=None),
+    )
 
     # Act
     response = client.get(url)
@@ -76,7 +102,7 @@ def test_rooms_view_reservation_on_not_in_context_for_unauthenticated_user(clien
 
 @pytest.mark.django_db
 def test_rooms_view_reservation_on_not_in_context_for_user_with_no_reservations(
-    authenticated_client,
+    mocker, authenticated_client
 ):
     """
     Tests that for an authenticated user with no active or scheduled reservations,
@@ -85,18 +111,31 @@ def test_rooms_view_reservation_on_not_in_context_for_user_with_no_reservations(
     # Arrange
     client, _ = authenticated_client
     url = reverse('rooms')
+    G(Room)
+    mocker.patch(
+        'reservations.views.svc.room_repo.fetch_all_benefits',
+        return_value=Result(value=[], error=None),
+    )
+    mocker.patch(
+        'reservations.views.svc.room_repo.fetch_all',
+        return_value=Result(value=list(Room.objects.all()), error=None),
+    )
+    mocker.patch(
+        'reservations.views.svc.fetch_client_active_reservations',
+        return_value=([], None),
+    )
 
     # Act
     response = client.get(url)
 
     # Assert
-    assert response.context.get('reservation_on') is None
+    assert response.context['reservation_on'] == []
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize('status', ['A', 'S'])
 def test_rooms_view_reservation_on_in_context_for_user_with_reservations(
-    authenticated_client, room1, status
+    mocker, authenticated_client, room_model, status
 ):
     """
     Tests that for an authenticated user with active or scheduled reservations,
@@ -105,16 +144,25 @@ def test_rooms_view_reservation_on_in_context_for_user_with_reservations(
     # Arrange
     client, user = authenticated_client
     url = reverse('rooms')
-    reservation = Reservation.objects.create(
+    reservation = G(
+        Reservation,
+        client=user,
+        room=room_model,
+        status=status,
         checkin=datetime.now().date(),
         checkout=datetime.now().date() + timedelta(days=1),
-        client=user,
-        room=room1,
-        status=status,
+    )
+    mocker.patch(
+        'reservations.views.svc.room_repo.fetch_all_benefits',
+        return_value=Result(value=[], error=None),
+    )
+    mocker.patch(
+        'reservations.views.svc.fetch_client_active_reservations',
+        return_value=([reservation], None),
     )
 
     # Act
     response = client.get(url)
 
     # Assert
-    assert response.context['reservation_on'] == reservation
+    assert response.context['reservation_on'] == [reservation]

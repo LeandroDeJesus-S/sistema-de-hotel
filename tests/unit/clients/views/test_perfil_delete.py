@@ -132,7 +132,7 @@ def test_success_url_after_delete_is_correct(mocker, authenticated_client, perfi
 
 @pytest.mark.django_db
 def test_client_is_deleted_if_all_goes_as_expected(
-    mocker, authenticated_client, perfil_urls, user
+    mocker, authenticated_client, perfil_urls, client_model
 ):
     """
     Test the deletion of a client if everything goes as expected.
@@ -147,4 +147,4 @@ def test_client_is_deleted_if_all_goes_as_expected(
 
     # Assert
     with pytest.raises(Client.DoesNotExist):
-        Client.objects.get(pk=user.pk)
+        Client.objects.get(pk=client_model.pk)

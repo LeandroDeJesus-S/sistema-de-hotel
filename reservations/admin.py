@@ -24,8 +24,8 @@ class RoomAdmin(admin.ModelAdmin):
     list_display = [
         'room_class',
         'number',
-        'adult_capacity',
-        'child_capacity',
+        'adults_capacity',
+        'children_capacity',
         'daily_price_formatted',
         'available',
         'image',

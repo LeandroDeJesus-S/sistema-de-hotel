@@ -59,9 +59,6 @@ class Checkout(LoginRequiredMixin, View):
             self.logger.debug(f'success callback url: {reservation_payment.success_url}')
             self.logger.debug(f'cancel callback url: {reservation_payment.cancel_url}')
 
-            reservation._validate_room()
-
-            reservation.room.available = False
             reservation.status = 'P'
 
             payment = Payment(reservation=reservation, amount=reservation.amount, status='P')
@@ -108,7 +105,9 @@ def payment_success(request: HttpRequest, reservation_pk: int):
     logger = logging.getLogger('djangoLogger')
     logger.info(f'reserva {reservation_pk} recebida para sucesso de pagamento')
 
-    payment = get_object_or_404(Payment, reservation__pk=reservation_pk)
+    payment = get_object_or_404(
+        Payment, reservation__client=request.user, reservation__pk=reservation_pk
+    )
     if payment.status == 'P':
         payment.reservation.status = 'A'
         payment.reservation.active = True

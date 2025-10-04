@@ -27,7 +27,7 @@ class Scheduling(models.Model):
 
     def _validate_scheduling_an_occupied_room(self):
         """valida se o agendamento é para um quarto ocupado"""
-        if not Reservation.objects.filter(room=self.reservation.room, active=True).exists():
+        if not Reservation.objects.filter(room=self.reservation.room, status='A').exists():
             self.error_messages['reservation'] = (
                 'Não é possível agendar um quarto que não esta ocupado.'
             )

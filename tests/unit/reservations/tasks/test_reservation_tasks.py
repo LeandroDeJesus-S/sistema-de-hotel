@@ -22,6 +22,7 @@ def test_check_reservation_dates_finalizes_past_reservations(db_setup):
     """
     # Arrange
     for r in Reservation.objects.all():
+        r.checkin = datetime.now().date() - timedelta(days=2)
         r.checkout = datetime.now().date() - timedelta(days=1)
         r.status = 'A'
         r.room.available = False

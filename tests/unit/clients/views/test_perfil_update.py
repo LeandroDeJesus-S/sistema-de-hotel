@@ -77,7 +77,7 @@ def test_authenticated_client_accessing_another_perfil_update_receives_http_forb
 
 @pytest.mark.django_db
 def test_authenticated_client_updating_another_perfil_receives_http_forbidden(
-    authenticated_client, user
+    authenticated_client, client_model
 ):
     """
     Test if a logged-in client trying to update another client's data receives HTTP Forbidden.
@@ -88,12 +88,12 @@ def test_authenticated_client_updating_another_perfil_receives_http_forbidden(
     url = reverse('update_perfil', args=[other_user.pk])
     data = {
         'username': 'new username',
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'phone': user.phone,
-        'email': user.email,
-        'birthdate': user.birthdate,
-        'cpf': user.cpf,
+        'first_name': client_model.first_name,
+        'last_name': client_model.last_name,
+        'phone': client_model.phone,
+        'email': client_model.email,
+        'birthdate': client_model.birthdate,
+        'cpf': client_model.cpf,
     }
 
     # Act
@@ -104,7 +104,7 @@ def test_authenticated_client_updating_another_perfil_receives_http_forbidden(
 
 
 @pytest.mark.django_db
-def test_client_updates_email_correctly(mocker, authenticated_client, perfil_urls, user):
+def test_client_updates_email_correctly(mocker, authenticated_client, perfil_urls, client_model):
     """
     Test if a logged-in client can update their email correctly as expected.
     """
@@ -114,25 +114,25 @@ def test_client_updates_email_correctly(mocker, authenticated_client, perfil_url
     url = perfil_urls['perfil_update_url']
     new_email = 'updated@email.com'
     data = {
-        'username': user.username,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'phone': user.phone,
+        'username': client_model.username,
+        'first_name': client_model.first_name,
+        'last_name': client_model.last_name,
+        'phone': client_model.phone,
         'email': new_email,
-        'birthdate': user.birthdate,
-        'cpf': user.cpf,
+        'birthdate': client_model.birthdate,
+        'cpf': client_model.cpf,
     }
 
     # Act
     client.post(url, data=data)
-    updated_user = Client.objects.get(pk=user.pk)
+    updated_user = Client.objects.get(pk=client_model.pk)
 
     # Assert
     assert updated_user.email == new_email
 
 
 @pytest.mark.django_db
-def test_client_updates_username_correctly(mocker, authenticated_client, perfil_urls, user):
+def test_client_updates_username_correctly(mocker, authenticated_client, perfil_urls, client_model):
     """
     Test if a logged-in client can update their username correctly as expected.
     """
@@ -143,46 +143,18 @@ def test_client_updates_username_correctly(mocker, authenticated_client, perfil_
     new_username = 'updatedusername'
     data = {
         'username': new_username,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'phone': user.phone,
-        'email': user.email,
-        'birthdate': user.birthdate,
-        'cpf': user.cpf,
+        'first_name': client_model.first_name,
+        'last_name': client_model.last_name,
+        'phone': client_model.phone,
+        'email': client_model.email,
+        'birthdate': client_model.birthdate,
+        'cpf': client_model.cpf,
     }
 
     # Act
     client.post(url, data=data)
-    updated_user = Client.objects.get(pk=user.pk)
+    updated_user = Client.objects.get(pk=client_model.pk)
 
     # Assert
     assert updated_user.username == new_username
 
-
-@pytest.mark.django_db
-def test_client_cannot_change_password_in_perfil_update(
-    mocker, authenticated_client, perfil_urls, user, valid_client_data
-):
-    """
-    Test if the client tries to send a new password, it is not persisted in the database.
-    """
-    # Arrange
-    mocker.patch('utils.support.verify_captcha', return_value=True)
-    client, _ = authenticated_client
-    url = perfil_urls['perfil_update_url']
-    data = {
-        'username': user.username,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'phone': user.phone,
-        'email': user.email,
-        'birthdate': user.birthdate,
-        'cpf': user.cpf,
-    }
-
-    # Act
-    client.post(url, data=data)
-    updated_user = Client.objects.get(pk=user.pk)
-
-    # Assert
-    assert updated_user.check_password(valid_client_data['password'])

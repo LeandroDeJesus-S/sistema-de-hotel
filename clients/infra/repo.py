@@ -12,6 +12,7 @@ from clients.domain.entities import Client as ClientEntity
 from clients.domain.ports import AbsClientRepository
 from clients.models import Client as DjangoClient
 from exc import Error, Result
+from utils.support import entity_to_model, model_to_entity, update_changed_fields
 
 logger = logging.getLogger('djangoLogger')
 
@@ -28,29 +29,28 @@ class ClientRepository(AbsClientRepository):
         """
         Creates a new client record in the database from a Client entity.
         """
-        try:
-            new_client_model = self._model(
-                first_name=client.first_name,
-                last_name=client.last_name,
-                username=client.username,
-                email=client.email,
-                phone=client.phone,
-                password=client.password,
-                birthdate=client.birthdate,
-                cpf=client.cpf,
+        model_instance_result = entity_to_model(client, self._model)
+        if model_instance_result.error:
+            return Result(value=None, error=model_instance_result.error)
+
+        model_instance = model_instance_result.value
+        if not model_instance:
+            return Result(
+                value=None, error=Error(msg='Failed to convert client entity to model')
             )
-            new_client_model.full_clean()
-            new_client_model.save()
-            return self._to_entity(new_client_model)
 
+        try:
+            model_instance.full_clean()
+            model_instance.save()
         except ValidationError as e:
-            logger.warning(e)
             msg = e.messages[0]
+            logger.warning(f'Validation error on client add: {msg}')
             return Result(value=None, error=Error(msg=msg, src_error=e))
-
         except Exception as e:
-            logger.error(e, exc_info=True)
+            logger.error(f'DB error on client add: {e}', exc_info=True)
             return Result(value=None, error=Error(msg='Could not create client', src_error=e))
+
+        return self._to_entity(model_instance)
 
     def get_by_id(self, client_id: int) -> Result[ClientEntity | None]:
         """Retrieves a client by their ID and converts the model to a domain entity."""
@@ -109,23 +109,7 @@ class ClientRepository(AbsClientRepository):
         """Updates an existing client's data in the database."""
         try:
             client_to_update = self._model.objects.get(id=client_id)
-
-            updated_fields = []
-            for field, value in kwargs.items():
-                if (
-                    value
-                    and hasattr(client_to_update, field)
-                    and getattr(client_to_update, field) != value
-                ):
-                    setattr(client_to_update, field, value)
-                    updated_fields.append(field)
-
-            if not updated_fields:
-                return Result(value=None, error=None)
-
-            client_to_update.full_clean()
-            client_to_update.save(update_fields=updated_fields)
-
+            update_changed_fields(client_to_update, kwargs)
             return Result(value=None, error=None)
         except self._model.DoesNotExist as e:
             return Result(
@@ -181,4 +165,4 @@ class ClientRepository(AbsClientRepository):
     @staticmethod
     def _to_entity(client_model: DjangoClient) -> Result[ClientEntity | None]:
         """Converts a Django Client model instance to a domain Client entity."""
-        return ClientEntity.safe_validate(client_model.__dict__)
+        return model_to_entity(client_model, ClientEntity)

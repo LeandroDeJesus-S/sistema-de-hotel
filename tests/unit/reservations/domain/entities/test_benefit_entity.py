@@ -30,8 +30,13 @@ def test_benefit_creation_with_valid_data(name, icon, short_desc):
             'Free Wi-Fi',
         ),
         (
+            'Wi-Fi+',
+            'wifi-icon.svg',
+            'Free Wi-Fi',
+        ),
+        (
             'Wi-Fi',
-            '',
+            'a' * 256,
             'Free Wi-Fi',
         ),
         (

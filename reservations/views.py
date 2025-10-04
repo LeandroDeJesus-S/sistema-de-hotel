@@ -1,43 +1,54 @@
 import logging
-from datetime import timedelta
 from typing import Any
 
 from django.conf import settings
 from django.contrib import messages
-from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models.query import QuerySet
-from django.http import HttpRequest
-from django.shortcuts import get_object_or_404, redirect, render
+from django.http import Http404, HttpRequest
+from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
-from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
-from django_q.tasks import schedule
 
+from clients.infra.repo import ClientRepository
+from reservations.application.dtos import CreateReservationInput
+from reservations.infra.repo import ReservationRepository, RoomRepository
 from utils import support
 
+from .application import services
 from .feedback_messages import ReservationMessages
 from .mixins import LoginRequired
-from .models import Benefit, Class, Reservation, Room
-from .rules import ReserveSupport
+from .models import Room
 from .validators import convert_date
 
+svc = services.ReservationService(
+    reservation_repo=ReservationRepository(),
+    room_repo=RoomRepository(),
+    client_repo=ClientRepository(),
+)
 
-def get_user_reservations_on(request, context):
-    """add ao context as reservas ativas ou agendadas de um usuário
-    com a key `reservation_on`
 
+def setup_reservation_context(
+    request: HttpRequest, svc: services.ReservationService, context: dict[str, Any]
+):
+    """add the reservations to the context
     Args:
         request (HttpRequest)
+        svc (ReservationService)
         context (Any): view context
     """
-    if request.user.is_authenticated:
-        reservation_on = request.user.reservation_clients.filter(status__in=['A', 'S']).first()
-        if reservation_on is not None:
-            context['reservation_on'] = reservation_on
+    if not request.user.is_authenticated:
+        return
+
+    reservations, _ = svc.fetch_client_active_reservations(
+        request.user.pk, include_scheduled=True
+    )
+    context['reservation_on'] = reservations
+
+    benefits_result = svc.room_repo.fetch_all_benefits()
+    context['benefits'] = benefits_result.value
 
 
 class Rooms(ListView):
@@ -48,17 +59,24 @@ class Rooms(ListView):
     model = Room
     template_name = 'rooms.html'
     context_object_name = 'rooms'
-    ordering = '-daily_price'
+
+    def get_queryset(self):
+        """retorna todos os quartos com seus benefícios"""
+        rooms, err = svc.room_repo.fetch_all(with_benefits=True)
+        if err:
+            self.logger.error(err.msg, exc_info=err.src_error)
+            messages.error(self.request, 'Could not load rooms.')
+            return []
+
+        self.logger.debug(f'{rooms =}')
+        return rooms
 
     def get_context_data(self, **kwargs):
         """retorna todos os quartos, todos os benefícios e todas as reservas
         ativas ou agendadas do cliente, caso tenha.
         """
         context = super().get_context_data(**kwargs)
-        context['benefits'] = Benefit.objects.all()
-        self.logger.debug('add benefits to the context')
-
-        get_user_reservations_on(self.request, context)
+        setup_reservation_context(self.request, svc, context)
         return context
 
 
@@ -69,37 +87,43 @@ class RoomDetail(DetailView):
     template_name = 'room.html'
     context_object_name = 'room'
 
-    def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
-        super().setup(request, *args, **kwargs)
-        self.logger = logging.getLogger('djangoLogger')
-
     def get_context_data(self, **kwargs):
         """add os benefícios e reservas ativas ou agendadas do cliente
         caso tenha
         """
         context = super().get_context_data(**kwargs)
-        context['benefits'] = Benefit.objects.all()
-        self.logger.info('add benefits to context')
-        get_user_reservations_on(self.request, context)
+        setup_reservation_context(self.request, svc, context)
         return context
 
 
-@method_decorator(support.captcha_required('reserve', params=('room_pk',)), name='post')
 class Reserve(LoginRequired, View):
     """gerencia a criação de novas reservas"""
 
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
         super().setup(request, *args, **kwargs)
         self.logger = logging.getLogger('djangoLogger')
-        self.context = {
-            'room_classes': Class.objects.all(),
+        room_classes, err = svc.room_repo.fetch_all_classes()
+        if err:
+            self.logger.error(err.msg, exc_info=err.src_error)
+            messages.error(request, err.msg)
+            room_classes = []
+        self.context: dict[str, Any] = {
+            'room_classes': room_classes,
         }
         self.template_name = 'reserve.html'
 
     def get(self, request: HttpRequest, room_pk: int):
         """renderiza o formulário para nova reserva caso o usuário não
         tenha uma reserva ativa ou agendada"""
-        if Reservation.objects.filter(client=request.user, status__in=['A', 'S']).exists():
+        has_active_reservation, err = svc.reservation_repo.has_active_reservation(
+            client_id=request.user.pk, include_scheduled=True
+        )
+        if err is not None:
+            self.logger.error(err, exc_info=err.src_error)
+            messages.error(request, err.msg)
+            return redirect('rooms')
+
+        if has_active_reservation:
             self.logger.info('user already have a reservation active ou scheduled')
             messages.info(request, ReservationMessages.ALREADY_HAVE_A_RESERVATION)
             return redirect('rooms')
@@ -109,49 +133,40 @@ class Reserve(LoginRequired, View):
         self.logger.debug(f'rendering {self.template_name}')
         return render(request, self.template_name, self.context)
 
+    @method_decorator(support.captcha_required('reserve', params=('room_pk',)))
     def post(self, request: HttpRequest, room_pk: int):
         self.logger.debug(f'reservation for room {room_pk} started')
         self.context['room_pk'] = room_pk
 
         try:
-            CHECK_IN = convert_date(self.request.POST.get('checkin', '0001-01-01'))
-            CHECKOUT = convert_date(self.request.POST.get('checkout', '0001-01-01'))
-            OBS = self.request.POST.get('obs', '')
+            check_in = convert_date(request.POST.get('checkin', '0001-01-01'))
+            checkout = convert_date(request.POST.get('checkout', '0001-01-01'))
+            obs = request.POST.get('obs', '')
 
-            with transaction.atomic():
-                reservation = Reservation(
-                    checkin=CHECK_IN,
-                    checkout=CHECKOUT,
-                    observations=OBS,
-                    client=self.request.user,
-                    room=get_object_or_404(Room, pk__exact=room_pk),
+            with (
+                transaction.atomic()
+            ):  # HACK: Is there a way to do the operation atomic into the usecase?
+                reservation, err = svc.initialize_reservation(
+                    CreateReservationInput(
+                        client_id=request.user.pk,
+                        room_pk=room_pk,
+                        check_in=check_in,
+                        check_out=checkout,
+                        observations=obs,
+                    )
                 )
+                if (err is not None) or (not reservation):
+                    msg = (err and err.msg) or 'unable to create reservation'
+                    src_err = (err and err.src_error) or None
 
-                reservation.amount = reservation.calc_reservation_value()
-                reservation.full_clean()
-                reservation.save()
-                self.logger.info(f'reservation {reservation} created')
+                    self.logger.error(msg, exc_info=src_err)
+                    messages.error(request, msg)
+                    return render(request, self.template_name, self.context)
 
-            schd = schedule(
-                'reservations.tasks.release_room',
-                reservation.pk,
-                repeats=1,
-                next_run=timezone.now()
-                + timedelta(minutes=ReserveSupport.RESERVATION_PATIENCE_MINUTES),
-                name=(
-                    f'release_room : reservation {reservation.pk} : room {reservation.room.pk}'
-                ),
-            )
-            self.logger.info(f'schedule {schd} created')
             self.logger.info(
-                f'reservation {reservation.pk} registered. Redirecting to checkout'
+                f'reservation {reservation.id} registered. Redirecting to checkout'
             )
-            return redirect(reverse_lazy('checkout', args=(reservation.pk,)))
-
-        except ValidationError as exc:
-            messages.error(request, exc.messages[0])
-            self.logger.error(str(exc.error_dict))
-            return render(request, self.template_name, self.context)
+            return redirect(reverse_lazy('checkout', args=(reservation.id,)))
 
         except Exception as exc:
             self.logger.error(str(exc))
@@ -161,27 +176,42 @@ class Reserve(LoginRequired, View):
             return redirect(redirect_url)
 
 
-class ReservationsHistory(LoginRequired, ListView):
+class ReservationsHistory(LoginRequired, ListView):  # FIXME: failing to load reservations
     """exibe o histórico de reservas do usuário"""
 
-    model = Reservation
     template_name = 'reservations_history.html'
     context_object_name = 'reservations'
-    ordering = '-id'
+    logger = logging.getLogger('djangoLogger')
 
-    def get_queryset(self) -> QuerySet[Any]:
-        qs = super().get_queryset()
-        return qs.filter(client__exact=self.request.user, status__in=['A', 'S', 'C', 'F'])
+    def get_queryset(self) -> list:
+        reservations, err = svc.fetch_client_reservation_history(
+            client_id=self.request.user.pk
+        )
+        if err:
+            self.logger.error(err.msg, exc_info=err.src_error)
+            messages.error(self.request, 'Could not load reservation history.')
+            return []
+
+        self.logger.debug(f'successfully loaded {len(reservations)} reservations')
+        return reservations
 
 
 class ReservationHistory(LoginRequired, DetailView):
     """exibe os dados de um reserva específica do histórico de reservas"""
 
-    model = Reservation
     context_object_name = 'reservation'
     template_name = 'reservation_history.html'
+    logger = logging.getLogger('djangoLogger')
 
-    def get_queryset(self) -> QuerySet[Any]:
-        """filtra por quartos do usuário ativo"""
-        qs = super().get_queryset()
-        return qs.filter(client__exact=self.request.user, status__in=['A', 'S', 'C', 'F'])
+    def get_object(self, _=None):
+        reservation, err = svc.fetch_reservation_detail(
+            reservation_id=self.kwargs.get('pk'), client_id=self.request.user.pk
+        )
+        if err:
+            self.logger.error(err.msg, exc_info=err.src_error)
+            raise Http404(err.msg)
+
+        if not reservation:
+            raise Http404('Reservation not found.')
+
+        return reservation

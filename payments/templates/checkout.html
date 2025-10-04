@@ -8,18 +8,20 @@
 {% block content %}
 
 <section>
-  <form action="{% url 'checkout' reservation.pk %}" method="POST">
+  <form id="form" action="{% url 'checkout' reservation.pk %}" method="POST">
     {% csrf_token %}
 
       <div class="container d-flex justify-content-center align-items-center">
         {% include "partials/_messages.html" %}
         <div class="card p-2 d-flex text-center" >
-            <img src="{{ reservation.room.image.url }}" alt="" class="card-img img-fluid rounded" style="width: 300px;">
+            {% if reservation.room.image %}
+                <img src="{{MEDIA_URL}}{{ reservation.room.image }}" alt="" class="card-img img-fluid rounded" style="width: 300px;">
+            {% endif %}
             <div class="card-body">
                 <h1 class="display-6 fs-4">Quarto {{reservation.room.number}} | {{reservation.room.room_class|capfirst}}</h1>
                 <div class="d-flex justify-content-around">
-                  <span class="text-dark"><i class="fa-solid fa-person fs-5"></i> {{reservation.room.adult_capacity}}</span>
-                  <span class="text-dark"><i class="fa-solid fa-child "></i> {{reservation.room.child_capacity}}</span>
+                  <span class="text-dark"><i class="fa-solid fa-person fs-5"></i> {{reservation.room.adults_capacity}}</span>
+                  <span class="text-dark"><i class="fa-solid fa-child "></i> {{reservation.room.children_capacity}}</span>
                   <span class="text-dark">📐 25m²</span>
                 </div>
                 <p class="card-text">

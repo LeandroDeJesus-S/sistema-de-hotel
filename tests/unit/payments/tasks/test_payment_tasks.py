@@ -25,13 +25,14 @@ def test_create_payment_pdf_sends_email_with_valid_payment(db_setup, mocker):
 
 
 @pytest.mark.django_db
-def test_create_payment_pdf_returns_false_if_email_not_sent(db_setup, mocker):
+def test_create_payment_pdf_returns_false_if_email_not_sent(payment_model, mocker):
     """
     Tests if the task returns False if the email is not sent correctly with a valid payment.
     """
     # Arrange
-    payment = models.Payment.objects.first()
+    payment = payment_model
     mock_pdf_handler = mocker.patch('payments.tasks.PaymentPDFHandler.handle')
+    mocker.patch('payments.tasks.PaymentPDFHandler._send_email')
     mock_pdf_handler.return_value = 0
 
     # Act

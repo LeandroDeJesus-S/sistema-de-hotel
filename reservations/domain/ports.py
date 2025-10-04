@@ -1,0 +1,45 @@
+from datetime import datetime
+from typing import Any, Protocol
+
+
+class TaskQueuer(Protocol):
+    """
+    An interface for a task queue scheduler.
+    """
+
+    def schedule_task(
+        self,
+        func_path: str,
+        run_at: datetime,
+        args: tuple,
+        name: str | None = None,
+        repeats: int = 1,
+    ) -> Any:
+        """
+        Schedules a task to run.
+
+        Args:
+            func_path: The path to the function to execute.
+            run_at: The datetime for the task to run.
+            args: The arguments to pass to the function.
+            name: An optional name for the task.
+            repeats: The number of times to repeat the task. Defaults to 1 (run once).
+
+        Returns:
+            An identifier for the scheduled task.
+        """
+        ...
+
+    def queue_task(self, func_path: str, args: tuple, name: str | None = None) -> Any:
+        """
+        Queues a task to run immediately.
+
+        Args:
+            func_path: The path to the function to execute.
+            args: The arguments to pass to the function.
+            name: An optional name for the task.
+
+        Returns:
+            An identifier for the queued task.
+        """
+        ...

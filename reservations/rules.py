@@ -5,6 +5,8 @@ class BenefitRules:
     ICON_SIZE = 64, 64
     NAME_MAX_LEN = 45
     SHORT_DESC_MAX_LEN = 100
+    ICON_MAX_LEN = 255
+    NAME_PATTERN = r'^[\w\- ]+$'
 
 
 class RoomRules:

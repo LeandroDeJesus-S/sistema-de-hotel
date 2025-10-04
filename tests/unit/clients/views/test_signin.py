@@ -6,12 +6,12 @@ from datetime import date
 
 
 @pytest.mark.django_db
-def test_signin_success(client, user, mock_recaptcha, settings):
+def test_signin_success(client, client_model, mock_recaptcha):
     """Test that a user can sign in successfully."""
     signin_url = reverse('signin')
     post_data = {
-        'username': user.username,
-        'password': user.raw_password,
+        'username': client_model.username,
+        'password': client_model.raw_password,
         'g-recaptcha-response': 'fake-token',
     }
 
@@ -21,7 +21,7 @@ def test_signin_success(client, user, mock_recaptcha, settings):
 
 
 @pytest.mark.django_db
-def test_signin_invalid_credentials(client, user, responses, settings):
+def test_signin_invalid_credentials(client, client_model, responses, settings):
     """Test that sign in fails with invalid credentials."""
     # Disable django-axes middleware for this test
     settings.MIDDLEWARE = [
@@ -56,9 +56,9 @@ def test_signin_invalid_credentials(client, user, responses, settings):
 
 
 @pytest.mark.django_db
-def test_signin_get_authenticated_user_is_redirected(client, user):
+def test_signin_get_authenticated_user_is_redirected(client, client_model):
     """Test that an already authenticated user is redirected from the signin page."""
-    client.force_login(user)
+    client.force_login(client_model)
     signin_url = reverse('signin')
     response = client.get(signin_url)
 

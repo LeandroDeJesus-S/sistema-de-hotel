@@ -8,14 +8,16 @@
 <div class="container p-5">
     <div class="row mb-5">
         <div class="col-md-4 d-flex justify-content-center">
-            <img src="{{reservation.room.image.url}}" alt="" class="img-fluid rounded">
+            {% if reservation.room.image %}
+                <img src="{{MEDIA_URL}}{{reservation.room.image}}" alt="" class="img-fluid rounded">
+            {% endif %}
         </div>
         <div class="col-md-8 d-flex align-items-center">
             <div class="jubroton">
-                <h1 class="text-center display-4">Quarto {{reservation.room.number}} | {{reservation.room.room_class|capfirst}}</h1>
+                <h1 class="text-center display-4">Quarto {{reservation.room.number}} | {{reservation.room.room_class.name|capfirst}}</h1>
                 <div class="reservation-info ms-3 mt-3">
-                    <p class="fs-5">Data de estadia: {{reservation.checkin}} - {{reservation.checkout}}</p>
-                    <p class="fs-5">Valor total: {{reservation.formatted_price}}</p>
+                    <p class="fs-5">Periodo de estadia: {{reservation.checkin}} - {{reservation.checkout}}</p>
+                    <p class="fs-5">Valor total: {{reservation.amount}}</p>
                     <p class="fs-5">Data de emissão: {{reservation.created_at|naturaltime}}</p>
                     <p class="fs-5">Status: {% include "partials/_reservation_status_badge.html" %}</small></p>
                 </div>

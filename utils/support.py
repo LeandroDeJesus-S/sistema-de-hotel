@@ -1,18 +1,23 @@
 import io
-from datetime import date
+from datetime import date, datetime
 from functools import wraps
 from secrets import token_hex
+from typing import Type, TypeVar
 
 import requests
 from django.conf import settings
 from django.contrib import messages
 from django.core.mail import EmailMessage
+from django.db import models
+from django.db.models.fields.files import ImageFieldFile
 from django.shortcuts import redirect
 from PIL import Image
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
+from base.entity import BaseEntity
 from clients.feedback_messages import Recaptcha
+from exc import Error, Result
 from home.models import Contact, Hotel
 from payments.models import Payment
 
@@ -198,3 +203,122 @@ def fmt_date(value: date, fmt='%d/%m/%Y') -> str:
         str: data formatada.
     """
     return value.strftime(fmt)
+
+
+def update_changed_fields(model_instance, update_data: dict) -> list[str]:
+    """
+    Updates only the fields of a model instance that have actually changed.
+
+    Args:
+        model_instance: The Django model instance to update.
+        update_data: A dictionary containing the new data to compare against.
+
+    Returns:
+        A list of the field names that were updated.
+    """
+    updated_fields = []
+    for field, value in update_data.items():
+        if (
+            value
+            and hasattr(model_instance, field)
+            and getattr(model_instance, field) != value
+        ):
+            setattr(model_instance, field, value)
+            updated_fields.append(field)
+
+    if updated_fields:
+        model_instance.full_clean()
+        model_instance.save(update_fields=updated_fields)
+
+    return updated_fields
+
+
+T = TypeVar('T', bound=BaseEntity)
+
+
+def model_to_entity(model: models.Model, entity_cls: Type[T]) -> Result[T | None]:
+    def to_dict(instance):
+        if not instance:
+            return None
+
+        opts = instance._meta
+        data = {}
+        for f in opts.concrete_fields + opts.many_to_many:
+            value = getattr(instance, f.name)
+            if isinstance(f, models.ManyToManyField):
+                data[f.name] = [to_dict(related) for related in value.all()]
+            elif isinstance(f, models.ForeignKey):
+                data[f.name] = to_dict(value)
+            elif isinstance(value, ImageFieldFile):
+                data[f.name] = value.name if value else ''
+            elif isinstance(value, datetime):
+                data[f.name] = value.date()
+            elif value is None and f.get_internal_type() in {'CharField', 'TextField'}:
+                data[f.name] = ''
+            else:
+                data[f.name] = value
+        return data
+
+    model_dict = to_dict(model)
+    return entity_cls.safe_validate(model_dict)
+
+
+def models_to_entities(models_queryset, entity_cls: Type[T]) -> Result[list[T]]:
+    entities: list[T] = []
+    for instance in models_queryset:
+        entity, err = model_to_entity(instance, entity_cls)
+        if err or not entity:
+            return Result(value=[], error=err)
+        entities.append(entity)
+    return Result(value=entities, error=None)
+
+
+M = TypeVar('M', bound=models.Model)
+
+
+def entity_to_model(entity: BaseEntity, model_cls: Type[M]) -> Result[M | None]:
+    """
+    Converts a Pydantic entity to a Django model instance, ready for creation or update.
+    This function does NOT save the model instance to the database.
+    It also does not handle ManyToMany relationships, which must be handled by the caller
+    after the instance is saved.
+    """
+
+    try:
+        model_data = {}
+        for field_name, value in entity.model_dump(exclude_none=True).items():
+            if (
+                isinstance(value, list)
+                and value
+                and isinstance(value[0], dict)
+                and 'id' in value[0]
+            ):
+                continue
+
+            if isinstance(value, dict) and 'id' in value and value['id'] is not None:
+                model_data[f'{field_name}_id'] = value['id']
+            elif field_name not in {'id'}:
+                model_data[field_name] = value
+
+        if entity.id:
+            # It's an update, get the existing instance
+            try:
+                instance = model_cls.objects.get(id=entity.id)
+                for key, value in model_data.items():
+                    setattr(instance, key, value)
+            except model_cls.DoesNotExist as e:
+                return Result(
+                    value=None,
+                    error=Error(
+                        msg=f'Instance with id {entity.id} not found for update.',
+                        src_error=e,
+                    ),
+                )
+        else:
+            # It's a creation
+            instance = model_cls(**model_data)
+
+        return Result(value=instance, error=None)
+
+    except Exception as e:
+        return Result(value=None, error=Error(msg=str(e), src_error=e))

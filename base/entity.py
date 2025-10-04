@@ -16,6 +16,7 @@ class BaseEntity(PydanticBaseModel):
     which returns a Result object instead of raising a ValidationError.
     """
 
+    id: int | None = None
     _messages: dict[str, dict[str, str]] = {}
 
     @classmethod
@@ -40,12 +41,11 @@ class BaseEntity(PydanticBaseModel):
             logger.debug(f'validated {instance}')
             return Result(value=instance, error=None)
         except ValidationError as e:
+            logger.debug(e, exc_info=True)
             errors = e.errors()
             custom_messages = getattr(cls, '_messages', PrivateAttr(default={}))
             if hasattr(custom_messages, 'get_default'):
                 custom_messages = custom_messages.get_default()
-
-            logger.debug(f'custom messages: {custom_messages}')
 
             for error in errors:
                 error_type = error['type']
