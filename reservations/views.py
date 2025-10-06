@@ -176,7 +176,7 @@ class Reserve(LoginRequired, View):
             return redirect(redirect_url)
 
 
-class ReservationsHistory(LoginRequired, ListView):  # FIXME: failing to load reservations
+class ReservationsHistory(LoginRequired, ListView):
     """exibe o histórico de reservas do usuário"""
 
     template_name = 'reservations_history.html'
