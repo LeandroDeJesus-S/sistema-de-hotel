@@ -69,3 +69,26 @@ Password = Annotated[
     ),
     'Represents a password value object.',
 ]
+
+
+FirstName = Annotated[
+    str,
+    StringConstraints(
+        pattern=ClientRules.FIRST_NAME_PATTERN,
+        min_length=ClientRules.MIN_FIRSTNAME_CHARS,
+        max_length=ClientRules.MAX_FIRSTNAME_CHARS,
+        strip_whitespace=True,
+    ),
+    'Represents a first name value object.',
+]
+
+LastName = Annotated[
+    str,
+    StringConstraints(
+        min_length=ClientRules.MIN_SURNAME_CHARS,
+        max_length=ClientRules.MAX_SURNAME_CHARS,
+        pattern=ClientRules.LAST_NAME_PATTERN,
+        strip_whitespace=True,
+    ),
+    'Represents a last name value object.',
+]

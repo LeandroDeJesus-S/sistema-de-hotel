@@ -54,7 +54,10 @@ class Client(AbstractUser):
         blank=False,
         null=False,
         validators=[
-            RegexValidator(r'^[^\W\d_]+$', ClientErrorMessages.INVALID_FIRSTNAME_LETTERS),
+            RegexValidator(
+                ClientRules.FIRST_NAME_PATTERN,
+                ClientErrorMessages.INVALID_FIRSTNAME_LETTERS,
+            ),
             MaxLengthValidator(
                 ClientRules.MAX_FIRSTNAME_CHARS,
                 ClientErrorMessages.INVALID_FIRSTNAME_MAX_LENGTH,
@@ -72,7 +75,7 @@ class Client(AbstractUser):
         null=False,
         validators=[
             RegexValidator(
-                r'^[A-Za-z][A-Za-z ]*$',
+                ClientRules.LAST_NAME_PATTERN,
                 ClientErrorMessages.INVALID_SURNAME_LETTERS,
             ),
             MinLengthValidator(

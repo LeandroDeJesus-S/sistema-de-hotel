@@ -1,7 +1,16 @@
 from base.entity import BaseEntity
 
 from ..feedback_messages import ClientErrorMessages, ContactErrorMessages
-from .value_objects import CPF, Birthdate, Email, Password, PhoneNumber, Username
+from .value_objects import (
+    CPF,
+    Birthdate,
+    Email,
+    FirstName,
+    LastName,
+    Password,
+    PhoneNumber,
+    Username,
+)
 
 
 class Client(BaseEntity):
@@ -55,8 +64,8 @@ class Client(BaseEntity):
         },
     }
     username: Username
-    first_name: str
-    last_name: str
+    first_name: FirstName
+    last_name: LastName
     birthdate: Birthdate
     email: Email
     phone: PhoneNumber

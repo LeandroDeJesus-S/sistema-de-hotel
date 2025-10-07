@@ -6,6 +6,9 @@ class ClientRules:
     MAX_SURNAME_CHARS = 50
     MIN_SURNAME_CHARS = 2
 
+    FIRST_NAME_PATTERN = r'^[^\W\d_]+$'
+    LAST_NAME_PATTERN = r'^[^\W\d_ ]+(?: [^\W\d_]+)*$'
+
     PASSWORD_SUPPORTED_SYMBOLS = "@<>();'-+*;"  # nosec
     PASSWORD_MIN_SIZE = 8
     PASSWORD_MAX_SIZE = 300  # to hashing support
