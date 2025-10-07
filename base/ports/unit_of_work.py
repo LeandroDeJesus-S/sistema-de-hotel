@@ -1,0 +1,6 @@
+from typing import ContextManager, Protocol
+
+
+class AbsUnitOfWork(ContextManager, Protocol):
+    def commit(self): ...
+    def rollback(self): ...

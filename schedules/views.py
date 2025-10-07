@@ -54,8 +54,8 @@ class Schedules(LoginRequired, View):
         """
         self.logger.debug(f'schedule for room {room_pk} received')
         self.context['room_pk'] = room_pk
-        CHECK_IN = convert_date(self.request.POST.get('checkin', '0001-01-01'))
-        CHECKOUT = convert_date(self.request.POST.get('checkout', '0001-01-01'))
+        CHECK_IN, _ = convert_date(self.request.POST.get('checkin', '0001-01-01'))
+        CHECKOUT, _ = convert_date(self.request.POST.get('checkout', '0001-01-01'))
         OBS = self.request.POST.get('obs', '')
 
         try:

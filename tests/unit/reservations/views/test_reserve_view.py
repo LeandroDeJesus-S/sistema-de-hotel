@@ -34,14 +34,13 @@ def test_reserve_view_uses_correct_template(authenticated_client, room_model):
 
 @pytest.mark.django_db
 def test_reserve_with_valid_data_redirects_to_checkout(
-    mocker, authenticated_client, room_model
+    mocker, authenticated_client, room_model, mock_recaptcha,
 ):
     """
     Tests if with valid data it redirects to checkout after reservation is created.
     """
     # Arrange
     client, user = authenticated_client
-    mocker.patch('reservations.views.support.verify_captcha', return_value=True)
     url = reverse('reserve', args=[room_model.pk])
     reservation = Reservation(pk=1, client=user, room=room_model)
     mock_initialize = mocker.patch(
@@ -151,7 +150,9 @@ def test_reserve_unexpected_error_redirects_to_room_with_message(
     # Arrange
     client, _ = authenticated_client
     mocker.patch('reservations.views.support.verify_captcha', return_value=True)
-    mocker.patch('reservations.views.convert_date', side_effect=Exception)
+    mocker.patch('reservations.views.convert_date', return_value=(None, Error(
+        ReservationMessages.RESERVATION_FAIL
+    )))
     url = reverse('reserve', args=[room_model.pk])
     checkin = datetime.now().date() + timedelta(days=2)
     valid_reserve_data = {
