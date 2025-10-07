@@ -3,7 +3,6 @@ from typing import Any
 
 from django.conf import settings
 from django.contrib import messages
-from django.db import transaction
 from django.http import Http404, HttpRequest
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
@@ -16,6 +15,7 @@ from clients.infra.repo import ClientRepository
 from reservations.application.dtos import CreateReservationInput
 from reservations.infra.repo import ReservationRepository, RoomRepository
 from utils import support
+from utils.adapters.unit_of_work import UnitOfWork
 
 from .application import services
 from .feedback_messages import ReservationMessages
@@ -27,6 +27,7 @@ svc = services.ReservationService(
     reservation_repo=ReservationRepository(),
     room_repo=RoomRepository(),
     client_repo=ClientRepository(),
+    uow=UnitOfWork(),
 )
 
 
@@ -138,42 +139,35 @@ class Reserve(LoginRequired, View):
         self.logger.debug(f'reservation for room {room_pk} started')
         self.context['room_pk'] = room_pk
 
-        try:
-            check_in = convert_date(request.POST.get('checkin', '0001-01-01'))
-            checkout = convert_date(request.POST.get('checkout', '0001-01-01'))
-            obs = request.POST.get('obs', '')
+        check_in, err1 = convert_date(request.POST.get('checkin', '0001-01-01'))
+        checkout, err2 = convert_date(request.POST.get('checkout', '0001-01-01'))
+        if err1 or err2:
+            err = err1 or err2
+            self.logger.error(f'failed to convert date {err.msg}')
+            messages.error(request, err.msg)
+            return redirect(reverse_lazy('reserve', args=(room_pk,)))
 
-            with (
-                transaction.atomic()
-            ):  # HACK: Is there a way to do the operation atomic into the usecase?
-                reservation, err = svc.initialize_reservation(
-                    CreateReservationInput(
-                        client_id=request.user.pk,
-                        room_pk=room_pk,
-                        check_in=check_in,
-                        check_out=checkout,
-                        observations=obs,
-                    )
-                )
-                if (err is not None) or (not reservation):
-                    msg = (err and err.msg) or 'unable to create reservation'
-                    src_err = (err and err.src_error) or None
+        obs = request.POST.get('obs', '')
 
-                    self.logger.error(msg, exc_info=src_err)
-                    messages.error(request, msg)
-                    return render(request, self.template_name, self.context)
-
-            self.logger.info(
-                f'reservation {reservation.id} registered. Redirecting to checkout'
+        reservation, err = svc.initialize_reservation(
+            CreateReservationInput(
+                client_id=request.user.pk,
+                room_pk=room_pk,
+                check_in=check_in,
+                check_out=checkout,
+                observations=obs,
             )
-            return redirect(reverse_lazy('checkout', args=(reservation.id,)))
+        )
+        if (err is not None) or (not reservation):
+            msg = (err and err.msg) or 'unable to create reservation'
+            src_err = (err and err.src_error) or None
 
-        except Exception as exc:
-            self.logger.error(str(exc))
-            messages.error(request, ReservationMessages.RESERVATION_FAIL)
-            room_url = reverse_lazy('room', args=(room_pk,))
-            redirect_url = request.META.get('HTTP_REFERER', room_url)
-            return redirect(redirect_url)
+            self.logger.error(msg, exc_info=src_err)
+            messages.error(request, msg)
+            return render(request, self.template_name, self.context)
+
+        self.logger.info(f'reservation {reservation.id} registered. Redirecting to checkout')
+        return redirect(reverse_lazy('checkout', args=(reservation.id,)))
 
 
 class ReservationsHistory(LoginRequired, ListView):

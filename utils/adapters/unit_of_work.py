@@ -6,7 +6,7 @@ from base.ports.unit_of_work import AbsUnitOfWork
 
 
 class UnitOfWork(AbsUnitOfWork):
-    def __init__(self, using: Any | None, savepoint: bool = True, durable: bool = True):
+    def __init__(self, using: Any | None = None, savepoint: bool = True, durable: bool = True):
         self._using = using
         self._savepoint = savepoint
         self._durable = durable

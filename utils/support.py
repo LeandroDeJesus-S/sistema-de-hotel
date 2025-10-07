@@ -1,4 +1,5 @@
 import io
+from collections.abc import Callable
 from datetime import date, datetime
 from functools import wraps
 from secrets import token_hex
@@ -190,6 +191,27 @@ def captcha_required(
         return decorated
 
     return decorator
+
+
+def ensure_result(error_msg: str | Callable = ''):
+    """Decorator that catches any exception in a use case and returns a Result object."""
+
+    def decorator(func):
+        @wraps(func)
+        def decorated(*args, **kwargs):
+            try:
+                raw_result = func(*args, **kwargs)
+                return (
+                    Result(value=raw_result, error=None)
+                    if not isinstance(raw_result, Result)
+                    else raw_result
+                )
+            except Exception as e:
+                return Result(value=None, error=Error(msg=error_msg or str(e), src_error=e))
+
+        return decorated
+
+    return decorator if isinstance(error_msg, str) else decorator(error_msg)
 
 
 def fmt_date(value: date, fmt='%d/%m/%Y') -> str:
