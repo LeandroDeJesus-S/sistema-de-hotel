@@ -67,6 +67,7 @@ pytest-responses = "^0.5.1"
 pytest-mock = "^3.14.1"
 faker = "^37.6.0"
 django-dynamic-fixture = "^4.0.1"
+pre-commit = "^4.3.0"
 
 [tool.ruff]
 line-length = 95
