@@ -206,6 +206,8 @@ def ensure_result(error_msg: str | Callable = ''):
                     if not isinstance(raw_result, Result)
                     else raw_result
                 )
+            except Error as e:
+                return Result(value=None, error=e)
             except Exception as e:
                 return Result(value=None, error=Error(msg=error_msg or str(e), src_error=e))
 

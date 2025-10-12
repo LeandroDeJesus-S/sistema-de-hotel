@@ -31,6 +31,7 @@ class AbsReservationRepository(Protocol):
     def fetch_for_history_detail(
         self, client_id: int, reservation_id: int
     ) -> Result[entities.Reservation | None]: ...
+    def find_by_id(self, id: int) -> Result[entities.Reservation | None]: ...
 
 
 class AbsBenefitRepository(Protocol):

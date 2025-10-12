@@ -189,7 +189,7 @@ class Client(AbstractUser):
     @property
     def formatted_phone(self) -> str:
         """retorna o telefone do usuário no formato (xx) xxxx-xxxx"""
-        phone = self.phone
+        phone: str = self.phone
         ddd = phone[:2]
         mid = -4
         phone = f'({ddd}) {phone[2:mid]}-{phone[mid:]}'

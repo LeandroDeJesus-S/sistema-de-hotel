@@ -157,4 +157,3 @@ def test_client_updates_username_correctly(mocker, authenticated_client, perfil_
 
     # Assert
     assert updated_user.username == new_username
-

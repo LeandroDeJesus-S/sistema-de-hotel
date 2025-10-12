@@ -287,3 +287,13 @@ class ReservationRepository(AbsReservationRepository):
             return Result(value=entity, error=None)
 
         return Result(value=None, error=Error(msg='Reservation not found', src_error=err))
+
+    def find_by_id(self, id: int) -> Result[entities.Reservation | None]:
+        reservation = (
+            self._modelclass.objects.select_related('client', 'room').filter(id=id).first()
+        )
+        if not reservation:
+            return Result(value=None, error=Error(msg='Reservation not found', src_error=None))
+
+        r, err = model_to_entity(reservation, self._entityclass)
+        return Result(value=r, error=err)

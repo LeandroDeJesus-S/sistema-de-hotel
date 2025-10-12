@@ -10,7 +10,7 @@
 {% block content %}
 
 <div class="container d-flex justify-content-center containe-form-out align-items-center">
-            
+
     <form id="form" action="{% url "signup" %}" method="post" class="form reserve-form text-light" >{% csrf_token %}
         <div class="container">
             {% include "partials/_messages.html" %}

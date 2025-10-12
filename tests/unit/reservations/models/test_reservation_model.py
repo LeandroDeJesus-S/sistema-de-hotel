@@ -232,7 +232,7 @@ def test_available_dates_returns_correct_string(reservation_model):
     reservation_model.status = 'S'
     reservation_model.save()
 
-    checkin2 = reservation_model.checkout + timedelta(days=2)    
+    checkin2 = reservation_model.checkout + timedelta(days=2)
     checkout2 = checkin2 + timedelta(days=1)
 
     reservation2 = G(

@@ -36,7 +36,7 @@ O site é um projeto pessoal criado para fins de prática e para aplicar alguns 
    ```
 
 2. entre na pasta do projeto
-   ```powershell 
+   ```powershell
    cd sistema-de-hotel
    ```
 

@@ -1,6 +1,7 @@
 import re
 from datetime import datetime
 from decimal import Decimal
+from typing import Self
 
 from django.core.exceptions import ValidationError
 from django.core.validators import (
@@ -346,8 +347,8 @@ class Reservation(models.Model):
         def fmt_date(d):
             return d.strftime('%d/%m/%Y')
 
-        dates = []
-        lst = None
+        dates: list[str] = []
+        lst: Self | None = None
         for reserva in reservations:
             if lst is None:
                 lst = reserva

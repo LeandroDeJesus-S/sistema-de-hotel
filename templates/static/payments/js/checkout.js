@@ -6,7 +6,7 @@ const options = {
   // Fully customizable with appearance API.
   appearance: {
     theme: 'night',
-    labels: 'floating' 
+    labels: 'floating'
   },
 };
 

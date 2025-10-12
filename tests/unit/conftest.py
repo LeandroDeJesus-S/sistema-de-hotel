@@ -179,10 +179,10 @@ def payment_model(db, reservation_model, contact_model):
     Fixture to create a Payment instance.
     """
     return G(
-        Payment, 
-        reservation=reservation_model, 
-        status="P", 
-        amount=reservation_model.amount, 
+        Payment,
+        reservation=reservation_model,
+        status="P",
+        amount=reservation_model.amount,
     )
 
 

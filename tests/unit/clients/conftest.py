@@ -67,6 +67,3 @@ def perfil_urls(client_model):
         'perfil_update_success_url': reverse('perfil', args=(client_model.pk,)),
         'perfil_delete_success_url': reverse('rooms'),
     }
-
-
-

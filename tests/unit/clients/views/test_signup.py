@@ -100,10 +100,10 @@ def test_signup_missing_field_renders_correct_template(
 @pytest.mark.parametrize(
     'field',
     [
-        'username', 
-        'telefone', 
-        'email', 
-        'cpf', 
+        'username',
+        'telefone',
+        'email',
+        'cpf',
     ],
 )
 @pytest.mark.django_db

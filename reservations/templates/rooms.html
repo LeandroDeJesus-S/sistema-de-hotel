@@ -7,7 +7,7 @@
 
 {% block content %}
 <div class="container">
-    {% include "partials/_messages.html" %}        
+    {% include "partials/_messages.html" %}
 
     {% for room in rooms %}
         <div class="card room-card mb-5 p-3">
@@ -30,19 +30,19 @@
                                         <label class="form-check-label text-light" for="{% if benefit in room.benefits %} flexCheckCheckedDisabled {% else %} flexCheckDisabled {% endif %} ">{{benefit.name}}</label>
                                     </div>
                                 {% endfor %}
-                                
+
                             </div>
                         </p>
                     </div>
                 </div>
                 <div class="col-md-1 d-flex align-items-end justify-content-end">
                     {% include "partials/_reserve_btn.html" %}
-                    
+
                 </div>
             </div>
 
         </div>
-    
+
     {% empty %}
         Não há quartos disponíveis no momento.
 

@@ -25,4 +25,3 @@ def test_base_entity_custom_error_messages():
 
     entity = TestEntity.safe_create()
     assert entity.error.msg == 'Name is required'
-

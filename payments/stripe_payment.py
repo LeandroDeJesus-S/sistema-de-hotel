@@ -1,9 +1,10 @@
+from datetime import timedelta
 from typing import Any
 
 import stripe
 from django.conf import settings
 from django.urls import reverse
-from django.utils.timezone import now, timedelta
+from django.utils.timezone import now
 from stripe.checkout import Session
 
 from payments.base import AbsSessionBasedPayment, PaymentSessionResponse
