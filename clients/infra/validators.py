@@ -10,7 +10,7 @@ from django.utils.translation import gettext as _
 from clients.application.validators import AbsValidator
 from clients.feedback_messages import ClientErrorMessages, ContactErrorMessages
 from clients.rules import ClientRules
-from exc import Error, Result
+from exc import Result
 
 T = TypeVar('T')
 ValidatorCall: TypeAlias = Callable[[T], Result[T] | None]
@@ -24,9 +24,9 @@ class DjangoValidatorAdapter:
         self._validator = validator
 
     def __call__(self, value: object) -> None:
-        _, err = self._validator.validate(value)
-        if err is not None:
-            raise ValidationError(err.msg)
+        result = self._validator.validate(value)
+        if result.is_err():
+            raise ValidationError(result.unwrap_err().msg)
 
     def __hash__(self) -> int:
         return hash(self._validator.__class__.__name__)
@@ -62,9 +62,9 @@ class UsernameValidator(AbsValidator):
                 'min_len': self._min_len,
                 'max_len': self._max_len,
             }
-            return Result('', Error(msg, None))
+            return Result.Err(msg)
 
-        return Result(value, None)
+        return Result.Ok(value)
 
 
 class PhoneNumberValidator(AbsValidator):
@@ -74,11 +74,11 @@ class PhoneNumberValidator(AbsValidator):
         try:
             parsed_phone = phonenumbers.parse(value, 'BR')
             if not phonenumbers.is_valid_number(parsed_phone):
-                return Result('', Error(ContactErrorMessages.INVALID_PHONE))
-            return Result(value, None)
+                return Result.Err(ContactErrorMessages.INVALID_PHONE)
+            return Result.Ok(value)
 
         except phonenumbers.NumberParseException as e:
-            return Result('', Error(ContactErrorMessages.INVALID_PHONE, src_error=e))
+            return Result.Err(ContactErrorMessages.INVALID_PHONE, src_error=e)
 
 
 class BirthDateValidator(AbsValidator):
@@ -93,12 +93,9 @@ class BirthDateValidator(AbsValidator):
         _now = now()
         age = (_now.year - value.year) - (value.month < _now.month)
         if not (self._min_age <= age <= self._max_age):
-            return Result(
-                date(1, 1, 1),
-                Error(ClientErrorMessages.INVALID_BIRTHDATE),
-            )
+            return Result.Err(ClientErrorMessages.INVALID_BIRTHDATE)
 
-        return Result(value, None)
+        return Result.Ok(value)
 
 
 class PasswordValidator(AbsValidator):
@@ -126,12 +123,12 @@ class PasswordValidator(AbsValidator):
                 'max_len': self._max_len,
                 'symbols': self._supported_symbols,
             }
-            return Result('', Error(msg, None))
+            return Result.Err(msg)
 
         for dj_validator in self._dj_extra:
             dj_validator(value)
 
-        return Result(value, None)
+        return Result.Ok(value)
 
 
 class DjangoPasswordValidatorAdapter:
@@ -145,9 +142,9 @@ class DjangoPasswordValidatorAdapter:
         self._help_msg = help_msg
 
     def validate(self, password: str, user=None) -> None:
-        _, err = self._validator.validate(password)
-        if err is not None:
-            raise ValidationError(err.msg)
+        result = self._validator.validate(password)
+        if result.is_err():
+            raise ValidationError(result.unwrap_err().msg)
 
     def get_help_text(self) -> str:
         return self._help_msg

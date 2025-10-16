@@ -23,7 +23,7 @@ class AbsClientRepository(Protocol):
     """
 
     @abstractmethod
-    def add(self, client: Client) -> Result[Client | None]:
+    def add(self, client: Client) -> Result[Client]:
         """
         Adds a new client to the repository and returns the persisted entity,
         which may include a database-assigned ID.
@@ -31,17 +31,17 @@ class AbsClientRepository(Protocol):
         ...
 
     @abstractmethod
-    def get_by_id(self, client_id: int) -> Result[Client | None]:
+    def get_by_id(self, client_id: int) -> Result[Client]:
         """Retrieves a client by their unique ID."""
         ...
 
     @abstractmethod
-    def get_by_username(self, username: str) -> Result[Client | None]:
+    def get_by_username(self, username: str) -> Result[Client]:
         """Retrieves a client by their username."""
         ...
 
     @abstractmethod
-    def get_by_email(self, email: str) -> Result[Client | None]:
+    def get_by_email(self, email: str) -> Result[Client]:
         """Retrieves a client by their email address."""
         ...
 
@@ -68,7 +68,7 @@ class AbsPasswordManager(Protocol):
     """
 
     @abstractmethod
-    def hash_password(self, raw_password: str) -> Result[str | None]:
+    def hash_password(self, raw_password: str) -> Result[str]:
         """Hashes a raw password and returns the secure hash."""
         ...
 
@@ -101,9 +101,7 @@ class AbsSessionManager(Protocol):
     """
 
     @abstractmethod
-    def authenticate(
-        self, request: Any, username: str, password: str
-    ) -> Result[Client | None]:
+    def authenticate(self, request: Any, username: str, password: str) -> Result[Client]:
         """
         Authenticates a user by their username and password.
         Returns the Client entity if authentication is successful, otherwise None.

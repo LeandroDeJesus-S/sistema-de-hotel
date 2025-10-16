@@ -10,7 +10,7 @@ from django.contrib.auth import logout as django_logout
 from django.contrib.auth.hashers import check_password, make_password
 
 from clients.domain.entities import Client
-from exc import Error, Result
+from exc import Result
 
 logger = logging.getLogger('djangoLogger')
 
@@ -18,7 +18,7 @@ logger = logging.getLogger('djangoLogger')
 class DjangoPasswordManager:
     """Handles password hashing and verification using Django's built-in tools."""
 
-    def hash_password(self, raw_password: str) -> Result[str | None]:  # noqa: PLR6301
+    def hash_password(self, raw_password: str) -> Result[str]:  # noqa: PLR6301
         """
         Hashes a password using Django's PBKDF2 algorithm.
 
@@ -30,9 +30,9 @@ class DjangoPasswordManager:
         """
         try:
             hashed = make_password(raw_password)
-            return Result(value=hashed, error=None)
+            return Result.Ok(hashed)
         except Exception as e:
-            return Result(value=None, error=Error('Failed to hash password', e))
+            return Result.Err('Failed to hash password', e)
 
     def check_password(self, password: str, hashed: str) -> Result[bool]:  # noqa: PLR6301
         """
@@ -48,10 +48,10 @@ class DjangoPasswordManager:
         try:
             is_valid = check_password(password, hashed)
             if not is_valid:
-                return Result(value=False, error=Error('Password does not match'))
-            return Result(value=True, error=None)
+                return Result.Err('Password does not match')
+            return Result.Ok(True)
         except Exception as e:
-            return Result(value=False, error=Error('Failed to verify password', e))
+            return Result.Err('Failed to verify password', e)
 
 
 class GoogleRecaptchaV3Verifier:
@@ -79,13 +79,13 @@ class GoogleRecaptchaV3Verifier:
             timeout=self.__REQUEST_TIMEOUT_SECONDS,
         )
         if response.status_code != HTTPStatus.OK:
-            return Result(value=False, error=Error('Failed to verify captcha'))
+            return Result.Err('Failed to verify captcha')
 
         result = response.json()
         if not result.get('success'):
-            return Result(value=False, error=Error('Invalid captcha'))
+            return Result.Err('Invalid captcha')
 
-        return Result(value=True, error=None)
+        return Result.Ok(True)
 
 
 class DjangoSessionManager:
@@ -97,9 +97,7 @@ class DjangoSessionManager:
         self._backend = backend
         self._usermodel = get_user_model()
 
-    def authenticate(
-        self, request: Any, username: str, password: str
-    ) -> Result[Client | None]:
+    def authenticate(self, request: Any, username: str, password: str) -> Result[Client]:
         logger.debug(f'authenticating user with backend: {self._backend}')
         try:
             user = django_authenticate(
@@ -110,12 +108,12 @@ class DjangoSessionManager:
             )
             if user is None:
                 logger.debug(f'used credentials: {username} {password}')
-                return Result(value=None, error=Error('Invalid credentials'))
+                return Result.Err('Invalid credentials')
 
             u = Client.model_validate(user.__dict__)
-            return Result(value=u, error=None)
+            return Result.Ok(u)
         except Exception as e:
-            return Result(value=None, error=Error('Failed to validate user', e))
+            return Result.Err('Failed to validate user', e)
 
     def login(self, request: Any, user: Client) -> Result[None]:
         """
@@ -130,13 +128,13 @@ class DjangoSessionManager:
         """
         db_u = self._usermodel.objects.filter(id=user.id).first()
         if db_u is None:
-            return Result(value=None, error=Error('Invalid user'))
+            return Result.Err('Invalid user')
 
         try:
             django_login(request, db_u, backend=self._backend)
-            return Result(value=None, error=None)
+            return Result.Ok(None)
         except Exception as e:
-            return Result(value=None, error=Error('Failed to login user', e))
+            return Result.Err('Failed to login user', e)
 
     def logout(self, request: Any) -> Result[None]:  # noqa: PLR6301
         """
@@ -150,6 +148,6 @@ class DjangoSessionManager:
         """
         try:
             django_logout(request)
-            return Result(value=None, error=None)
+            return Result.Ok(None)
         except Exception as e:
-            return Result(value=None, error=Error('Failed to logout user', e))
+            return Result.Err('Failed to logout user', e)

@@ -38,7 +38,7 @@ def test_rooms_view_sends_all_rooms_to_context_ordered_by_price(mocker, client):
     expected_rooms = list(Room.objects.all().order_by('-daily_price'))
     mocker.patch(
         'reservations.views.svc.room_repo.fetch_all',
-        return_value=Result(value=expected_rooms, error=None),
+        return_value=Result.Ok(expected_rooms),
     )
 
     # Act
@@ -62,7 +62,7 @@ def test_rooms_view_benefits_are_sent_to_context(authenticated_client, mocker):
     expected_benefits = list(benefits)
     mocker.patch(
         'reservations.views.svc.room_repo.fetch_all_benefits',
-        return_value=type('Result', (), {'value': expected_benefits, 'error': None})(),
+        return_value=Result.Ok(expected_benefits),
     )
 
     # Act
@@ -86,11 +86,11 @@ def test_rooms_view_reservation_on_not_in_context_for_unauthenticated_user(
     G(Room)
     mocker.patch(
         'reservations.views.svc.room_repo.fetch_all_benefits',
-        return_value=Result(value=[], error=None),
+        return_value=Result.Ok([]),
     )
     mocker.patch(
         'reservations.views.svc.room_repo.fetch_all',
-        return_value=Result(value=list(Room.objects.all()), error=None),
+        return_value=Result.Ok([]),
     )
 
     # Act
@@ -114,15 +114,15 @@ def test_rooms_view_reservation_on_not_in_context_for_user_with_no_reservations(
     G(Room)
     mocker.patch(
         'reservations.views.svc.room_repo.fetch_all_benefits',
-        return_value=Result(value=[], error=None),
+        return_value=Result.Ok([]),
     )
     mocker.patch(
         'reservations.views.svc.room_repo.fetch_all',
-        return_value=Result(value=list(Room.objects.all()), error=None),
+        return_value=Result.Ok([]),
     )
     mocker.patch(
         'reservations.views.svc.fetch_client_active_reservations',
-        return_value=([], None),
+        return_value=Result.Ok([]),
     )
 
     # Act
@@ -154,11 +154,11 @@ def test_rooms_view_reservation_on_in_context_for_user_with_reservations(
     )
     mocker.patch(
         'reservations.views.svc.room_repo.fetch_all_benefits',
-        return_value=Result(value=[], error=None),
+        return_value=Result.Ok([]),
     )
     mocker.patch(
         'reservations.views.svc.fetch_client_active_reservations',
-        return_value=([reservation], None),
+        return_value=Result.Ok([reservation]),
     )
 
     # Act

@@ -78,7 +78,7 @@ class SignUp(View):
             messages.error(request, feedback_messages.SignUp.MISSING_FIELDS)
             return render(request, self.template_name, CAPTCHA_CTX)
 
-        client_entity, err = DomainClient.safe_create(
+        client_entity_result = DomainClient.safe_create(
             username=username,
             password=password,
             first_name=name,
@@ -88,35 +88,26 @@ class SignUp(View):
             email=email,
             cpf=cpf,
         )
-        if err:
-            messages.error(request, err.msg)
-            self.logger.error(str(err))
+        if client_entity_result.is_err():
+            messages.error(request, client_entity_result.unwrap_err().msg)
+            self.logger.error(str(client_entity_result.unwrap_err()))
             return render(request, self.template_name, CAPTCHA_CTX)
 
-        if client_entity is None:
-            messages.error(request, feedback_messages.Generic.UNEXPECTED_ERROR)
-            self.logger.error('client entity is None after creation')
+        created_user_result = self.svc.create_user(client_entity_result.unwrap())
+
+        if created_user_result.is_err():
+            messages.error(request, created_user_result.unwrap_err().msg)
+            self.logger.error(created_user_result.unwrap_err())
             return render(request, self.template_name, CAPTCHA_CTX)
 
-        created_user_result = self.svc.create_user(client_entity)
-
-        if created_user_result.error is not None:
-            messages.error(request, created_user_result.error.msg)
-            self.logger.error(created_user_result.error)
-            return render(request, self.template_name, CAPTCHA_CTX)
-
-        if created_user_result.value is None:
-            messages.error(request, feedback_messages.Generic.UNEXPECTED_ERROR)
-            self.logger.error('created user is None')
-            return render(request, self.template_name, CAPTCHA_CTX)
-
-        login_result = self.svc.session_manager.login(request, created_user_result.value)
+        login_result = self.svc.session_manager.login(request, created_user_result.unwrap())
         _redirect = self._redirect
 
-        if login_result.error is not None:
+        if login_result.is_err():
             _redirect = reverse('signin')
             self.logger.error(
-                f'User created, but failed to log in automatically: {login_result.error}'
+                'User created, but failed to log in '
+                f'automatically: {login_result.unwrap_err()}'
             )
 
         self.logger.debug(f'redirecting to {_redirect}')
@@ -159,21 +150,20 @@ class SignIn(View):
             'password': request.POST.get('password', ''),
         }
 
-        user, err = self.svc.session_manager.authenticate(request, **post_data)
-        if err is not None:
-            messages.error(request, err.msg)
-            self.logger.error(err, exc_info=err.src_error)
+        user_result = self.svc.session_manager.authenticate(request, **post_data)
+        if user_result.is_err():
+            messages.error(request, user_result.unwrap_err().msg)
+            self.logger.error(
+                user_result.unwrap_err(), exc_info=user_result.unwrap_err().src_error
+            )
             return _std_rendering
 
-        if user is None:
-            messages.error(request, feedback_messages.SignIn.INVALID_CREDENTIALS)
-            self.logger.error('user is None')
-            return _std_rendering
-
-        _, err = self.svc.session_manager.login(request, user)
-        if err is not None:
-            self.logger.error(err, exc_info=err.src_error)
-            messages.error(request, err.msg)
+        login_result = self.svc.session_manager.login(request, user_result.unwrap())
+        if login_result.is_err():
+            self.logger.error(
+                login_result.unwrap_err(), exc_info=login_result.unwrap_err().src_error
+            )
+            messages.error(request, login_result.unwrap_err().msg)
             return _std_rendering
 
         next_url = request.session.get('next_url', self.next_url)
@@ -249,29 +239,19 @@ class PerfilChangePassword(LoginRequired, View):
             'password_repeat': self.request.POST.get('password_repeat', '').strip(),
         }
 
-        inp, err = ChangePasswordInput.safe_validate(data)
-        if err is not None:
-            self.logger.error(err.msg)
-            messages.error(self.request, err.msg)
+        inp_result = ChangePasswordInput.safe_validate(data)
+        if inp_result.is_err():
+            self.logger.error(inp_result.unwrap_err().msg)
+            messages.error(self.request, inp_result.unwrap_err().msg)
             return _redirect
 
-        if inp is None:
-            self.logger.error('input is None and err is not None')
-            messages.error(self.request, feedback_messages.Generic.INVALID_DATA)
-            return _redirect
-
-        entity, err = self.svc.change_pw(inp)
-        if err is not None:
-            self.logger.error(err.msg, exc_info=err.src_error)
-            messages.error(self.request, err.msg)
-            return _redirect
-
-        if entity is None:
-            self.logger.error('input is None and err is not None')
-            messages.error(
-                self.request,
-                feedback_messages.Generic.UNEXPECTED_ERROR,
+        change_pw_result = self.svc.change_pw(inp_result.unwrap())
+        if change_pw_result.is_err():
+            self.logger.error(
+                change_pw_result.unwrap_err().msg,
+                exc_info=change_pw_result.unwrap_err().src_error,
             )
+            messages.error(self.request, change_pw_result.unwrap_err().msg)
             return _redirect
 
         messages.success(self.request, feedback_messages.ChangePassword.SUCCESS)

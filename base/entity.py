@@ -4,7 +4,7 @@ from typing import Any, Type, TypeVar
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import PrivateAttr, ValidationError
 
-from exc import Error, Result
+from exc import Result
 
 T = TypeVar('T', bound='BaseEntity')
 logger = logging.getLogger('djangoLogger')
@@ -20,7 +20,7 @@ class BaseEntity(PydanticBaseModel):
     _messages: dict[str, dict[str, str]] = {}
 
     @classmethod
-    def safe_validate(cls: Type[T], data: Any) -> Result[T | None]:
+    def safe_validate(cls: Type[T], data: Any) -> Result[T]:
         """
         Safely validates data and creates an instance of the model.
 
@@ -39,7 +39,7 @@ class BaseEntity(PydanticBaseModel):
             logger.debug(f'validating {data}')
             instance = cls.model_validate(data, from_attributes=True)
             logger.debug(f'validated {instance}')
-            return Result(value=instance, error=None)
+            return Result.Ok(instance)
         except ValidationError as e:
             logger.debug(e, exc_info=True)
             errors = e.errors()
@@ -60,12 +60,12 @@ class BaseEntity(PydanticBaseModel):
                     field_messages = custom_messages.get(field_name, {})
                     current_field_message = field_messages.get(error_type, default_error_msg)
 
-                return Result(value=None, error=Error(msg=current_field_message, src_error=e))
+                return Result.Err(msg=current_field_message, src_error=e)
 
-            return Result(value=None, error=Error(msg='Validation error', src_error=e))
+            return Result.Err(msg='Validation error', src_error=e)
 
     @classmethod
-    def safe_create(cls: Type[T], **kwargs: Any) -> Result[T | None]:
+    def safe_create(cls: Type[T], **kwargs: Any) -> Result[T]:
         """
         Safely creates an instance of the model from keyword arguments.
 

@@ -1,5 +1,6 @@
 import pytest
 
+from exc import Error
 from reservations.infra.repo import ReservationRepository
 from reservations.domain.entities import Reservation as ReservationEntity
 from reservations.models import Reservation as ReservationModel
@@ -15,12 +16,11 @@ class TestReservationRepository:
         result = repo.find_by_id(reservation_model.id)
 
         # Assert
-        assert result.error is None
-        assert result.value is not None
-        assert isinstance(result.value, ReservationEntity)
-        assert result.value.id == reservation_model.id
-        assert result.value.client.id == reservation_model.client.id
-        assert result.value.room.id == reservation_model.room.id
+        assert not result.is_err()
+        assert isinstance(result.unwrap(), ReservationEntity)
+        assert result.unwrap().id == reservation_model.id
+        assert result.unwrap().client.id == reservation_model.client.id
+        assert result.unwrap().room.id == reservation_model.room.id
 
     def test_find_by_id_not_found(self):
         # Arrange
@@ -30,6 +30,5 @@ class TestReservationRepository:
         result = repo.find_by_id(999)
 
         # Assert
-        assert result.error is not None
-        assert result.value is None
-        assert result.error.msg == "Reservation not found"
+        assert result.is_err()
+        assert isinstance(result.unwrap_err(), Error)

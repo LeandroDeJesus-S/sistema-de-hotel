@@ -323,10 +323,16 @@ class Reservation(models.Model):
 
     def clean(self) -> None:
         super().clean()
+        self.error_messages: dict[str, str] = {}
+        self._validate_check_in()
+        self._validate_room()
 
-        _, err = support.model_to_entity(self, entities.Reservation)
-        if err is not None:
-            raise ValidationError(err.msg)
+        if self.error_messages:
+            raise ValidationError(self.error_messages)
+
+        result = support.model_to_entity(self, entities.Reservation)
+        if result.is_err():
+            raise ValidationError(result.unwrap_err().msg)
 
     @classmethod
     def get_free_dates(cls, reservations) -> str:

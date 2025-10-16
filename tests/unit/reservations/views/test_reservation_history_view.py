@@ -6,7 +6,7 @@ import pytest
 from django.urls import reverse
 
 from reservations.models import Reservation
-
+from exc import Result
 
 @pytest.mark.django_db
 def test_reservation_history_view_uses_correct_template(
@@ -17,7 +17,7 @@ def test_reservation_history_view_uses_correct_template(
     client, _ = authenticated_client
     url = reverse('reservation_history', args=[reservation_model.pk])
     mocker.patch(
-        'reservations.views.svc.fetch_reservation_detail', return_value=(reservation_model, None)
+        'reservations.views.svc.fetch_reservation_detail', return_value=Result.Ok(reservation_model)
     )
 
     # Act
@@ -43,7 +43,7 @@ def test_reservation_history_view_sends_only_client_reservations_to_context(
     expected_reservation = reservation_model.pk
     mocker.patch(
         'reservations.views.svc.fetch_reservation_detail',
-        return_value=(expected_reservation, None),
+        return_value=Result.Ok(expected_reservation),
     )
 
     # Act

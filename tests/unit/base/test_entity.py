@@ -8,7 +8,7 @@ def test_base_entity_safe_create():
         name: str
 
     entity = TestEntity.safe_create(name='John Doe')
-    assert entity.value.name == 'John Doe'
+    assert entity.unwrap().name == 'John Doe'
 
 
 def test_base_entity_custom_error_messages():
@@ -24,4 +24,4 @@ def test_base_entity_custom_error_messages():
         }
 
     entity = TestEntity.safe_create()
-    assert entity.error.msg == 'Name is required'
+    assert entity.unwrap_err().msg == 'Name is required'

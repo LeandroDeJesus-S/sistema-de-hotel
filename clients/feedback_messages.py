@@ -35,6 +35,7 @@ class ChangePassword:
 
 class ClientErrorMessages:
     GENERIC = _('Dados de cliente inválidos.')
+    SIGNUP_ERROR = _('Não foi possível criar a conta. Verifique seus dados e tente novamente.')
 
     DUPLICATED_CPF = _('CPF não disponível.')
     DUPLICATED_USERNAME = _('Nome de usuário já existe.')

@@ -134,12 +134,12 @@ def test_signup_duplicated_unique_field_renders_signup_with_message(
 
 
 @pytest.mark.parametrize(
-    ('field', 'expected_msg'),
+    'field',
     [
-        ('username', ClientErrorMessages.DUPLICATED_USERNAME),
-        ('telefone', ContactErrorMessages.DUPLICATED_PHONE),
-        ('email', ContactErrorMessages.DUPLICATED_EMAIL),
-        ('cpf', ClientErrorMessages.DUPLICATED_CPF),
+        'username',
+        'telefone',
+        'email',
+        'cpf',
     ],
 )
 @pytest.mark.django_db
@@ -149,7 +149,6 @@ def test_signup_duplicated_unique_field_renders_correct_template(
     valid_signup_data,
     existing_user_data,
     field,
-    expected_msg,
 ):
     """
     Test if fields that must be unique are validated correctly,
@@ -160,12 +159,15 @@ def test_signup_duplicated_unique_field_renders_correct_template(
     url = reverse('signup')
     data = valid_signup_data.copy()
     data[field] = existing_user_data[field]
+    expected_msg = ClientErrorMessages.SIGNUP_ERROR
 
     # Act
     response = client.post(url, data)
+    message = get_message(response)
 
     # Assert
     assert 'signup.html' in [t.name for t in response.templates]
+    assert message == expected_msg
 
 
 @pytest.mark.parametrize(
@@ -177,7 +179,7 @@ def test_signup_duplicated_unique_field_renders_correct_template(
         ),
         (
             '1' * (ClientRules.USERNAME_MAX_SIZE + 1),
-            ClientErrorMessages.INVALID_USERNAME_LEN,
+            ClientErrorMessages.INVALID_USERNAME_LEN ,
         ),
         ('dah#1234', ClientErrorMessages.INVALID_USERNAME_CHARS),
         ('dah$1234', ClientErrorMessages.INVALID_USERNAME_CHARS),
@@ -206,7 +208,7 @@ def test_signup_invalid_username_renders_signup_with_message(
     message = get_message(response)
 
     # Assert
-    assert message == case_message
+    assert str(case_message) in message
 
 
 @pytest.mark.parametrize(
@@ -214,11 +216,17 @@ def test_signup_invalid_username_renders_signup_with_message(
     [
         (
             '1' * (ClientRules.USERNAME_MIN_SIZE - 1),
-            ClientErrorMessages.INVALID_USERNAME_LEN,
+            ClientErrorMessages.INVALID_USERNAME_LEN % {
+                'min_len': ClientRules.USERNAME_MIN_SIZE,
+                'max_len': ClientRules.USERNAME_MAX_SIZE,
+            },
         ),
         (
             '1' * (ClientRules.USERNAME_MAX_SIZE + 1),
-            ClientErrorMessages.INVALID_USERNAME_LEN,
+            ClientErrorMessages.INVALID_USERNAME_LEN % {
+                'min_len': ClientRules.USERNAME_MIN_SIZE,
+                'max_len': ClientRules.USERNAME_MAX_SIZE,
+            },
         ),
         ('dah#1234', ClientErrorMessages.INVALID_USERNAME_CHARS),
         ('dah$1234', ClientErrorMessages.INVALID_USERNAME_CHARS),

@@ -40,16 +40,12 @@ def setup_reservation_context(
         svc (ReservationService)
         context (Any): view context
     """
-    if not request.user.is_authenticated:
-        return
+    if request.user.is_authenticated:
+        context['reservation_on'] = svc.fetch_client_active_reservations(
+            request.user.pk, include_scheduled=True
+        ).unwrap()
 
-    reservations, _ = svc.fetch_client_active_reservations(
-        request.user.pk, include_scheduled=True
-    )
-    context['reservation_on'] = reservations
-
-    benefits_result = svc.room_repo.fetch_all_benefits()
-    context['benefits'] = benefits_result.value
+    context['benefits'] = svc.room_repo.fetch_all_benefits().unwrap_or([])
 
 
 class Rooms(ListView):
@@ -63,12 +59,14 @@ class Rooms(ListView):
 
     def get_queryset(self):
         """retorna todos os quartos com seus benefícios"""
-        rooms, err = svc.room_repo.fetch_all(with_benefits=True)
-        if err:
+        result = svc.room_repo.fetch_all(with_benefits=True)
+        if result.is_err():
+            err = result.unwrap_err()
             self.logger.error(err.msg, exc_info=err.src_error)
             messages.error(self.request, 'Could not load rooms.')
             return []
 
+        rooms = result.unwrap()
         self.logger.debug(f'{rooms =}')
         return rooms
 
@@ -103,11 +101,15 @@ class Reserve(LoginRequired, View):
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
         super().setup(request, *args, **kwargs)
         self.logger = logging.getLogger('djangoLogger')
-        room_classes, err = svc.room_repo.fetch_all_classes()
-        if err:
+        result = svc.room_repo.fetch_all_classes()
+        if result.is_err():
+            err = result.unwrap_err()
             self.logger.error(err.msg, exc_info=err.src_error)
             messages.error(request, err.msg)
             room_classes = []
+        else:
+            room_classes = result.unwrap()
+
         self.context: dict[str, Any] = {
             'room_classes': room_classes,
         }
@@ -116,15 +118,16 @@ class Reserve(LoginRequired, View):
     def get(self, request: HttpRequest, room_pk: int):
         """renderiza o formulário para nova reserva caso o usuário não
         tenha uma reserva ativa ou agendada"""
-        has_active_reservation, err = svc.reservation_repo.has_active_reservation(
+        result = svc.reservation_repo.has_active_reservation(
             client_id=request.user.pk, include_scheduled=True
         )
-        if err is not None:
+        if result.is_err():
+            err = result.unwrap_err()
             self.logger.error(err, exc_info=err.src_error)
             messages.error(request, err.msg)
             return redirect('rooms')
 
-        if has_active_reservation:
+        if result.unwrap():
             self.logger.info('user already have a reservation active ou scheduled')
             messages.info(request, ReservationMessages.ALREADY_HAVE_A_RESERVATION)
             return redirect('rooms')
@@ -139,33 +142,38 @@ class Reserve(LoginRequired, View):
         self.logger.debug(f'reservation for room {room_pk} started')
         self.context['room_pk'] = room_pk
 
-        check_in, err1 = convert_date(request.POST.get('checkin', '0001-01-01'))
-        checkout, err2 = convert_date(request.POST.get('checkout', '0001-01-01'))
-        if err1 or err2:
-            err = err1 or err2
+        check_in_result = convert_date(request.POST.get('checkin', '0001-01-01'))
+        checkout_result = convert_date(request.POST.get('checkout', '0001-01-01'))
+
+        if check_in_result.is_err() or checkout_result.is_err():
+            err = (
+                check_in_result.unwrap_err()
+                if check_in_result.is_err()
+                else checkout_result.unwrap_err()
+            )
             self.logger.error(f'failed to convert date {err.msg}')
             messages.error(request, err.msg)
             return redirect(reverse_lazy('reserve', args=(room_pk,)))
 
         obs = request.POST.get('obs', '')
 
-        reservation, err = svc.initialize_reservation(
+        result = svc.initialize_reservation(
             CreateReservationInput(
                 client_id=request.user.pk,
                 room_pk=room_pk,
-                check_in=check_in,
-                check_out=checkout,
+                check_in=check_in_result.unwrap(),
+                check_out=checkout_result.unwrap(),
                 observations=obs,
             )
         )
-        if (err is not None) or (not reservation):
-            msg = (err and err.msg) or 'unable to create reservation'
-            src_err = (err and err.src_error) or None
-
-            self.logger.error(msg, exc_info=src_err)
+        if result.is_err():
+            err = result.unwrap_err()
+            msg = err.msg or 'unable to create reservation'
+            self.logger.error(msg, exc_info=err.src_error)
             messages.error(request, msg)
             return render(request, self.template_name, self.context)
 
+        reservation = result.unwrap()
         self.logger.info(f'reservation {reservation.id} registered. Redirecting to checkout')
         return redirect(reverse_lazy('checkout', args=(reservation.id,)))
 
@@ -178,14 +186,14 @@ class ReservationsHistory(LoginRequired, ListView):
     logger = logging.getLogger('djangoLogger')
 
     def get_queryset(self) -> list:
-        reservations, err = svc.fetch_client_reservation_history(
-            client_id=self.request.user.pk
-        )
-        if err:
+        result = svc.fetch_client_reservation_history(client_id=self.request.user.pk)
+        if result.is_err():
+            err = result.unwrap_err()
             self.logger.error(err.msg, exc_info=err.src_error)
             messages.error(self.request, 'Could not load reservation history.')
             return []
 
+        reservations = result.unwrap()
         self.logger.debug(f'successfully loaded {len(reservations)} reservations')
         return reservations
 
@@ -198,13 +206,15 @@ class ReservationHistory(LoginRequired, DetailView):
     logger = logging.getLogger('djangoLogger')
 
     def get_object(self, _=None):
-        reservation, err = svc.fetch_reservation_detail(
+        result = svc.fetch_reservation_detail(
             reservation_id=self.kwargs.get('pk'), client_id=self.request.user.pk
         )
-        if err:
+        if result.is_err():
+            err = result.unwrap_err()
             self.logger.error(err.msg, exc_info=err.src_error)
             raise Http404(err.msg)
 
+        reservation = result.unwrap()
         if not reservation:
             raise Http404('Reservation not found.')
 

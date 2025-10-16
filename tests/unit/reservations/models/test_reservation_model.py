@@ -60,7 +60,7 @@ def test_checkin_too_far_in_future_raises_validation_error(client_model, room_mo
 @pytest.mark.parametrize(
     'checkout_delta, error_message',
     [
-        (timedelta(days=0), ReserveErrorMessages.INVALID_CHECKIN_DATE),
+        (timedelta(days=ReserveRules.MIN_RESERVATION_DAYS-1), ReserveErrorMessages.INVALID_STAYED_DAYS),
         (
             timedelta(days=ReserveRules.MAX_RESERVATION_DAYS + 1),
             ReserveErrorMessages.INVALID_STAYED_DAYS,
@@ -75,6 +75,7 @@ def test_invalid_stay_duration_raises_validation_error(
     Tests if the minimum and maximum reservation duration raises a ValidationError when invalid.
     """
     # Arrange
+    reservation_model.checkin = datetime.now().date()
     reservation_model.checkout = reservation_model.checkin + checkout_delta
 
     # Act & Assert

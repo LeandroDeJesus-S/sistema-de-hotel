@@ -47,15 +47,28 @@ class Schedules(LoginRequired, View):
         return render(self.request, 'schedule.html', {**self.context, **CAPTCHA_CTX})
 
     @transaction.atomic
-    def post(self, request, room_pk, *args, **kwargs):
+    def post(self, request, room_pk, *args, **kwargs):  # noqa: PLR0915
         """valida os dados do formulário de agendamento, inicia a
         reserva, pagamento, cria uma sessão de pagamento e redireciona
         para a pagina hospedada do stripe
         """
         self.logger.debug(f'schedule for room {room_pk} received')
         self.context['room_pk'] = room_pk
-        CHECK_IN, _ = convert_date(self.request.POST.get('checkin', '0001-01-01'))
-        CHECKOUT, _ = convert_date(self.request.POST.get('checkout', '0001-01-01'))
+        check_in_result = convert_date(self.request.POST.get('checkin', '0001-01-01'))
+        checkout_result = convert_date(self.request.POST.get('checkout', '0001-01-01'))
+
+        if check_in_result.is_err() or checkout_result.is_err():
+            err = (
+                check_in_result.unwrap_err()
+                if check_in_result.is_err()
+                else checkout_result.unwrap_err()
+            )
+            messages.error(request, err.msg)
+            self.logger.error(err.msg, exc_info=err.src_error)
+            return render(request, 'schedule.html', {**self.context, **CAPTCHA_CTX})
+
+        CHECK_IN = check_in_result.unwrap()
+        CHECKOUT = checkout_result.unwrap()
         OBS = self.request.POST.get('obs', '')
 
         try:

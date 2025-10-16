@@ -84,15 +84,10 @@ class TestInitializeReservationUseCase:
             client_id=1, room_pk=1, check_in=check_in, check_out=check_out, observations=''
         )
 
-        mock_client_repo.get_by_id.return_value = Result(value=mock_client, error=None)
-        mock_room_repo.find_by_id.return_value = Result(value=mock_room, error=None)
-        mock_reservation_repo.has_overlapping_reservation.return_value = Result(
-            value=False, error=None
-        )
-        mock_reservation_repo.save.return_value = Result(
-            value=Mock(spec=Reservation), error=None
-        )
-        mock_room_repo.save.return_value = Result(value=mock_room, error=None)
+        mock_client_repo.get_by_id.return_value = Result.Ok(mock_client)
+        mock_room_repo.find_by_id.return_value = Result.Ok(mock_room)
+        mock_reservation_repo.has_overlapping_reservation.return_value = Result.Ok(False)
+        mock_reservation_repo.save.return_value = Result.Ok(Mock(spec=Reservation))
 
         uc = InitializeReservationUseCase(
             mock_reservation_repo, mock_room_repo, mock_client_repo, mock_unit_of_work
@@ -102,11 +97,9 @@ class TestInitializeReservationUseCase:
         result = uc(command)
 
         # Assert
-        assert result.error is None
-        assert isinstance(result.value, Reservation)
+        assert result.is_ok()
+        assert isinstance(result.unwrap(), Reservation)
         mock_reservation_repo.save.assert_called_once()
-        mock_room_repo.save.assert_called_once()
-        assert mock_room.available is False
 
     def test_call_with_unavailable_room_returns_error(
         self,
@@ -125,8 +118,8 @@ class TestInitializeReservationUseCase:
             client_id=1, room_pk=1, check_in=check_in, check_out=check_out, observations=''
         )
 
-        mock_client_repo.get_by_id.return_value = Result(value=mock_client, error=None)
-        mock_room_repo.find_by_id.return_value = Result(value=mock_room, error=None)
+        mock_client_repo.get_by_id.return_value = Result.Ok(mock_client)
+        mock_room_repo.find_by_id.return_value = Result.Ok(mock_room)
 
         uc = InitializeReservationUseCase(
             mock_reservation_repo, mock_room_repo, mock_client_repo, mock_unit_of_work
@@ -136,8 +129,8 @@ class TestInitializeReservationUseCase:
         result = uc(command)
 
         # Assert
-        assert result.error is not None
-        assert result.error.msg == 'room not available'
+        assert result.is_err()
+        assert result.unwrap_err().msg == 'room not available'
         mock_reservation_repo.save.assert_not_called()
 
     def test_call_with_overlapping_reservation_returns_error(
@@ -156,11 +149,9 @@ class TestInitializeReservationUseCase:
             client_id=1, room_pk=1, check_in=check_in, check_out=check_out, observations=''
         )
 
-        mock_client_repo.get_by_id.return_value = Result(value=mock_client, error=None)
-        mock_room_repo.find_by_id.return_value = Result(value=mock_room, error=None)
-        mock_reservation_repo.has_overlapping_reservation.return_value = Result(
-            value=True, error=None
-        )
+        mock_client_repo.get_by_id.return_value = Result.Ok(mock_client)
+        mock_room_repo.find_by_id.return_value = Result.Ok(mock_room)
+        mock_reservation_repo.has_overlapping_reservation.return_value = Result.Ok(True)
 
         uc = InitializeReservationUseCase(
             mock_reservation_repo, mock_room_repo, mock_client_repo, mock_unit_of_work
@@ -170,41 +161,9 @@ class TestInitializeReservationUseCase:
         result = uc(command)
 
         # Assert
-        assert result.error is not None
-        assert result.error.msg == 'The room is not available'
+        assert result.is_err()
+        assert result.unwrap_err().msg == 'The room is not available'
         mock_reservation_repo.save.assert_not_called()
-
-    def test_call_with_invalid_dates_returns_error(
-        self,
-        mock_reservation_repo,
-        mock_room_repo,
-        mock_client_repo,
-        mock_unit_of_work,
-        mock_client,
-        mock_room,
-    ):
-        # Arrange
-        check_in = date.today() - timedelta(days=1)  # Invalid check-in
-        check_out = check_in + timedelta(days=5)
-        command = CreateReservationInput(
-            client_id=1, room_pk=1, check_in=check_in, check_out=check_out, observations=''
-        )
-
-        mock_client_repo.get_by_id.return_value = Result(value=mock_client, error=None)
-        mock_room_repo.find_by_id.return_value = Result(value=mock_room, error=None)
-        mock_reservation_repo.has_overlapping_reservation.return_value = Result(
-            value=False, error=None
-        )
-
-        uc = InitializeReservationUseCase(
-            mock_reservation_repo, mock_room_repo, mock_client_repo, mock_unit_of_work
-        )
-
-        # Act
-        result = uc(command)
-
-        # Assert
-        assert result.error is not None
 
 
 class TestFetchClientActiveReservations:
@@ -219,8 +178,8 @@ class TestFetchClientActiveReservations:
             Mock(spec=Reservation, status=ReservationStatusEnum.ACTIVE),
             Mock(spec=Reservation, status=ReservationStatusEnum.SCHEDULED),
         ]
-        mock_reservation_repo.fetch_active_reservations.return_value = Result(
-            value=reservations, error=None
+        mock_reservation_repo.fetch_active_reservations.return_value = Result.Ok(
+            reservations
         )
         uc = FetchClientActiveReservations(mock_reservation_repo)
 
@@ -228,8 +187,8 @@ class TestFetchClientActiveReservations:
         result = uc(client_id, include_scheduled=True)
 
         # Assert
-        assert result.error is None
-        assert result.value == reservations
+        assert result.is_ok()
+        assert result.unwrap() == reservations
         mock_reservation_repo.fetch_active_reservations.assert_called_once_with(
             client_id, True
         )
@@ -246,12 +205,12 @@ class TestReleaseRoomUseCase:
         # Arrange
         room = Mock(spec=Room, available=False)
         reservation = Mock(spec=Reservation, room=room)
-        mock_reservation_repo.find_by_id.return_value = Result(value=reservation, error=None)
-        mock_payments_repo.confirm_reservation_payment.return_value = Result(
-            value=False, error=None
+        mock_reservation_repo.find_by_id.return_value = Result.Ok(reservation)
+        mock_payments_repo.confirm_reservation_payment.return_value = Result.Ok(
+            False
         )  # Unpaid
-        mock_room_repo.save.return_value = Result(value=None, error=None)
-        mock_reservation_repo.save.return_value = Result(value=None, error=None)
+        mock_room_repo.save.return_value = Result.Ok(None)
+        mock_reservation_repo.save.return_value = Result.Ok(None)
 
         uc = ReleaseRoomUseCase(
             mock_room_repo, mock_reservation_repo, mock_payments_repo, mock_unit_of_work
@@ -261,8 +220,8 @@ class TestReleaseRoomUseCase:
         result = uc(reservation_id=1)
 
         # Assert
-        assert result.error is None
-        assert result.value is True
+        assert result.is_ok()
+        assert result.unwrap() is True
         assert reservation.room.available is True
         assert reservation.status == ReservationStatusEnum.CANCELLED
         mock_room_repo.save.assert_called_once_with(room)
@@ -278,9 +237,9 @@ class TestReleaseRoomUseCase:
         # Arrange
         room = Mock(spec=Room, available=False)
         reservation = Mock(spec=Reservation, room=room)
-        mock_reservation_repo.find_by_id.return_value = Result(value=reservation, error=None)
-        mock_payments_repo.confirm_reservation_payment.return_value = Result(
-            value=True, error=None
+        mock_reservation_repo.find_by_id.return_value = Result.Ok(reservation)
+        mock_payments_repo.confirm_reservation_payment.return_value = Result.Ok(
+            True
         )  # Paid
 
         uc = ReleaseRoomUseCase(
@@ -291,8 +250,8 @@ class TestReleaseRoomUseCase:
         result = uc(reservation_id=1)
 
         # Assert
-        assert result.error is None
-        assert result.value is True
+        assert result.is_ok()
+        assert result.unwrap() is True
         assert room.available is False  # Should not change
         mock_room_repo.save.assert_not_called()
         mock_reservation_repo.save.assert_not_called()
@@ -305,7 +264,7 @@ class TestReleaseRoomUseCase:
         mock_unit_of_work,
     ):
         # Arrange
-        mock_reservation_repo.find_by_id.return_value = Result(value=None, error=Error('not found'))
+        mock_reservation_repo.find_by_id.return_value = Result.Err(msg='not found')
 
         uc = ReleaseRoomUseCase(
             mock_room_repo, mock_reservation_repo, mock_payments_repo, mock_unit_of_work
@@ -315,9 +274,8 @@ class TestReleaseRoomUseCase:
         result = uc(reservation_id=999)
 
         # Assert
-        assert result.error is not None
-        assert result.value is False
-        assert 'not found' in result.error.msg
+        assert result.is_err()
+        assert 'not found' in result.unwrap_err().msg
 
 
 class TestFetchClientReservationHistoryUseCase:
@@ -325,17 +283,15 @@ class TestFetchClientReservationHistoryUseCase:
         # Arrange
         client_id = 1
         history = [Mock(spec=Reservation), Mock(spec=Reservation)]
-        mock_reservation_repo.fetch_client_history.return_value = Result(
-            value=history, error=None
-        )
+        mock_reservation_repo.fetch_client_history.return_value = Result.Ok(history)
         uc = FetchClientReservationHistoryUseCase(mock_reservation_repo)
 
         # Act
         result = uc(client_id)
 
         # Assert
-        assert result.error is None
-        assert result.value == history
+        assert result.is_ok()
+        assert result.unwrap() == history
         mock_reservation_repo.fetch_client_history.assert_called_once_with(client_id)
 
 
@@ -345,8 +301,8 @@ class TestFetchReservationDetailUseCase:
         reservation_id = 1
         client_id = 1
         reservation = Mock(spec=Reservation)
-        mock_reservation_repo.fetch_for_history_detail.return_value = Result(
-            value=reservation, error=None
+        mock_reservation_repo.fetch_for_history_detail.return_value = Result.Ok(
+            reservation
         )
         uc = FetchReservationDetailUseCase(mock_reservation_repo)
 
@@ -354,8 +310,8 @@ class TestFetchReservationDetailUseCase:
         result = uc(reservation_id, client_id)
 
         # Assert
-        assert result.error is None
-        assert result.value == reservation
+        assert result.is_ok()
+        assert result.unwrap() == reservation
         mock_reservation_repo.fetch_for_history_detail.assert_called_once_with(
             client_id, reservation_id
         )

@@ -1,15 +1,13 @@
-{% if room.available %}
-    <a href="{% url "reserve" room.id %}" class="btn btn-outline-info">Reservar {{room.daily_price_formatted}}</a>
-
-{% elif reservation_on and room.id == reservation_on.room.id %}
-    <a href="{% url "reservation_history" reservation_on.id %}" class="btn btn-outline-info">
-        Ver reserva
-    </a>
-
+{% if reservation_on %}
+    {% for res_on in reservation_on %}
+        {% if res_on.room.id == room.id %}
+            <a href="{% url "reservation_history" res_on.id %}" class="btn btn-outline-info">
+            Ver reserva
+            </a>
+        {% else %}
+            <a href="{% url "reserve" room.id %}" class="btn btn-outline-info">Reservar {{room.daily_price_formatted}}</a>
+        {% endif %}
+    {% endfor %}
 {% else %}
-    <a href="{% url "schedule" room.id %}" class="btn btn-outline-info">
-        <i class="fa-brands fa-whatsapp"></i>
-        Agendar {{room.daily_price_formatted}}
-    </a>
-
+    <a href="{% url "reserve" room.id %}" class="btn btn-outline-info">Reservar {{room.daily_price_formatted}}</a>
 {% endif %}

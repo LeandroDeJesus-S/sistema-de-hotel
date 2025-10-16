@@ -1,13 +1,14 @@
 import logging
 from decimal import Decimal
+from typing import Dict
 
 from base.ports.unit_of_work import AbsUnitOfWork
 from clients.domain.ports import AbsClientRepository
-from exc import Error, Result
+from exc import Result
 from payments.domain.ports import AbsPaymentsRepository
+from reservations.domain.entities import Reservation
 from reservations.domain.value_objects import ReservationStatusEnum
 
-from ..domain.entities import Reservation
 from ..domain.repo import AbsReservationRepository, AbsRoomRepository
 from .dtos import CreateReservationInput
 
@@ -25,74 +26,80 @@ class InitializeReservationUseCase:
         self.client_repo = client_repo
         self.unit_of_work = unit_of_work
 
-    def __call__(self, command: CreateReservationInput) -> Result[Reservation | None]:  # noqa: PLR0911
+    def __call__(self, command: CreateReservationInput) -> Result[Reservation]:
         """Fetches the room, check if its available then checks for overlapping reservations
         and creates the reservation"""
-        client, err = self.client_repo.get_by_id(command.client_id)
-        if err is not None or not client:
-            return Result(value=None, error=Error(msg='client not found', src_error=err))
+        return (
+            self._find_client(command)
+            .then(self._find_room)
+            .then(self._check_availability)
+            .then(self._check_overlap)
+            .then(self._create_reservation_entity)
+            .then(self._save_reservation)
+        )
 
+    def _find_client(self, command: CreateReservationInput) -> Result[Dict]:
+        client_result = self.client_repo.get_by_id(command.client_id)
+        if client_result.is_err():
+            return Result.Err(msg='client not found', src_error=client_result.unwrap_err())
+        return Result.Ok({'command': command, 'client': client_result.unwrap()})
+
+    def _find_room(self, data: Dict) -> Result[Dict]:
+        command = data['command']
         room_result = self.room_repo.find_by_id(command.room_pk)
-        if room_result.error or not room_result.value:
-            return Result(
-                value=None, error=Error(msg='room not found', src_error=room_result.error)
-            )
+        if room_result.is_err() or not room_result.unwrap():
+            return Result.Err(msg='room not found', src_error=room_result.unwrap_err())
+        data['room'] = room_result.unwrap()
+        return Result.Ok(data)
 
-        if not room_result.value.available:
-            return Result(value=None, error=Error(msg='room not available', src_error=None))
+    def _check_availability(self, data: Dict) -> Result[Dict]:  # noqa: PLR6301
+        if not data['room'].available:
+            return Result.Err(msg='room not available')
+        return Result.Ok(data)
 
-        room = room_result.value
+    def _check_overlap(self, data: Dict) -> Result[Dict]:
+        command = data['command']
         overlap_result = self.reservation_repo.has_overlapping_reservation(
             room_id=command.room_pk,
             check_in=command.check_in,
             check_out=command.check_out,
         )
-        if overlap_result.error or overlap_result.value:
-            return Result(
-                value=None,
-                error=Error(msg='The room is not available', src_error=None),
-            )
+        if overlap_result.is_err() or overlap_result.unwrap():
+            return Result.Err(msg='The room is not available')
+        return Result.Ok(data)
 
+    def _create_reservation_entity(self, data: Dict) -> Result[Reservation]:  # noqa: PLR6301
+        command = data['command']
+        client = data['client']
+        room = data['room']
         stayed_days = Decimal(str((command.check_out - command.check_in).days))
-        reservation_entity, err = Reservation.safe_create(
+
+        result = Reservation.safe_create(
             client=client,
             room=room,
             checkin=command.check_in,
             checkout=command.check_out,
             observations=command.observations,
             amount=room.daily_price * stayed_days,
+            status=ReservationStatusEnum.INITIALIZED,
         )
+        if result.is_err():
+            return Result.Err(
+                msg='Failed to create reservation', src_error=result.unwrap_err()
+            )
+        return result
 
-        if err or reservation_entity is None:
-            return Result(value=None, error=err)
-
+    def _save_reservation(self, reservation_entity: Reservation) -> Result[Reservation]:
         with self.unit_of_work as uow:
             saved_reservation_result = self.reservation_repo.save(reservation_entity)
-            if saved_reservation_result.error or not saved_reservation_result.value:
+            if saved_reservation_result.is_err() or not saved_reservation_result.unwrap():
                 uow.rollback()
-                return Result(
-                    value=None,
-                    error=Error(
-                        msg='failed to save reservation',
-                        src_error=saved_reservation_result.error,
-                    ),
+                return Result.Err(
+                    msg='failed to save reservation',
+                    src_error=saved_reservation_result.unwrap_err(),
                 )
 
-            saved_reservation = saved_reservation_result.value
-
-            room.available = False
-            room_save_result = self.room_repo.save(room)
-            if room_save_result.error:
-                uow.rollback()
-                return Result(
-                    value=None,
-                    error=Error(
-                        msg='failed to update room availability',
-                        src_error=room_save_result.error,
-                    ),
-                )
-
-        return Result(value=saved_reservation, error=None)
+            return Result.Ok(saved_reservation_result.unwrap())
 
 
 class FetchClientActiveReservations:
@@ -120,60 +127,48 @@ class ReleaseRoomUseCase:
     def __call__(self, reservation_id: int) -> Result[bool]:  # noqa: PLR0911
         with self._unit_of_work as uow:
             reservation_result = self._reservation_repo.find_by_id(reservation_id)
-            if reservation_result.error or not reservation_result.value:
-                return Result(
-                    value=False,
-                    error=Error(
-                        msg=f'Reservation with id {reservation_id} not found',
-                        src_error=reservation_result.error,
-                    ),
+            if reservation_result.is_err():
+                return Result.Err(
+                    msg=f'Reservation with id {reservation_id} not found',
+                    src_error=reservation_result.unwrap_err(),
                 )
-            reservation = reservation_result.value
+            reservation = reservation_result.unwrap()
 
             payment_paid_result = self._payment_repo.confirm_reservation_payment(
                 reservation_id
             )
-            if payment_paid_result.error:
-                return Result(
-                    value=False,
-                    error=Error(
-                        msg='Failed to check payment status',
-                        src_error=payment_paid_result.error,
-                    ),
+            if payment_paid_result.is_err():
+                return Result.Err(
+                    msg='Failed to check payment status',
+                    src_error=payment_paid_result.unwrap_err(),
                 )
 
-            if payment_paid_result.value:  # Payment is confirmed
-                return Result(value=True, error=None)  # Room remains occupied
+            if payment_paid_result.unwrap():  # Payment is confirmed
+                return Result.Ok(True)  # Room remains occupied
 
             if reservation.room.available:
-                return Result(value=True, error=None)  # Room is already available
+                return Result.Ok(True)  # Room is already available
 
             # Release the room and cancel reservation
             reservation.room.available = True
             reservation.status = ReservationStatusEnum.CANCELLED
 
             room_save_result = self._room_repo.save(reservation.room)
-            if room_save_result.error:
+            if room_save_result.is_err():
                 uow.rollback()
-                return Result(
-                    value=False,
-                    error=Error(
-                        msg='Failed to save room state', src_error=room_save_result.error
-                    ),
+                return Result.Err(
+                    msg='Failed to save room state', src_error=room_save_result.unwrap_err()
                 )
 
             reservation_save_result = self._reservation_repo.save(reservation)
-            if reservation_save_result.error:
+            if reservation_save_result.is_err():
                 uow.rollback()
-                return Result(
-                    value=False,
-                    error=Error(
-                        msg='Failed to update reservation status',
-                        src_error=reservation_save_result.error,
-                    ),
+                return Result.Err(
+                    msg='Failed to update reservation status',
+                    src_error=reservation_save_result.unwrap_err(),
                 )
 
-        return Result(value=True, error=None)
+        return Result.Ok(True)
 
 
 class FetchClientReservationHistoryUseCase:
@@ -188,5 +183,5 @@ class FetchReservationDetailUseCase:
     def __init__(self, repo: AbsReservationRepository) -> None:
         self._repo = repo
 
-    def __call__(self, reservation_id: int, client_id: int) -> Result[Reservation | None]:
+    def __call__(self, reservation_id: int, client_id: int) -> Result[Reservation]:
         return self._repo.fetch_for_history_detail(client_id, reservation_id)

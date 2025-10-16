@@ -16,10 +16,10 @@ def test_convert_date_with_valid_date():
     str_date = '2024-02-01'
 
     # Act
-    result, _ = validators.convert_date(str_date)
+    result = validators.convert_date(str_date)
 
     # Assert
-    assert result == date(2024, 2, 1)
+    assert result.unwrap() == date(2024, 2, 1)
 
 
 def test_convert_date_with_invalid_date_format():
@@ -30,7 +30,7 @@ def test_convert_date_with_invalid_date_format():
     str_date = '01022024'
 
     # Act
-    result, err = validators.convert_date(str_date)
+    result = validators.convert_date(str_date)
 
     # Assert
-    assert result is None and isinstance(err, Error)
+    assert result.is_err() and isinstance(result.unwrap_err(), Error)

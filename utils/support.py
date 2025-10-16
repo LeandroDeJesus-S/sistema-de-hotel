@@ -8,6 +8,7 @@ from typing import Type, TypeVar
 import requests
 from django.conf import settings
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.core.mail import EmailMessage
 from django.db import models
 from django.db.models.fields.files import ImageFieldFile
@@ -202,14 +203,12 @@ def ensure_result(error_msg: str | Callable = ''):
             try:
                 raw_result = func(*args, **kwargs)
                 return (
-                    Result(value=raw_result, error=None)
-                    if not isinstance(raw_result, Result)
-                    else raw_result
+                    Result.Ok(raw_result) if not isinstance(raw_result, Result) else raw_result
                 )
             except Error as e:
-                return Result(value=None, error=e)
+                return Result.Err(e.msg, e.src_error)
             except Exception as e:
-                return Result(value=None, error=Error(msg=error_msg or str(e), src_error=e))
+                return Result.Err(error_msg or str(e), e)
 
         return decorated
 
@@ -258,9 +257,10 @@ def update_changed_fields(model_instance, update_data: dict) -> list[str]:
 
 
 T = TypeVar('T', bound=BaseEntity)
+M = TypeVar('M', bound=models.Model)
 
 
-def model_to_entity(model: models.Model, entity_cls: Type[T]) -> Result[T | None]:
+def model_to_entity(model: M, entity_cls: Type[T]) -> Result[T]:
     def to_dict(instance):
         if not instance:
             return None
@@ -284,23 +284,28 @@ def model_to_entity(model: models.Model, entity_cls: Type[T]) -> Result[T | None
         return data
 
     model_dict = to_dict(model)
-    return entity_cls.safe_validate(model_dict)
+    entity = entity_cls.safe_validate(model_dict)
+    if entity.is_err():
+        return Result.Err(
+            msg='Failed to convert model to entity', src_error=entity.unwrap_err()
+        )
+    return Result.Ok(entity.unwrap())
 
 
 def models_to_entities(models_queryset, entity_cls: Type[T]) -> Result[list[T]]:
     entities: list[T] = []
     for instance in models_queryset:
-        entity, err = model_to_entity(instance, entity_cls)
-        if err or not entity:
-            return Result(value=[], error=err)
-        entities.append(entity)
-    return Result(value=entities, error=None)
+        entity_result = model_to_entity(instance, entity_cls)
+        if entity_result.is_err():
+            return Result.Err(
+                msg='Failed to convert models to entities',
+                src_error=entity_result.unwrap_err(),
+            )
+        entities.append(entity_result.unwrap())
+    return Result.Ok(entities)
 
 
-M = TypeVar('M', bound=models.Model)
-
-
-def entity_to_model(entity: BaseEntity, model_cls: Type[M]) -> Result[M | None]:
+def entity_to_model(entity: BaseEntity, model_cls: Type[M]) -> Result[M]:
     """
     Converts a Pydantic entity to a Django model instance, ready for creation or update.
     This function does NOT save the model instance to the database.
@@ -331,18 +336,24 @@ def entity_to_model(entity: BaseEntity, model_cls: Type[M]) -> Result[M | None]:
                 for key, value in model_data.items():
                     setattr(instance, key, value)
             except model_cls.DoesNotExist as e:
-                return Result(
-                    value=None,
-                    error=Error(
-                        msg=f'Instance with id {entity.id} not found for update.',
-                        src_error=e,
-                    ),
+                return Result.Err(
+                    msg=f'Instance with id {entity.id} not found for update.',
+                    src_error=e,
                 )
         else:
             # It's a creation
             instance = model_cls(**model_data)
 
-        return Result(value=instance, error=None)
+        return Result.Ok(instance)
 
     except Exception as e:
-        return Result(value=None, error=Error(msg=str(e), src_error=e))
+        return Result.Err(msg=str(e), src_error=e)
+
+
+def model_validate(model: M) -> Result[M]:
+    """calls full_clean on a model instance"""
+    try:
+        model.full_clean()
+        return Result.Ok(model)
+    except ValidationError as e:
+        return Result.Err(msg=str(e), src_error=e)

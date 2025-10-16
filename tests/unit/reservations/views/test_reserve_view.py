@@ -9,7 +9,7 @@ from ddf import G
 from django.urls import reverse
 
 from clients.feedback_messages import Recaptcha
-from exc import Error
+from exc import Error, Result
 from reservations.feedback_messages import ReservationMessages, ReserveErrorMessages
 from reservations.models import Reservation
 from reservations.rules import ReserveRules
@@ -45,7 +45,7 @@ def test_reserve_with_valid_data_redirects_to_checkout(
     reservation = Reservation(pk=1, client=user, room=room_model)
     mock_initialize = mocker.patch(
         'reservations.views.svc.initialize_reservation',
-        return_value=(reservation, None),
+        return_value=Result.Ok(reservation),
     )
     checkin = datetime.now().date() + timedelta(days=2)
     valid_reserve_data = {
@@ -99,7 +99,7 @@ def test_reserve_with_invalid_checkin_date_renders_reserve_with_message(
 
     mocker.patch(
         'reservations.views.svc.initialize_reservation',
-        return_value=(None, Error(msg=error_message)),
+        return_value=Result.Err(msg=error_message),
     )
 
     # Act
@@ -150,9 +150,9 @@ def test_reserve_unexpected_error_redirects_to_room_with_message(
     # Arrange
     client, _ = authenticated_client
     mocker.patch('reservations.views.support.verify_captcha', return_value=True)
-    mocker.patch('reservations.views.convert_date', return_value=(None, Error(
+    mocker.patch('reservations.views.convert_date', return_value=Result.Err(
         ReservationMessages.RESERVATION_FAIL
-    )))
+    ))
     url = reverse('reserve', args=[room_model.pk])
     checkin = datetime.now().date() + timedelta(days=2)
     valid_reserve_data = {

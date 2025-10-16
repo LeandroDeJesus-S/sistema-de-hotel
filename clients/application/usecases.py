@@ -1,5 +1,6 @@
 import logging
 
+from clients.feedback_messages import ClientErrorMessages
 from exc import Error, Result
 
 from ..domain import entities, ports
@@ -24,7 +25,7 @@ class CreateUserUseCase:
         self._repo = repo
         self._pw_mng = pw_mng
 
-    def __call__(self, user: entities.Client) -> Result[entities.Client | None]:
+    def __call__(self, user: entities.Client) -> Result[entities.Client]:
         """
         Executes the sign-up process.
 
@@ -34,30 +35,35 @@ class CreateUserUseCase:
         Returns:
             A Result containing the created and persisted Client entity, or an Error on failure
         """
-        ok, _ = self._repo.check_duplicate(user)
-        if ok:
-            return Result(
-                value=None,
-                error=Error(
-                    'Não foi possível criar a conta. Verifique seus dados e tente novamente.'
-                ),
+        duplicate_result = self._repo.check_duplicate(user)
+        if duplicate_result.is_err():
+            return Result.Err(
+                msg=duplicate_result.unwrap_err().msg,
+                src_error=duplicate_result.unwrap_err().src_error,
+            )
+        if duplicate_result.unwrap():  # A duplicate was found
+            return Result.Err(
+                msg=ClientErrorMessages.SIGNUP_ERROR,
+                src_error=Error(msg='Duplicate user data'),
             )
 
-        hashed_password, err = self._pw_mng.hash_password(user.password)
-        if err is not None or not hashed_password:
-            return Result(value=None, error=Error('Failed to hash password', err))
+        hashed_password_result = self._pw_mng.hash_password(user.password)
+        if hashed_password_result.is_err():
+            return Result.Err(
+                msg='Failed to hash password', src_error=hashed_password_result.unwrap_err()
+            )
 
-        user.password = hashed_password
-        u, err = self._repo.add(user)
+        user.password = hashed_password_result.unwrap()
+        add_result = self._repo.add(user)
 
-        if err is not None:
-            logging.getLogger('djangoLogger').error(err, exc_info=True)
-            return Result(value=None, error=Error(err.msg, err))
+        if add_result.is_err():
+            logging.getLogger('djangoLogger').error(add_result.unwrap_err(), exc_info=True)
+            return Result.Err(
+                msg=add_result.unwrap_err().msg,
+                src_error=add_result.unwrap_err(),
+            )
 
-        if u is None:
-            return Result(value=None, error=Error('Failed to create user', err))
-
-        return Result(value=u, error=None)
+        return add_result
 
 
 class ChangePasswordUseCase:
@@ -81,34 +87,35 @@ class ChangePasswordUseCase:
         self._pw_mng = pw_mng
         self._session_mng = session_mng
 
-    def __call__(self, inp: ChangePasswordInput) -> Result[entities.Client | None]:
+    def __call__(self, inp: ChangePasswordInput) -> Result[entities.Client]:
         """
         Executes the password change process.
 
         Args:
-            request: The framework-specific request object containing the session to be managed
-            client_id: The ID of the client whose password is being changed.
-            new_password: The new raw password to be set.
+            inp: The input data for the password change.
 
         Returns:
             A Result containing the updated Client entity, or an Error on failure.
         """
-        client_id = inp.user_id
-        new_password = inp.password
+        client_result = self._repo.get_by_id(inp.user_id)
+        if client_result.is_err():
+            return Result.Err(msg='Client not found', src_error=client_result.unwrap_err())
 
-        u, err = self._repo.get_by_id(client_id)
-        if u is None:
-            return Result(value=None, error=Error('Client not found', err))
+        hashed_password_result = self._pw_mng.hash_password(inp.password)
+        if hashed_password_result.is_err():
+            return Result.Err(
+                msg='Failed to hash password', src_error=hashed_password_result.unwrap_err()
+            )
 
-        hashed_password, err = self._pw_mng.hash_password(new_password)
-        if err is not None:
-            return Result(value=None, error=Error('Failed to hash password', err))
+        update_result = self._repo.update(
+            inp.user_id, password=hashed_password_result.unwrap()
+        )
+        if update_result.is_err():
+            return Result.Err(
+                msg='Failed to update password', src_error=update_result.unwrap_err()
+            )
 
-        _, err = self._repo.update(client_id, password=hashed_password)
-        if err is not None:
-            return Result(value=None, error=Error('Failed to update password', err))
-
-        return Result(value=u, error=None)
+        return client_result
 
 
 class VerifyCaptchaUseCase:
@@ -136,8 +143,4 @@ class VerifyCaptchaUseCase:
         Returns:
             A Result with True if the token is valid, or an Error on failure.
         """
-        ok, err = self._captcha_service.verify(captcha_token)
-        if not ok:
-            return Result(value=False, error=Error('Captcha verification fail', err))
-
-        return Result(value=True, error=None)
+        return self._captcha_service.verify(captcha_token)

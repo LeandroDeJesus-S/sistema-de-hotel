@@ -147,9 +147,9 @@ class Client(AbstractUser):
     def clean(self):
         super().clean()
         for pw_validator in self._PW_VALIDATORS:
-            _, err = pw_validator.validate(self.password)
-            if err is not None:
-                raise ValidationError(err.msg)
+            result = pw_validator.validate(self.password)
+            if result.is_err():
+                raise ValidationError(result.unwrap_err().msg)
 
     @staticmethod
     def _create_mask(value: str, start: int, end: int, maskchar='*') -> str:

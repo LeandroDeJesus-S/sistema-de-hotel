@@ -49,7 +49,7 @@ def test_room_detail_view_benefits_are_sent_to_context(authenticated_client, roo
     client, _ = authenticated_client
     G(Benefit, n=3)
     url = reverse('room', args=[room_model.pk])
-    expected_benefits, _ = models_to_entities(Benefit.objects.all(), BenefitEntity)
+    expected_benefits = models_to_entities(Benefit.objects.all(), BenefitEntity).unwrap()
 
     # Act
     response = client.get(url)
@@ -70,7 +70,7 @@ def test_room_detail_view_reservation_on_not_in_context_for_unauthenticated_user
     url = reverse('room', args=[room_model.pk])
     mocker.patch(
         'reservations.views.svc.room_repo.fetch_all_benefits',
-        return_value=Result(value=[], error=None),
+        return_value=Result.Ok([]),
     )
 
     # Act
@@ -93,11 +93,11 @@ def test_room_detail_view_reservation_on_not_in_context_for_user_with_no_reserva
     url = reverse('room', args=[room_model.pk])
     mocker.patch(
         'reservations.views.svc.room_repo.fetch_all_benefits',
-        return_value=Result(value=[], error=None),
+        return_value=Result.Ok([]),
     )
     mocker.patch(
         'reservations.views.svc.fetch_client_active_reservations',
-        return_value=([], None),
+        return_value=Result.Ok([]),
     )
 
     # Act
@@ -129,15 +129,15 @@ def test_room_detail_view_reservation_on_in_context_for_user_with_reservations(
     )
     mocker.patch(
         'reservations.views.svc.room_repo.fetch_all_benefits',
-        return_value=Result(value=[], error=None),
+        return_value=Result.Ok([]),
     )
     mocker.patch(
         'reservations.views.svc.fetch_client_active_reservations',
-        return_value=([reservation], None),
+        return_value=Result.Ok([reservation]),
     )
 
     # Act
     response = client.get(url)
 
     # Assert
-    assert response.context['reservation_on'] == [reservation]
+    assert response.context.get('reservation_on') == [reservation]

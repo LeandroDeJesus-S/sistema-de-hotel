@@ -66,26 +66,26 @@ def mock_user():
 def test_hash_password_success(password_manager):
     raw_password = 'plain_password'
     result = password_manager.hash_password(raw_password)
-    assert result.error is None
-    assert result.value is not None
-    assert result.value != raw_password
+    assert result.is_ok()
+    assert result.unwrap() is not None
+    assert result.unwrap() != raw_password
 
 
 def test_check_password_success(password_manager):
     raw_password = 'plain_password'
     hashed_result = password_manager.hash_password(raw_password)
-    check_result = password_manager.check_password(raw_password, hashed_result.value)
-    assert check_result.error is None
-    assert check_result.value is True
+    check_result = password_manager.check_password(raw_password, hashed_result.unwrap())
+    assert check_result.is_ok()
+    assert check_result.unwrap() is True
 
 
 def test_check_password_failure(password_manager):
     raw_password = 'plain_password'
     wrong_password = 'wrong_password'
     hashed_result = password_manager.hash_password(raw_password)
-    check_result = password_manager.check_password(wrong_password, hashed_result.value)
-    assert check_result.error is not None
-    assert not check_result.value
+    check_result = password_manager.check_password(wrong_password, hashed_result.unwrap())
+    assert check_result.is_err()
+    assert check_result.unwrap_err().msg == 'Password does not match'
 
 
 def test_hash_password_exception(password_manager, mocker):
@@ -93,9 +93,9 @@ def test_hash_password_exception(password_manager, mocker):
         'clients.infra.adapters.make_password', side_effect=Exception('Hashing error')
     )
     result = password_manager.hash_password('any_password')
-    assert result.value is None
-    assert isinstance(result.error, Error)
-    assert 'Failed to hash password' in result.error.msg
+    assert result.is_err()
+    assert isinstance(result.unwrap_err(), Error)
+    assert 'Failed to hash password' in result.unwrap_err().msg
 
 
 def test_check_password_exception(password_manager, mocker):
@@ -104,9 +104,9 @@ def test_check_password_exception(password_manager, mocker):
         side_effect=Exception('Verification error'),
     )
     result = password_manager.check_password('any_password', 'any_hash')
-    assert not result.value
-    assert isinstance(result.error, Error)
-    assert 'Failed to verify password' in result.error.msg
+    assert result.is_err()
+    assert isinstance(result.unwrap_err(), Error)
+    assert 'Failed to verify password' in result.unwrap_err().msg
 
 
 # --- Tests for GoogleRecaptchaV3Verifier ---
@@ -120,8 +120,8 @@ def test_recaptcha_verify_success(recaptcha_verifier, mocker):
 
     result = recaptcha_verifier.verify('fake-token')
 
-    assert result.error is None
-    assert result.value is True
+    assert result.is_ok()
+    assert result.unwrap() is True
 
 
 def test_recaptcha_verify_http_error(recaptcha_verifier, mocker):
@@ -132,9 +132,9 @@ def test_recaptcha_verify_http_error(recaptcha_verifier, mocker):
 
     result = recaptcha_verifier.verify('fake-token')
 
-    assert not result.value
-    assert isinstance(result.error, Error)
-    assert 'Failed to verify captcha' in result.error.msg
+    assert result.is_err()
+    assert isinstance(result.unwrap_err(), Error)
+    assert 'Failed to verify captcha' in result.unwrap_err().msg
 
 
 def test_recaptcha_verify_captcha_failure(recaptcha_verifier, mocker):
@@ -146,9 +146,9 @@ def test_recaptcha_verify_captcha_failure(recaptcha_verifier, mocker):
 
     result = recaptcha_verifier.verify('fake-token')
 
-    assert not result.value
-    assert isinstance(result.error, Error)
-    assert 'Invalid captcha' in result.error.msg
+    assert result.is_err()
+    assert isinstance(result.unwrap_err(), Error)
+    assert 'Invalid captcha' in result.unwrap_err().msg
 
 
 # --- Tests for DjangoSessionManager ---
@@ -161,9 +161,9 @@ def test_authenticate_success(session_manager, mock_user, mocker):
         request=MagicMock(), username='testuser', password='password'
     )
 
-    assert result.error is None
-    assert isinstance(result.value, Client)
-    assert result.value.username == 'testuser'
+    assert result.is_ok()
+    assert isinstance(result.unwrap(), Client)
+    assert result.unwrap().username == 'testuser'
 
 
 def test_authenticate_failure(session_manager, mocker):
@@ -172,9 +172,9 @@ def test_authenticate_failure(session_manager, mocker):
         request=MagicMock(), username='testuser', password='wrong_password'
     )
 
-    assert result.value is None
-    assert isinstance(result.error, Error)
-    assert 'Invalid credentials' in result.error.msg
+    assert result.is_err()
+    assert isinstance(result.unwrap_err(), Error)
+    assert 'Invalid credentials' in result.unwrap_err().msg
 
 
 def test_authenticate_exception(session_manager, mocker):
@@ -186,9 +186,9 @@ def test_authenticate_exception(session_manager, mocker):
         request=MagicMock(), username='testuser', password='password'
     )
 
-    assert result.value is None
-    assert isinstance(result.error, Error)
-    assert 'Failed to validate user' in result.error.msg
+    assert result.is_err()
+    assert isinstance(result.unwrap_err(), Error)
+    assert 'Failed to validate user' in result.unwrap_err().msg
 
 
 def test_login_success(session_manager, mock_user, mocker):
@@ -205,7 +205,7 @@ def test_login_success(session_manager, mock_user, mocker):
 
     result = session_manager.login(request=MagicMock(), user=client_entity)
 
-    assert result.error is None
+    assert result.is_ok()
     mock_django_login.assert_called_once()
 
 
@@ -221,9 +221,9 @@ def test_login_user_not_found(session_manager, mock_user, mocker):
 
     result = session_manager.login(request=MagicMock(), user=client_entity)
 
-    assert result.value is None
-    assert isinstance(result.error, Error)
-    assert 'Invalid user' in result.error.msg
+    assert result.is_err()
+    assert isinstance(result.unwrap_err(), Error)
+    assert 'Invalid user' in result.unwrap_err().msg
 
 
 def test_login_exception(session_manager, mock_user, mocker):
@@ -242,15 +242,15 @@ def test_login_exception(session_manager, mock_user, mocker):
 
     result = session_manager.login(request=MagicMock(), user=client_entity)
 
-    assert result.value is None
-    assert isinstance(result.error, Error)
-    assert 'Failed to login user' in result.error.msg
+    assert result.is_err()
+    assert isinstance(result.unwrap_err(), Error)
+    assert 'Failed to login user' in result.unwrap_err().msg
 
 
 def test_logout_success(session_manager, mocker):
     mock_django_logout = mocker.patch('clients.infra.adapters.django_logout')
     result = session_manager.logout(request=MagicMock())
-    assert result.error is None
+    assert result.is_ok()
     mock_django_logout.assert_called_once()
 
 
@@ -259,6 +259,6 @@ def test_logout_exception(session_manager, mocker):
         'clients.infra.adapters.django_logout', side_effect=Exception('Logout error')
     )
     result = session_manager.logout(request=MagicMock())
-    assert result.value is None
-    assert isinstance(result.error, Error)
-    assert 'Failed to logout user' in result.error.msg
+    assert result.is_err()
+    assert isinstance(result.unwrap_err(), Error)
+    assert 'Failed to logout user' in result.unwrap_err().msg
