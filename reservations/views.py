@@ -12,6 +12,7 @@ from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 
 from clients.infra.repo import ClientRepository
+from reservations.domain.entities import Reservation
 from reservations.infra.repo import ReservationRepository, RoomRepository
 from utils import support
 from utils.adapters.unit_of_work import UnitOfWork
@@ -41,7 +42,7 @@ def setup_reservation_context(
     if request.user.is_authenticated:
         context['reservation_on'] = svc.fetch_client_active_reservations(
             request.user.pk, include_scheduled=True
-        ).unwrap()
+        ).unwrap_or([])
 
     context['benefits'] = svc.room_repo.fetch_all_benefits().unwrap_or([])
 
@@ -58,14 +59,17 @@ class Rooms(ListView):
     def get_queryset(self):
         """retorna todos os quartos com seus benefícios"""
         result = svc.room_repo.fetch_all(with_benefits=True)
-        if result.is_err():
-            err = result.unwrap_err()
-            self.logger.error(err.msg, exc_info=err.src_error)
-            messages.error(self.request, 'Could not load rooms.')
-            return []
-
-        rooms = result.unwrap()
-        self.logger.debug(f'{rooms =}')
+        *_, rooms = result.match(
+            on_ok=lambda rs: (
+                self.logger.debug('successfully loaded rooms'),  # type: ignore
+                rs,
+            ),
+            on_err=lambda err: (
+                self.logger.error(err.msg, exc_info=err.src_error),  # type: ignore
+                messages.error(self.request, 'Could not load rooms.'),
+                [],
+            ),
+        )
         return rooms
 
     def get_context_data(self, **kwargs):
@@ -100,18 +104,14 @@ class Reserve(LoginRequired, View):
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
         super().setup(request, *args, **kwargs)
         self.logger = logging.getLogger('djangoLogger')
+
         result = svc.room_repo.fetch_all_classes()
         if result.is_err():
             err = result.unwrap_err()
             self.logger.error(err.msg, exc_info=err.src_error)
             messages.error(request, err.msg)
-            room_classes = []
-        else:
-            room_classes = result.unwrap()
 
-        self.context: dict[str, Any] = {
-            'room_classes': room_classes,
-        }
+        self.context: dict[str, Any] = {'room_classes': result.unwrap_or([])}
         self.template_name = 'reserve.html'
 
     def get(self, request: HttpRequest, room_pk: int):
@@ -120,21 +120,28 @@ class Reserve(LoginRequired, View):
         result = svc.reservation_repo.has_active_reservation(
             client_id=request.user.pk, include_scheduled=True
         )
-        if result.is_err():
-            err = result.unwrap_err()
-            self.logger.error(err, exc_info=err.src_error)
+
+        def _on_ok(has):
+            if has:
+                self.logger.info('user already have a reservation active ou scheduled')
+                messages.info(request, ReservationMessages.ALREADY_HAVE_A_RESERVATION)
+                return redirect('rooms')
+
+            self.context['room_pk'] = room_pk
+            self.context['recaptcha_site_key'] = settings.G_RECAPTCHA_KEY_SITE
+            self.logger.debug(f'rendering {self.template_name}')
+            return render(request, self.template_name, self.context)
+
+        def _on_err(err):
+            self.logger.error(err.msg, exc_info=err.src_error)
             messages.error(request, err.msg)
             return redirect('rooms')
 
-        if result.unwrap():
-            self.logger.info('user already have a reservation active ou scheduled')
-            messages.info(request, ReservationMessages.ALREADY_HAVE_A_RESERVATION)
-            return redirect('rooms')
-
-        self.context['room_pk'] = room_pk
-        self.context['recaptcha_site_key'] = settings.G_RECAPTCHA_KEY_SITE
-        self.logger.debug(f'rendering {self.template_name}')
-        return render(request, self.template_name, self.context)
+        response = result.match(
+            on_ok=_on_ok,
+            on_err=_on_err,
+        )
+        return response
 
     def post(self, request: HttpRequest, room_pk: int):
         self.logger.debug(f'reservation for room {room_pk} started')
@@ -168,16 +175,18 @@ class ReservationsHistory(LoginRequired, ListView):
     context_object_name = 'reservations'
     logger = logging.getLogger('djangoLogger')
 
-    def get_queryset(self) -> list:
+    def get_queryset(self) -> list[Reservation]:
         result = svc.fetch_client_reservation_history(client_id=self.request.user.pk)
-        if result.is_err():
-            err = result.unwrap_err()
+
+        def _on_err(err) -> list[Reservation]:
             self.logger.error(err.msg, exc_info=err.src_error)
-            messages.error(self.request, 'Could not load reservation history.')
+            messages.error(self.request, err.msg)
             return []
 
-        reservations = result.unwrap()
-        self.logger.debug(f'successfully loaded {len(reservations)} reservations')
+        reservations = result.match(
+            on_ok=lambda rs: rs,
+            on_err=_on_err,
+        )
         return reservations
 
 
@@ -192,13 +201,11 @@ class ReservationHistory(LoginRequired, DetailView):
         result = svc.fetch_reservation_detail(
             reservation_id=self.kwargs.get('pk'), client_id=self.request.user.pk
         )
-        if result.is_err():
-            err = result.unwrap_err()
-            self.logger.error(err.msg, exc_info=err.src_error)
-            raise Http404(err.msg)
-
-        reservation = result.unwrap()
-        if not reservation:
-            raise Http404('Reservation not found.')
-
+        *_, reservation = result.match(
+            on_ok=lambda r: (None, r),
+            on_err=lambda err: (
+                self.logger.error(err.msg, exc_info=err.src_error),  # Type: ignore
+                Http404(err.msg),
+            ),
+        )
         return reservation
