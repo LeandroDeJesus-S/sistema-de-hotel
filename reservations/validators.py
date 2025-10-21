@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from utils.support import ensure_result
+from utils.decorators import ensure_result
 
 
 @ensure_result

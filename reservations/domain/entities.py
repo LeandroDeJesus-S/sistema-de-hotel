@@ -29,7 +29,7 @@ from reservations.feedback_messages import (
 )
 from reservations.rules import ReserveRules
 
-from .value_objects import ReservationStatusEnum, RoomNumber
+from .value_objects import CheckInOut, ReservationStatusEnum, RoomNumber
 
 
 class Benefit(BaseEntity):
@@ -158,8 +158,8 @@ class Reservation(BaseEntity):
             'value_error': ReserveErrorMessages.INVALID_ROOM_CHOICE,
         },
     }
-    checkin: date
-    checkout: date
+    checkin: CheckInOut
+    checkout: CheckInOut
     client: Client
     room: Room
     observations: ReservationObservations

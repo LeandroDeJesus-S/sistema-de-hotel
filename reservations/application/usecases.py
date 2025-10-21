@@ -6,6 +6,7 @@ from base.ports.unit_of_work import AbsUnitOfWork
 from clients.domain.ports import AbsClientRepository
 from exc import Result
 from payments.domain.ports import AbsPaymentsRepository
+from reservations import feedback_messages
 from reservations.domain.entities import Reservation
 from reservations.domain.value_objects import ReservationStatusEnum
 
@@ -72,7 +73,6 @@ class InitializeReservationUseCase:
         command = data['command']
         client = data['client']
         room = data['room']
-        stayed_days = Decimal(str((command.check_out - command.check_in).days))
 
         result = Reservation.safe_create(
             client=client,
@@ -80,16 +80,24 @@ class InitializeReservationUseCase:
             checkin=command.check_in,
             checkout=command.check_out,
             observations=command.observations,
-            amount=room.daily_price * stayed_days,
+            amount=Decimal(
+                '0'
+            ),  # bypass to be sure that checkin/checkout are valid validates at first
             status=ReservationStatusEnum.INITIALIZED,
         )
         if result.is_err():
             return Result.Err(
-                msg='Failed to create reservation', src_error=result.unwrap_err()
+                msg=feedback_messages.ReservationMessages.RESERVATION_FAIL,
+                src_error=result.unwrap_err(),
             )
-        return result
+
+        reservation = result.unwrap()
+        stayed_days = Decimal(str((command.check_out - command.check_in).days))
+        reservation.amount = room.daily_price * stayed_days
+        return Result.Ok(reservation)
 
     def _save_reservation(self, reservation_entity: Reservation) -> Result[Reservation]:
+        logging.getLogger('djangoLogger').info('Saving reservation')
         with self.unit_of_work as uow:
             saved_reservation_result = self.reservation_repo.save(reservation_entity)
             if saved_reservation_result.is_err() or not saved_reservation_result.unwrap():

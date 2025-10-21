@@ -12,7 +12,6 @@ from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 
 from clients.infra.repo import ClientRepository
-from reservations.application.dtos import CreateReservationInput
 from reservations.infra.repo import ReservationRepository, RoomRepository
 from utils import support
 from utils.adapters.unit_of_work import UnitOfWork
@@ -21,7 +20,6 @@ from .application import services
 from .feedback_messages import ReservationMessages
 from .mixins import LoginRequired
 from .models import Room
-from .validators import convert_date
 
 svc = services.ReservationService(
     reservation_repo=ReservationRepository(),
@@ -95,6 +93,7 @@ class RoomDetail(DetailView):
         return context
 
 
+@method_decorator(support.captcha_required('reserve', params=('room_pk',)), 'post')
 class Reserve(LoginRequired, View):
     """gerencia a criação de novas reservas"""
 
@@ -137,45 +136,29 @@ class Reserve(LoginRequired, View):
         self.logger.debug(f'rendering {self.template_name}')
         return render(request, self.template_name, self.context)
 
-    @method_decorator(support.captcha_required('reserve', params=('room_pk',)))
     def post(self, request: HttpRequest, room_pk: int):
         self.logger.debug(f'reservation for room {room_pk} started')
         self.context['room_pk'] = room_pk
 
-        check_in_result = convert_date(request.POST.get('checkin', '0001-01-01'))
-        checkout_result = convert_date(request.POST.get('checkout', '0001-01-01'))
-
-        if check_in_result.is_err() or checkout_result.is_err():
-            err = (
-                check_in_result.unwrap_err()
-                if check_in_result.is_err()
-                else checkout_result.unwrap_err()
-            )
-            self.logger.error(f'failed to convert date {err.msg}')
-            messages.error(request, err.msg)
-            return redirect(reverse_lazy('reserve', args=(room_pk,)))
-
-        obs = request.POST.get('obs', '')
-
-        result = svc.initialize_reservation(
-            CreateReservationInput(
-                client_id=request.user.pk,
-                room_pk=room_pk,
-                check_in=check_in_result.unwrap(),
-                check_out=checkout_result.unwrap(),
-                observations=obs,
-            )
+        result = svc.create_reservation({
+            'client_id': request.user.pk,
+            'room_pk': room_pk,
+            'check_in': request.POST.get('checkin', '0001-01-01'),
+            'check_out': request.POST.get('checkout', '0001-01-01'),
+            'observations': request.POST.get('obs', ''),
+        })
+        *_, response = result.match(
+            on_ok=lambda r: (
+                self.logger.info(f'reservation {r.id} registered. Redirecting to checkout'),  # type: ignore
+                redirect(reverse_lazy('checkout', args=(r.id,))),
+            ),
+            on_err=lambda err: (
+                self.logger.error(err.msg, exc_info=err.src_error),  # type: ignore
+                messages.error(request, err.msg),
+                redirect(reverse_lazy('reserve', args=(room_pk,))),
+            ),
         )
-        if result.is_err():
-            err = result.unwrap_err()
-            msg = err.msg or 'unable to create reservation'
-            self.logger.error(msg, exc_info=err.src_error)
-            messages.error(request, msg)
-            return render(request, self.template_name, self.context)
-
-        reservation = result.unwrap()
-        self.logger.info(f'reservation {reservation.id} registered. Redirecting to checkout')
-        return redirect(reverse_lazy('checkout', args=(reservation.id,)))
+        return response
 
 
 class ReservationsHistory(LoginRequired, ListView):

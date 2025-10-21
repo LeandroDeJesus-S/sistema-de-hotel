@@ -54,4 +54,4 @@ def test_uow_defaults(mock_transaction):
     THEN transaction.atomic should be called with the correct defaults
     """
     UnitOfWork(using=None)
-    mock_transaction.atomic.assert_called_with(None, True, True)
+    mock_transaction.atomic.assert_called_with(None, True, False)

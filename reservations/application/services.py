@@ -1,4 +1,9 @@
+from typing import Any, Dict
+
 from clients.domain.ports import AbsClientRepository
+from exc import Result
+from reservations.application.dtos import CreateReservationInput
+from reservations.domain.entities import Reservation
 from utils.adapters.unit_of_work import AbsUnitOfWork
 
 from ..domain.repo import AbsReservationRepository, AbsRoomRepository
@@ -30,3 +35,14 @@ class ReservationService:
             reservation_repo
         )
         self.fetch_reservation_detail = FetchReservationDetailUseCase(reservation_repo)
+
+    def create_reservation(self, data: Dict[str, Any]) -> Result[Reservation]:
+        command = CreateReservationInput.safe_validate(data)
+        if command.is_err():
+            return Result.Err(msg='invalid data', src_error=command.unwrap_err())
+
+        result = self.initialize_reservation(command.unwrap())
+        if result.is_err():
+            return Result.Err(result.unwrap_err().msg, result.unwrap_err())
+
+        return Result.Ok(result.unwrap())

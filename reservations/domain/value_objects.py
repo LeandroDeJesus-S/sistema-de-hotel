@@ -1,8 +1,11 @@
+from datetime import date
 from decimal import Decimal
 from enum import Enum
 from typing import Annotated
 
-from pydantic import Field, StringConstraints
+from pydantic import BeforeValidator, Field, StringConstraints
+
+from reservations.validators import convert_date
 
 from .. import rules
 
@@ -102,4 +105,20 @@ ReservationObservations = Annotated[
         pattern=rules.ReserveRules.OBSERVATIONS_PATTERN,
     ),
     'represents observations made by the customer during the reservation',
+]
+
+
+def cast_date(d: date | str) -> date:
+    if isinstance(d, str):
+        conv_d = convert_date(d)
+        if conv_d.is_err():
+            raise ValueError(conv_d.unwrap_err().msg)
+        return conv_d.unwrap()  # type: ignore
+    return d
+
+
+CheckInOut = Annotated[
+    date,
+    BeforeValidator(cast_date),
+    'represents a check-in/out date',
 ]

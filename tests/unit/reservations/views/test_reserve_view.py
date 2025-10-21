@@ -3,13 +3,14 @@ Tests for the Reserve view.
 """
 
 from datetime import datetime, timedelta
+from http import HTTPStatus
 
 import pytest
 from ddf import G
 from django.urls import reverse
 
 from clients.feedback_messages import Recaptcha
-from exc import Error, Result
+from exc import Result
 from reservations.feedback_messages import ReservationMessages, ReserveErrorMessages
 from reservations.models import Reservation
 from reservations.rules import ReserveRules
@@ -141,7 +142,7 @@ def test_reserve_with_existing_reservation_redirects_to_rooms_with_message(
 
 @pytest.mark.django_db
 def test_reserve_unexpected_error_redirects_to_room_with_message(
-    mocker, authenticated_client, room_model
+    mocker, authenticated_client, room_model, mock_recaptcha,
 ):
     """
     Tests if an unexpected exception occurs when sending form data,
@@ -149,8 +150,7 @@ def test_reserve_unexpected_error_redirects_to_room_with_message(
     """
     # Arrange
     client, _ = authenticated_client
-    mocker.patch('reservations.views.support.verify_captcha', return_value=True)
-    mocker.patch('reservations.views.convert_date', return_value=Result.Err(
+    mocker.patch('reservations.domain.entities.Reservation.safe_create', return_value=Result.Err(
         ReservationMessages.RESERVATION_FAIL
     ))
     url = reverse('reserve', args=[room_model.pk])
@@ -166,6 +166,7 @@ def test_reserve_unexpected_error_redirects_to_room_with_message(
     message = get_message(response)
 
     # Assert
+    assert response.status_code == HTTPStatus.FOUND
     assert message == ReservationMessages.RESERVATION_FAIL
 
 
