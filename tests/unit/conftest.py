@@ -181,8 +181,10 @@ def payment_model(db, reservation_model, contact_model):
     return G(
         Payment,
         reservation=reservation_model,
-        status="P",
+        status=Payment.Status.PENDING,
         amount=reservation_model.amount,
+        client=reservation_model.client,
+        payment_gateway=Payment.Gateway.STRIPE,
     )
 
 

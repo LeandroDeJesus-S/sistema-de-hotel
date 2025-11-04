@@ -91,7 +91,13 @@ def test_release_room_does_not_free_room_with_finalized_payment(db_setup):
     reservation.room.save()
     reservation.save()
 
-    Payment.objects.create(reservation=reservation, amount=reservation.amount, status='F')
+    Payment.objects.create(
+        reservation=reservation,
+        amount=reservation.amount,
+        status=Payment.Status.COMPLETED,
+        client=reservation.client,
+        payment_gateway=Payment.Gateway.STRIPE,
+    )
 
     # Act
     release_room(reservation.pk)

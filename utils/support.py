@@ -48,7 +48,7 @@ class PaymentPDFHandler:
     def _rows_list(self):
         """return all the rows of the pdf in list format"""
         rows = [
-            f'Data de emissão: {self.payment.date.strftime("%h:%M:%S %d/%m/%Y")}',
+            f'Data de emissão: {self.payment.created_at.strftime("%h:%M:%S %d/%m/%Y")}',
             f'Status: {self.payment.status}',
             f'Pagador: {self.payment.reservation.client.complete_name}',
             f'Recebedor: HOTEL'

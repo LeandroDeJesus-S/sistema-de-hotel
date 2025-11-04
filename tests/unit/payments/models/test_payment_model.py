@@ -21,7 +21,7 @@ def test_payment_creation_date_is_set(payment_model):
     payment = payment_model
 
     # Act & Assert
-    assert payment.date.timestamp() == pytest.approx(datetime.now().timestamp(), abs=1)
+    assert payment.created_at.timestamp() == pytest.approx(datetime.now().timestamp(), abs=1)
 
 
 @pytest.mark.django_db
@@ -75,13 +75,13 @@ def test_reservation_is_assigned_to_payment(payment_model, reservation_model):
 @pytest.mark.django_db
 def test_initial_status_is_processing(payment_model):
     """
-    Tests if the status when starting the payment is 'P' for processing.
+    Tests if the status when starting the payment is 'PENDING'.
     """
     # Arrange
     payment = payment_model
 
     # Act & Assert
-    assert payment.status == 'P'
+    assert payment.status == Payment.Status.PENDING
 
 
 @pytest.mark.django_db
@@ -90,7 +90,11 @@ def test_validation_error_if_payment_amount_differs_from_reservation(reservation
     Tests if a ValidationError is raised if the payment amount is different from the reservation amount.
     """
     # Arrange
-    payment = Payment(reservation=reservation_model, amount=Decimal('10000'))
+    payment = Payment(
+        client=reservation_model.client,
+        reservation=reservation_model,
+        amount=Decimal('10000'),
+    )
 
     # Act & Assert
     with pytest.raises(ValidationError) as excinfo:
@@ -104,7 +108,11 @@ def test_payment_saved_with_valid_data(reservation_model):
     Tests if the payment is persisted with all valid data.
     """
     # Arrange
-    payment = Payment(reservation=reservation_model, amount=reservation_model.amount)
+    payment = Payment(
+        client=reservation_model.client,
+        reservation=reservation_model,
+        amount=reservation_model.amount,
+    )
 
     # Act
     payment.full_clean()

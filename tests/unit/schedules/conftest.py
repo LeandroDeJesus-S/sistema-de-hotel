@@ -101,7 +101,14 @@ def payment_fixture(client_fixture, room_fixture):
     # Create a Scheduling object for this reservation, as the view expects it
     G(Scheduling, client=client_fixture, reservation=reservation)
 
-    return G(Payment, reservation=reservation, status='P', amount=reservation.amount)
+    return G(
+        Payment,
+        reservation=reservation,
+        status=Payment.Status.PENDING,
+        amount=reservation.amount,
+        client=client_fixture,
+        payment_gateway=Payment.Gateway.STRIPE,
+    )
 
 
 @pytest.fixture

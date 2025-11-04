@@ -112,7 +112,13 @@ class Schedules(LoginRequired, View):
             scheduling.full_clean()
             self.logger.debug(f'schedule {scheduling} prepared')
 
-            payment = Payment(status='P', amount=reservation.amount, reservation=reservation)
+            payment = Payment(
+                status=Payment.Status.PENDING,
+                amount=reservation.amount,
+                reservation=reservation,
+                client=self.request.user,
+                payment_gateway=Payment.Gateway.STRIPE,
+            )
             payment.full_clean()
             self.logger.debug(f'payment {payment} created')
 
@@ -151,12 +157,12 @@ def schedule_success(request: HttpRequest, reservation_pk: int):
 
     payment = get_object_or_404(Payment, reservation__pk__exact=reservation_pk)
     context = {'payment': payment}
-    if not payment.status == 'P':
+    if payment.status != Payment.Status.PENDING:
         logger.warn('payment is not processing')
         return render(request, 'schedule_success.html', context)
 
     payment.reservation.status = 'S'
-    payment.status = 'F'
+    payment.status = Payment.Status.COMPLETED
     payment.reservation.save()
     payment.save()
     context['payment'] = payment

@@ -3,16 +3,29 @@ Tests for the payments views.
 """
 
 from http import HTTPStatus
+from unittest.mock import MagicMock
 
 import pytest
 from django.contrib.messages import get_messages
 from django.db import OperationalError
 from django.urls import reverse
 
+from exc import Result
 from payments.models import Payment
 from payments.error_messages import CheckoutMessages, PaymentCancelMessages
 
 # Checkout view tests
+
+
+@pytest.fixture
+def mock_payment_creator(mocker):
+    mock_svc = MagicMock()
+    mock_svc.start_checkout.return_value = Result.Ok(
+        MagicMock(redirect_url='http://stripepayment-hostedpage.url')
+    )
+    mocker.patch('payments.views.svc', mock_svc)
+    return mock_svc
+
 
 
 @pytest.mark.django_db
@@ -105,7 +118,7 @@ def test_payment_created_successfully(client, client_model, reservation_model, m
 
 
 @pytest.mark.django_db
-def test_operational_error_redirects_to_rooms_with_message(client, client_model, reservation_model, mock_payment_creator, mock_recaptcha, mocker):
+def test_operational_error_redirects_to_rooms_with_message(client, client_model, reservation_model, mock_payment_creator, mock_recaptcha):
     """
     Tests if an OperationalError redirects to the rooms page with the correct message.
     """
@@ -114,7 +127,7 @@ def test_operational_error_redirects_to_rooms_with_message(client, client_model,
     reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
-    mocker.patch('payments.views.Payment.save', side_effect=OperationalError('Database error'))
+    mock_payment_creator.start_checkout.return_value = Result.Err('Database error', OperationalError('Database error'))
 
     # Act
     response = client.post(url)
@@ -124,11 +137,11 @@ def test_operational_error_redirects_to_rooms_with_message(client, client_model,
     assert response.status_code == 302
     assert response.url == reverse('rooms')
     assert len(messages) > 0
-    assert messages[0].message == CheckoutMessages.TRANSACTION_BLOCKING
+    assert messages[0].message == CheckoutMessages.PAYMENT_FAIL
 
 
 @pytest.mark.django_db
-def test_unexpected_exception_redirects_to_rooms_with_message(client, client_model, reservation_model, mock_payment_creator, mock_recaptcha, mocker):
+def test_unexpected_exception_redirects_to_rooms_with_message(client, client_model, reservation_model, mock_payment_creator, mock_recaptcha):
     """
     Tests if an unexpected exception redirects to the rooms page with the correct message.
     """
@@ -137,7 +150,7 @@ def test_unexpected_exception_redirects_to_rooms_with_message(client, client_mod
     reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
-    mocker.patch('payments.views.Payment.save', side_effect=Exception('unexpected exception'))
+    mock_payment_creator.start_checkout.return_value = Result.Err('unexpected exception', Exception('unexpected exception'))
 
     # Act
     response = client.post(url)
@@ -163,12 +176,14 @@ def test_payment_is_created_correctly(client, client_model, reservation_model, m
 
     # Act
     client.post(url, follow=True)
-    payment = Payment.objects.last()
 
     # Assert
-    assert payment is not None
-    assert payment.reservation == reservation
-    assert payment.status == 'P'
+    mock_payment_creator.start_checkout.assert_called_once_with(
+        reservation_id=reservation.pk,
+        client_id=user.pk,
+        success_url=f'http://testserver/pagamento/success/{reservation.pk}/',
+        cancel_url=f'http://testserver/pagamento/cancel/{reservation.pk}/',
+    )
 
 
 # PaymentSuccess view tests
@@ -210,7 +225,7 @@ def test_payment_status_updated_to_finished(client, client_model, reservation_mo
     payment.refresh_from_db()
 
     # Assert
-    assert payment.status == 'F'
+    assert payment.status == Payment.Status.COMPLETED
 
 
 @pytest.mark.django_db
@@ -309,7 +324,7 @@ def test_payment_and_reservation_status_change_to_cancelled(client, payment_mode
     payment.reservation.room.refresh_from_db()
 
     # Assert
-    assert payment.status == 'C'
+    assert payment.status == Payment.Status.FAILED
     assert payment.reservation.status == 'C'
     assert payment.reservation.room.available
 

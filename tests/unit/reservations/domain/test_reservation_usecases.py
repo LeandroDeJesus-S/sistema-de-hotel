@@ -195,87 +195,104 @@ class TestFetchClientActiveReservations:
 
 
 class TestReleaseRoomUseCase:
-    def test_release_unpaid_reservation_successfully(
+    def test_release_room_successfully(
         self,
         mock_room_repo,
-        mock_reservation_repo,
-        mock_payments_repo,
         mock_unit_of_work,
     ):
         # Arrange
-        room = Mock(spec=Room, available=False)
-        reservation = Mock(spec=Reservation, room=room)
-        mock_reservation_repo.find_by_id.return_value = Result.Ok(reservation)
-        mock_payments_repo.confirm_reservation_payment.return_value = Result.Ok(
-            False
-        )  # Unpaid
-        mock_room_repo.save.return_value = Result.Ok(None)
-        mock_reservation_repo.save.return_value = Result.Ok(None)
+        room = Mock(spec=Room)
+        room.available = False
+        mock_room_repo.find_by_id.return_value = Result.Ok(room)
+        mock_room_repo.save.return_value = Result.Ok(room)
 
         uc = ReleaseRoomUseCase(
-            mock_room_repo, mock_reservation_repo, mock_payments_repo, mock_unit_of_work
+            room_repo=mock_room_repo,
+            reservations_repo=Mock(),
+            payments_repo=Mock(),
+            unit_of_work=mock_unit_of_work,
         )
 
         # Act
-        result = uc(reservation_id=1)
+        result = uc(room_id=1)
 
         # Assert
         assert result.is_ok()
         assert result.unwrap() is True
-        assert reservation.room.available is True
-        assert reservation.status == ReservationStatusEnum.CANCELLED
+        assert room.available is True
         mock_room_repo.save.assert_called_once_with(room)
-        mock_reservation_repo.save.assert_called_once_with(reservation)
 
-    def test_do_nothing_if_reservation_is_paid(
+    def test_do_nothing_if_room_is_already_available(
         self,
         mock_room_repo,
-        mock_reservation_repo,
-        mock_payments_repo,
         mock_unit_of_work,
     ):
         # Arrange
-        room = Mock(spec=Room, available=False)
-        reservation = Mock(spec=Reservation, room=room)
-        mock_reservation_repo.find_by_id.return_value = Result.Ok(reservation)
-        mock_payments_repo.confirm_reservation_payment.return_value = Result.Ok(
-            True
-        )  # Paid
+        room = Mock(spec=Room, available=True)
+        mock_room_repo.find_by_id.return_value = Result.Ok(room)
 
         uc = ReleaseRoomUseCase(
-            mock_room_repo, mock_reservation_repo, mock_payments_repo, mock_unit_of_work
+            room_repo=mock_room_repo,
+            reservations_repo=Mock(),
+            payments_repo=Mock(),
+            unit_of_work=mock_unit_of_work,
         )
 
         # Act
-        result = uc(reservation_id=1)
+        result = uc(room_id=1)
 
         # Assert
         assert result.is_ok()
         assert result.unwrap() is True
-        assert room.available is False  # Should not change
         mock_room_repo.save.assert_not_called()
-        mock_reservation_repo.save.assert_not_called()
 
-    def test_return_error_if_reservation_not_found(
+    def test_return_error_if_room_not_found(
         self,
         mock_room_repo,
-        mock_reservation_repo,
-        mock_payments_repo,
         mock_unit_of_work,
     ):
         # Arrange
-        mock_reservation_repo.find_by_id.return_value = Result.Err(msg='not found')
+        mock_room_repo.find_by_id.return_value = Result.Err(msg='not found')
 
         uc = ReleaseRoomUseCase(
-            mock_room_repo, mock_reservation_repo, mock_payments_repo, mock_unit_of_work
+            room_repo=mock_room_repo,
+            reservations_repo=Mock(),
+            payments_repo=Mock(),
+            unit_of_work=mock_unit_of_work,
         )
 
         # Act
-        result = uc(reservation_id=999)
+        result = uc(room_id=999)
 
         # Assert
         assert result.is_err()
-        assert 'not found' in result.unwrap_err().msg
+        assert 'Room not found' in result.unwrap_err().msg
+
+    def test_return_error_if_saving_room_fails(
+        self,
+        mock_room_repo,
+        mock_unit_of_work,
+    ):
+        # Arrange
+        room = Mock(spec=Room)
+        room.available = False
+        mock_room_repo.find_by_id.return_value = Result.Ok(room)
+        mock_room_repo.save.return_value = Result.Err(msg='db error')
+
+        uc = ReleaseRoomUseCase(
+            room_repo=mock_room_repo,
+            reservations_repo=Mock(),
+            payments_repo=Mock(),
+            unit_of_work=mock_unit_of_work,
+        )
+
+        # Act
+        result = uc(room_id=1)
+
+        # Assert
+        assert result.is_err()
+        assert 'Failed to save room state' in result.unwrap_err().msg
+        mock_unit_of_work.__enter__().rollback.assert_called_once()
 
 
 class TestFetchClientReservationHistoryUseCase:

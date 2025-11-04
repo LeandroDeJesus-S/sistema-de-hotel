@@ -28,6 +28,7 @@ from reservations.feedback_messages import (
     RoomErrorMessages,
 )
 from reservations.rules import ReserveRules
+from utils.decorators import ensure_result
 
 from .value_objects import CheckInOut, ReservationStatusEnum, RoomNumber
 
@@ -167,6 +168,11 @@ class Reservation(BaseEntity):
     status: ReservationStatus = ReservationStatusEnum.INITIALIZED
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     id: int | None = None
+
+    @ensure_result
+    def reservation_days(self) -> int:
+        """Returns the reservation stayed period"""
+        return (self.checkout - self.checkin).days
 
     @model_validator(mode='after')
     def validate_room(self):

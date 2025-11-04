@@ -53,7 +53,7 @@ def release_room(reservation_pk):
     try:
         reservation = Reservation.objects.get(pk=reservation_pk)
         payment = Payment.objects.filter(reservation=reservation).first()
-        if payment is None or payment.status != 'F':
+        if payment is None or payment.status != Payment.Status.COMPLETED:
             logger.info(
                 f'room {reservation.room} of the reservation {reservation_pk} released'
             )

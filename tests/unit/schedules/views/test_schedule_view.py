@@ -9,6 +9,7 @@ from django.urls import reverse
 from django_q.tasks import Schedule
 
 from schedules.models import Scheduling
+from payments.models import Payment
 from reservations.feedback_messages import ReserveErrorMessages
 from clients.feedback_messages import Recaptcha
 from payments.error_messages import CheckoutMessages
@@ -238,7 +239,7 @@ def test_payment_saved_correctly(client_logged_in, payment_fixture):
     the reservation status to scheduled correctly.
     """
     # Arrange
-    payment_fixture.status = 'P'  # Ensure it starts as processing
+    payment_fixture.status = Payment.Status.PENDING
     payment_fixture.save()
     # Ensure the reservation and client are refreshed from DB
     payment_fixture.reservation.refresh_from_db()
@@ -251,7 +252,7 @@ def test_payment_saved_correctly(client_logged_in, payment_fixture):
 
     # Assert
     payment_fixture.refresh_from_db()
-    assert payment_fixture.status == 'F'
+    assert payment_fixture.status == Payment.Status.COMPLETED
     assert payment_fixture.reservation.status == 'S'
 
 
@@ -293,7 +294,7 @@ def test_creates_schedule_task_correctly(client_logged_in, payment_fixture):
     activate the reservation on the scheduled date.
     """
     # Arrange
-    payment_fixture.status = 'P'  # Ensure it starts as processing
+    payment_fixture.status = Payment.Status.PENDING
     payment_fixture.save()
     # Ensure the reservation and client are refreshed from DB
     payment_fixture.reservation.refresh_from_db()

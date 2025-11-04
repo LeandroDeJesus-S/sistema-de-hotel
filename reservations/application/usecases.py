@@ -132,51 +132,26 @@ class ReleaseRoomUseCase:
         self._unit_of_work = unit_of_work
         self._logger = logging.getLogger('djangoLogger')
 
-    def __call__(self, reservation_id: int) -> Result[bool]:  # noqa: PLR0911
+    def __call__(self, room_id: int) -> Result[bool]:
         with self._unit_of_work as uow:
-            reservation_result = self._reservation_repo.find_by_id(reservation_id)
-            if reservation_result.is_err():
-                return Result.Err(
-                    msg=f'Reservation with id {reservation_id} not found',
-                    src_error=reservation_result.unwrap_err(),
-                )
-            reservation = reservation_result.unwrap()
+            room_result = self._room_repo.find_by_id(room_id)
+            if room_result.is_err():
+                return Result.Err('Room not found', src_error=room_result.unwrap_err())
 
-            payment_paid_result = self._payment_repo.confirm_reservation_payment(
-                reservation_id
-            )
-            if payment_paid_result.is_err():
-                return Result.Err(
-                    msg='Failed to check payment status',
-                    src_error=payment_paid_result.unwrap_err(),
-                )
+            room = room_result.unwrap()
+            if room.available:
+                return Result.Ok(True)
 
-            if payment_paid_result.unwrap():  # Payment is confirmed
-                return Result.Ok(True)  # Room remains occupied
+            room.available = True
+            room_save_result = self._room_repo.save(room)
 
-            if reservation.room.available:
-                return Result.Ok(True)  # Room is already available
-
-            # Release the room and cancel reservation
-            reservation.room.available = True
-            reservation.status = ReservationStatusEnum.CANCELLED
-
-            room_save_result = self._room_repo.save(reservation.room)
             if room_save_result.is_err():
                 uow.rollback()
                 return Result.Err(
-                    msg='Failed to save room state', src_error=room_save_result.unwrap_err()
+                    msg='Failed to save room state',
+                    src_error=room_save_result.unwrap_err(),
                 )
-
-            reservation_save_result = self._reservation_repo.save(reservation)
-            if reservation_save_result.is_err():
-                uow.rollback()
-                return Result.Err(
-                    msg='Failed to update reservation status',
-                    src_error=reservation_save_result.unwrap_err(),
-                )
-
-        return Result.Ok(True)
+            return Result.Ok(True)
 
 
 class FetchClientReservationHistoryUseCase:
