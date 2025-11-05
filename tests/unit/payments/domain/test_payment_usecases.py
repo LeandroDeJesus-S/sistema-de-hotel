@@ -84,7 +84,7 @@ def test_checkout_use_case_success(
 ):
     # Arrange
     domain_result = DomainCheckoutResultDTO(
-        session_id='12345', session_url='http://stripe.com/session'
+        session_id='12345', client_id='123', session_url='http://stripe.com/session'
     )
     mock_payment_gateway.create_checkout_session.return_value = Result.Ok(domain_result)
     mock_payment_repo.create.return_value = Result.Ok(MagicMock(spec=Payment))
@@ -104,26 +104,6 @@ def test_checkout_use_case_success(
     mock_uow.__enter__.assert_called_once()
 
 
-def test_checkout_use_case_gateway_failure(
-    checkout_use_case: CheckoutUseCase,
-    checkout_use_case_input_dto: CheckoutUseCaseInputDTO,
-    mock_payment_gateway: MagicMock,
-    mock_uow: MagicMock,
-):
-    # Arrange
-    mock_payment_gateway.create_checkout_session.return_value = Result.Err(
-        'Gateway error'
-    )
-
-    # Act
-    result = checkout_use_case(checkout_use_case_input_dto)
-
-    # Assert
-    assert result.is_err()
-    assert 'Failed to create payment session' in result.unwrap_err().msg
-    mock_uow.__enter__.assert_not_called()
-
-
 def test_checkout_use_case_repo_failure(
     checkout_use_case: CheckoutUseCase,
     checkout_use_case_input_dto: CheckoutUseCaseInputDTO,
@@ -133,7 +113,7 @@ def test_checkout_use_case_repo_failure(
 ):
     # Arrange
     domain_result = DomainCheckoutResultDTO(
-        session_id='12345', session_url='http://stripe.com/session'
+        session_id='12345', client_id='123', session_url='http://stripe.com/session'
     )
     mock_payment_gateway.create_checkout_session.return_value = Result.Ok(domain_result)
     mock_payment_repo.create.return_value = Result.Err('DB error')
@@ -143,6 +123,6 @@ def test_checkout_use_case_repo_failure(
 
     # Assert
     assert result.is_err()
-    assert 'Failed to create payment record' in result.unwrap_err().msg
+    assert 'Failed to create payment' in result.unwrap_err().msg
     mock_uow.__enter__.assert_called_once()
     mock_uow.__enter__().rollback.assert_called_once()

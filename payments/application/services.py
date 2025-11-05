@@ -6,9 +6,8 @@ from django.utils.timezone import timezone
 from base.ports.unit_of_work import AbsUnitOfWork
 from clients.domain.ports import AbsClientRepository
 from exc import Result
-from payments.application.dtos import CheckoutResultDTO, CheckoutUseCaseInputDTO
-from payments.domain.dtos import CheckoutItemDTO, CheckoutSessionInputDTO
-from payments.domain.entities import Payment
+from payments.application.dtos import CheckoutUseCaseInputDTO
+from payments.domain.dtos import CheckoutItemDTO, CheckoutResultDTO, CheckoutSessionInputDTO
 from payments.domain.ports import (
     AbsPaymentsRepository,
     AbsSessionBasedPayment,
@@ -52,34 +51,20 @@ class PaymentService:
                 src_error=client.unwrap_err(),
             )
 
-        reservation = self._reservation_repo.find_by_id(reservation_id)
-        if reservation.is_err():
+        reservation_result = self._reservation_repo.find_by_id(reservation_id)
+        if reservation_result.is_err():
             return Result.Err(
                 'Failed to find reservation',
-                src_error=reservation.unwrap_err(),
+                src_error=reservation_result.unwrap_err(),
             )
 
-        with self._uow as w:
-            new_payment = Payment.safe_create(
-                client=client.unwrap(),
-                reservation=reservation.unwrap(),
-                success_url=success_url,
-                cancel_url=cancel_url,
-            ).then(self._payment_repo.create)
-
-            if new_payment.is_err():
-                w.rollback()
-                return Result.Err(
-                    'Failed to create payment',
-                    src_error=new_payment.unwrap_err(),
-                )
-
-        reservation_days = reservation.unwrap().reservation_days()
+        reservation = reservation_result.unwrap()
+        reservation_days = reservation.reservation_days()
         dto = CheckoutUseCaseInputDTO(
             client=client.unwrap(),
-            reservation=reservation.unwrap(),
+            reservation=reservation,
             checkout_session_input=CheckoutSessionInputDTO(
-                currency='brl',
+                currency='brl',  # TODO: make it dynamic
                 expires_at=timezone.now()
                 + timedelta(minutes=PaymentRules.CHECKOUT_SESSION_EXPIRES_MIN),
                 success_url=success_url,
@@ -87,15 +72,14 @@ class PaymentService:
                 items=[
                     CheckoutItemDTO(
                         name=(
-                            f'Reserva: Quarto Nº{reservation.unwrap().room.number}, '
-                            f'classe {reservation.unwrap().room.room_class}.'
+                            f'Reserva: Quarto Nº{reservation.room.number}, '
+                            f'classe {reservation.room.room_class}.'
                         ),
-                        unit_price_cents=int(reservation.unwrap().room.daily_price * 100),
+                        unit_price_cents=int(reservation.room.daily_price * 100),
                         quantity=reservation_days,
                     )
                 ],
+                metadata={'customer_email': client.unwrap().email},
             ),
         )
-        return self._checkout_usecase(dto).map(
-            lambda res: CheckoutResultDTO(redirect_url=res.session_url)
-        )
+        return self._checkout_usecase(dto)

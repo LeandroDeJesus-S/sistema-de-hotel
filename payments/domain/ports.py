@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Protocol
+from typing import Any, Generic, Protocol, TypeVar
 
 from exc import Result
 from payments.domain.dtos import CheckoutResultDTO, CheckoutSessionInputDTO
@@ -44,6 +44,19 @@ class AbsPaymentsRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_by_gateway_payment_intent_id(self, payment_intent_id: str) -> Result[Payment]:
+        """
+        Gets a payment by its gateway payment intent ID.
+
+        Args:
+            payment_intent_id: The payment intent ID from the gateway.
+
+        Returns:
+            A Result containing the payment entity or None if not found, or an Error on failure
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def update(self, payment: Payment) -> Result[Payment]:
         """
         Updates an existing payment record.
@@ -55,3 +68,27 @@ class AbsPaymentsRepository(ABC):
             A Result containing the updated payment entity on success, or an Error on failure.
         """
         raise NotImplementedError
+
+
+WebhookIdent = TypeVar('WebhookIdent')
+
+
+class WebhookEvent(Protocol, Generic[WebhookIdent]):
+    """Represents a webhook event sent by a payment gateway."""
+
+    ident: WebhookIdent
+
+    def handle(self, data: dict[str, Any]) -> Result[None]:
+        """performs the necessary actions to handle the webhook event."""
+
+
+class PaymentWebhookHandler(Protocol, Generic[WebhookIdent]):
+    """Class responsible for handling payment webhooks from payment gateways."""
+
+    events: dict[WebhookIdent, WebhookEvent[WebhookIdent]]
+
+    def with_events(self, *event: WebhookEvent[WebhookIdent]) -> Result[None]:
+        """Registers a list of events to be handled."""
+
+    def handle_webhook(self, event_ident: WebhookIdent, data: dict[str, Any]) -> Result[None]:
+        """Handles a webhook event dispatching by its identifier."""

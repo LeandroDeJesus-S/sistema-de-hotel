@@ -13,7 +13,9 @@ class CheckoutUseCaseInputDTO(BaseModel):
     checkout_session_input: CheckoutSessionInputDTO
 
 
-class CheckoutResultDTO(BaseModel):
-    """Data Transfer Object for the result of a checkout."""
-
-    redirect_url: str
+# class CheckoutResultDTO(BaseModel):
+#     """Data Transfer Object for the result of a checkout."""
+#
+#     client_id: str
+#     checkout_session_id: str
+#     redirect_url: str

@@ -135,6 +135,7 @@ class Checkout(LoginRequiredMixin, View):
         return super().dispatch(request, *args, **kwargs)
 
 
+# TODO: use cases needed
 @require_GET
 @login_required(login_url=reverse_lazy('signin'))
 @check_reservation_ownership
@@ -193,3 +194,6 @@ def payment_cancel(request: HttpRequest, reservation_pk: int):
         return redirect('rooms')
 
     return render(request, 'cancel.html')
+
+
+def stripe_webhook(request: HttpRequest): ...
