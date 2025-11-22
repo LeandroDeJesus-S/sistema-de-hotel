@@ -112,3 +112,9 @@ class PaymentRepository(AbsPaymentsRepository):
             return Result.Ok(updated_entity_result.unwrap())
         except Exception as e:
             return Result.Err(f'Failed to update payment {payment.id}', src_error=e)
+
+    def get_by_id(self, payment_id: int) -> Result[Payment]:
+        """returns a payment by its id"""
+        if payment_model := self._model_cls.objects.filter(id=payment_id).first():
+            return model_to_entity(payment_model, self._entity_cls)
+        return Result.Err('Payment not found')

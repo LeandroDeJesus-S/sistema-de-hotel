@@ -48,7 +48,7 @@ def test_reservation_creation_with_valid_data(
     [
         (-1, 2, ReserveErrorMessages.INVALID_CHECKIN_DATE),  # Past check-in
         (2, 1, ReserveErrorMessages.INVALID_CHECKIN_DATE),  # Check-out before check-in
-        (1, 1, ReserveErrorMessages.INVALID_CHECKIN_DATE),  # Check-out same as check-in
+        (1, 1, ReserveErrorMessages.INVALID_STAYED_DAYS),  # Check-out same as check-in
     ],
 )
 def test_reservation_creation_with_invalid_dates(

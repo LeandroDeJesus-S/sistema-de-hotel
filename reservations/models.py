@@ -235,6 +235,31 @@ class Room(models.Model):
 class Reservation(models.Model):
     """representa o registro de uma reserva"""
 
+    class Meta:
+        verbose_name = 'Reserva'
+        verbose_name_plural = 'Reservas'
+
+        constraints = [
+            models.CheckConstraint(
+                name='checkin_check',
+                check=models.Q(checkin__lte=models.F('checkout')),
+            ),
+            models.CheckConstraint(
+                name='min_stayed_days',
+                check=models.Q(
+                    checkout__gte=models.F('checkin')
+                    + timezone.timedelta(days=ReserveRules.MIN_RESERVATION_DAYS)
+                ),
+            ),
+            models.CheckConstraint(
+                name='max_stayed_days',
+                check=models.Q(
+                    checkout__lte=models.F('checkin')
+                    + timezone.timedelta(days=ReserveRules.MAX_RESERVATION_DAYS)
+                ),
+            ),
+        ]
+
     checkin = models.DateField(
         'Check-in',
         blank=False,
@@ -323,16 +348,18 @@ class Reservation(models.Model):
 
     def clean(self) -> None:
         super().clean()
-        self.error_messages: dict[str, str] = {}
-        self._validate_check_in()
-        self._validate_room()
-
-        if self.error_messages:
-            raise ValidationError(self.error_messages)
-
+        # self.error_messages: dict[str, str] = {}
+        # self._validate_check_in()
+        # # self._validate_room()
+        #
+        # if self.error_messages:
+        #     raise ValidationError(self.error_messages)
+        #
         result = support.model_to_entity(self, entities.Reservation)
         if result.is_err():
-            raise ValidationError(result.unwrap_err().msg)
+            res_err = result.unwrap_err()
+            err = res_err.src_error or res_err
+            raise ValidationError(getattr(err, 'msg', str(err)))
 
     @classmethod
     def get_free_dates(cls, reservations) -> str:
@@ -435,28 +462,3 @@ class Reservation(models.Model):
     def coast_in_cents(self):
         """custo da reserva em centavos"""
         return int(self.amount * Decimal('100'))
-
-    class Meta:
-        verbose_name = 'Reserva'
-        verbose_name_plural = 'Reservas'
-
-        constraints = [
-            models.CheckConstraint(
-                name='checkin_check',
-                check=models.Q(checkin__lte=models.F('checkout')),
-            ),
-            models.CheckConstraint(
-                name='min_stayed_days',
-                check=models.Q(
-                    checkout__gte=models.F('checkin')
-                    + timezone.timedelta(days=ReserveRules.MIN_RESERVATION_DAYS)
-                ),
-            ),
-            models.CheckConstraint(
-                name='max_stayed_days',
-                check=models.Q(
-                    checkout__lte=models.F('checkin')
-                    + timezone.timedelta(days=ReserveRules.MAX_RESERVATION_DAYS)
-                ),
-            ),
-        ]

@@ -8,21 +8,24 @@ from base.ports.unit_of_work import AbsUnitOfWork
 
 class UnitOfWork(AbsUnitOfWork):
     def __init__(
-        self, using: Any | None = None, savepoint: bool = True, durable: bool = False
+        self,
+        using: Any | None = None,
+        savepoint: bool = True,
+        durable: bool = False,
     ):
         self._using = using
         self._savepoint = savepoint
         self._durable = durable
-        self._ctx = transaction.atomic(using, savepoint, durable)
+        self._logger = logging.getLogger('djangoLogger')
 
     def __enter__(self):
-        logging.getLogger('djangoLogger').debug('Enter UOW')
-        self._ctx.__enter__()
+        self._logger.debug('Enter UOW')
+        transaction.set_autocommit(False)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        logging.getLogger('djangoLogger').debug('Exit UOW')
-        self._ctx.__exit__(exc_type, exc_val, exc_tb)
+        self._logger.debug('Exit UOW')
+        transaction.set_autocommit(True)
 
     def commit(self):
         transaction.commit(self._using)

@@ -44,6 +44,7 @@ class UsernameValidator(AbsValidator):
         dj_extra: list[ValidatorCall],
         max_len: int = MAX_LEN,
         min_len: int = MIN_LEN,
+        raise_exc: bool = False,
     ) -> None:
         """
         Args:
@@ -52,6 +53,7 @@ class UsernameValidator(AbsValidator):
         self._dj_extra = dj_extra
         self._max_len = max_len
         self._min_len = min_len
+        self.raise_exc = raise_exc
 
     def validate(self, value: str) -> Result[str]:
         for dj_validator in self._dj_extra:
@@ -62,6 +64,8 @@ class UsernameValidator(AbsValidator):
                 'min_len': self._min_len,
                 'max_len': self._max_len,
             }
+            if self.raise_exc:
+                raise ValidationError(msg)
             return Result.Err(msg)
 
         return Result.Ok(value)
@@ -70,14 +74,21 @@ class UsernameValidator(AbsValidator):
 class PhoneNumberValidator(AbsValidator):
     """Performs a phone number validation using phonenumbers library"""
 
+    def __init__(self, raise_exc: bool = False) -> None:
+        self.raise_exc = raise_exc
+
     def validate(self, value: str) -> Result[str]:  # noqa: PLR6301
         try:
             parsed_phone = phonenumbers.parse(value, 'BR')
             if not phonenumbers.is_valid_number(parsed_phone):
+                if self.raise_exc:
+                    raise ValidationError(ContactErrorMessages.INVALID_PHONE)
                 return Result.Err(ContactErrorMessages.INVALID_PHONE)
             return Result.Ok(value)
 
         except phonenumbers.NumberParseException as e:
+            if self.raise_exc:
+                raise ValidationError(ContactErrorMessages.INVALID_PHONE)
             return Result.Err(ContactErrorMessages.INVALID_PHONE, src_error=e)
 
 
@@ -85,14 +96,17 @@ class BirthDateValidator(AbsValidator):
     MIN_AGE = ClientRules.MIN_AGE
     MAX_AGE = ClientRules.MAX_AGE
 
-    def __init__(self, min_age=MIN_AGE, max_age=MAX_AGE) -> None:
+    def __init__(self, min_age=MIN_AGE, max_age=MAX_AGE, raise_exc: bool = False) -> None:
         self._min_age = min_age
         self._max_age = max_age
+        self.raise_exc = raise_exc
 
     def validate(self, value: date) -> Result[date]:
         _now = now()
         age = (_now.year - value.year) - (value.month < _now.month)
         if not (self._min_age <= age <= self._max_age):
+            if self.raise_exc:
+                raise ValidationError(ClientErrorMessages.INVALID_BIRTHDATE)
             return Result.Err(ClientErrorMessages.INVALID_BIRTHDATE)
 
         return Result.Ok(value)
@@ -109,11 +123,13 @@ class PasswordValidator(AbsValidator):
         max_len: int = MAX_LEN,
         min_len: int = MIN_LEN,
         supported_symbols: str = SYMBOLS,
+        raise_exc: bool = False,
     ) -> None:
         self._dj_extra = dj_extra
         self._max_len = max_len
         self._min_len = min_len
         self._supported_symbols = supported_symbols
+        self.raise_exc = raise_exc
 
     def validate(self, value: str) -> Result[str]:
         no_symbols = value.isnumeric() or value.isalnum()
@@ -123,6 +139,8 @@ class PasswordValidator(AbsValidator):
                 'max_len': self._max_len,
                 'symbols': self._supported_symbols,
             }
+            if self.raise_exc:
+                raise ValidationError(msg)
             return Result.Err(msg)
 
         for dj_validator in self._dj_extra:

@@ -21,7 +21,7 @@ from payments.error_messages import CheckoutMessages, PaymentCancelMessages
 def mock_payment_creator(mocker):
     mock_svc = MagicMock()
     mock_svc.start_checkout.return_value = Result.Ok(
-        MagicMock(redirect_url='http://stripepayment-hostedpage.url')
+        MagicMock(session_url='http://stripepayment-hostedpage.url')
     )
     mocker.patch('payments.views.svc', mock_svc)
     return mock_svc
@@ -206,46 +206,6 @@ def test_success_view_uses_correct_template(client, payment_model):
     # Assert
     assert response.status_code == 200
     assert 'success.html' in [t.name for t in response.templates]
-
-
-@pytest.mark.django_db
-def test_payment_status_updated_to_finished(client, client_model, reservation_model, payment_model):
-    """
-    Tests if the payment is updated to finished status after success.
-    """
-    # Arrange
-    user = client_model
-    reservation = reservation_model
-    payment = payment_model
-    client.force_login(user)
-    url = reverse('payment_success', args=[reservation.pk])
-
-    # Act
-    client.get(url)
-    payment.refresh_from_db()
-
-    # Assert
-    assert payment.status == Payment.Status.COMPLETED
-
-
-@pytest.mark.django_db
-def test_reservation_is_activated(client, client_model, reservation_model, payment_model):
-    """
-    Tests if the reservation is activated correctly.
-    """
-    # Arrange
-    user = client_model
-    reservation = reservation_model
-    payment = payment_model
-    client.force_login(user)
-    url = reverse('payment_success', args=[reservation.pk])
-
-    # Act
-    client.get(url)
-    payment.refresh_from_db()
-
-    # Assert
-    assert payment.reservation.status == 'A'
 
 
 @pytest.mark.django_db

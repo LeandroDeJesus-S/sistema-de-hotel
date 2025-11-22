@@ -30,6 +30,9 @@ class AbsReservationRepository(Protocol):
         self, client_id: int, reservation_id: int
     ) -> Result[entities.Reservation]: ...
     def find_by_id(self, id: int) -> Result[entities.Reservation]: ...
+    def from_room(
+        self, room_id: int, occuped_only: bool = False
+    ) -> Result[list[entities.Reservation]]: ...
 
 
 class AbsBenefitRepository(Protocol):

@@ -1,0 +1,97 @@
+import io
+
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+
+from base.ports.pdf import AbsPDFGenerator
+from exc import Result
+from home.models import Hotel as HotelModel
+from payments.domain.entities import Payment
+from payments.models import Payment as PaymentModel
+from utils.support import entity_to_model
+
+
+class ReportLabPDFReceiptGenerator(AbsPDFGenerator):
+    """A PDF generator adapter that uses the ReportLab library."""
+
+    def generate(self, payment: Payment) -> Result[bytes]:
+        """Generates a payment receipt PDF using ReportLab.
+
+        Args:
+            payment: The payment object containing the data for the receipt.
+
+        Returns:
+            The generated PDF as bytes.
+        """
+        entity_result = entity_to_model(payment, PaymentModel)
+        if entity_result.is_err():
+            return Result.Err(
+                msg='Failed to convert payment entity to model',
+                src_error=entity_result.unwrap_err(),
+            )
+        payment_model = entity_result.unwrap()
+
+        try:
+            hotel = (
+                payment_model.reservation.room.hotel
+            )  # XXX: it may be a good idea add hotel to payment model to avoid nested queries
+
+            buffer = io.BytesIO()
+            y = A4[1] * 0.5
+            pagesize = (A4[0], y)
+            w, h = pagesize
+
+            pdf_canvas = canvas.Canvas(buffer, pagesize=pagesize)
+
+            self._draw_header(pdf_canvas, hotel, w, h)
+            self._draw_body(pdf_canvas, payment_model, h)
+
+            pdf_canvas.save()
+            buffer.seek(0)
+            return Result.Ok(buffer.getvalue())
+        except Exception as e:
+            return Result.Err(msg='Failed to generate PDF', src_error=e)
+
+    def _draw_header(  # noqa: PLR6301
+        self, pdf_canvas: canvas.Canvas, hotel: HotelModel, w: int, h: int
+    ) -> None:
+        """draw the logo, hotel name, and title of the pdf"""
+        if hotel.logo:
+            pdf_canvas.drawInlineImage(str(hotel.logo.path), 30, h - 40)
+
+        pdf_canvas.setFontSize(30)
+        pdf_canvas.drawString(65, h - 38, hotel.name)
+
+        pdf_canvas.setFontSize(20)
+        pdf_canvas.drawString(
+            w - 350,
+            h - 40,
+            'COMPROVANTE DE PAGAMENTO',
+            wordSpace=0.5,
+        )
+
+        pdf_canvas.line(30, h - 50, w - 30, h - 50)
+
+    def _draw_body(self, pdf_canvas: canvas.Canvas, payment: PaymentModel, h: float) -> None:
+        """draw the payment information into the body of the pdf"""
+        pdf_canvas.setFontSize(15)
+        initial_offset = 85.0
+        offset_y = initial_offset
+        for row in self._rows_list(payment):
+            pdf_canvas.drawString(70, h - offset_y, row)
+            offset_y += initial_offset * 0.5
+
+    def _rows_list(self, payment: PaymentModel) -> list[str]:  # noqa: PLR6301
+        """return all the rows of the pdf in list format"""
+        rows = [
+            f'Data de emissão: {payment.created_at.strftime("%h:%M:%S %d/%m/%Y")}',
+            f'Status: {payment.status}',
+            f'Pagador: {payment.reservation.client.complete_name}',
+            'Recebedor: HOTEL',
+            f'Check-in: {payment.reservation.checkin.strftime("%d/%m/%Y")}',
+            f'Check-out: {payment.reservation.checkout.strftime("%d/%m/%Y")}',
+            f'Classe: {payment.reservation.room.room_class}',
+            f'Quarto: Nº{payment.reservation.room.number}',
+            f'Total: {payment.reservation.formatted_price()}',
+        ]
+        return rows

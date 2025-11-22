@@ -1,5 +1,6 @@
 import io
-from datetime import date, datetime
+import logging
+from datetime import date, datetime, time, timedelta
 from functools import wraps
 from secrets import token_hex
 from typing import Type, TypeVar
@@ -12,6 +13,8 @@ from django.core.mail import EmailMessage
 from django.db import models
 from django.db.models.fields.files import ImageFieldFile
 from django.shortcuts import redirect
+from django.utils.translation import gettext as gt
+from django.utils.translation import gettext_lazy as gtl
 from PIL import Image
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
@@ -21,6 +24,7 @@ from clients.feedback_messages import Recaptcha
 from exc import Result
 from home.models import Contact, Hotel
 from payments.models import Payment
+from reservations.domain.entities import Reservation as ReservationEntity
 
 
 class PaymentPDFHandler:
@@ -140,7 +144,7 @@ def verify_captcha(captcha_resp) -> bool:
     Returns:
         bool: retorna True se o captcha é valido
     """
-    MIN_SCORE = 0.8
+    MIN_SCORE = 0.7
     data = {
         'response': captcha_resp,
         'secret': settings.G_RECAPTCHA_KEY_SECRET,
@@ -153,8 +157,9 @@ def verify_captcha(captcha_resp) -> bool:
         return False
 
     json_resp = response.json()
+    logging.getLogger('djangoLogger').debug(f'recaptcha resp: {json_resp}')
     success = json_resp.get('success', False)
-    good_score = json_resp.get('score', 0) > MIN_SCORE
+    good_score = json_resp.get('score', 0) >= MIN_SCORE
     is_valid = success and good_score
     return True if is_valid else False
 
@@ -253,7 +258,7 @@ def model_to_entity(model: M, entity_cls: Type[T]) -> Result[T]:
                 data[f.name] = to_dict(value)
             elif isinstance(value, ImageFieldFile):
                 data[f.name] = value.name if value else ''
-            elif isinstance(value, datetime):
+            elif isinstance(value, datetime) and value.time() == time(0, 0):
                 data[f.name] = value.date()
             elif value is None and f.get_internal_type() in {'CharField', 'TextField'}:
                 data[f.name] = ''
@@ -335,3 +340,45 @@ def model_validate(model: M) -> Result[M]:
         return Result.Ok(model)
     except ValidationError as e:
         return Result.Err(msg=str(e), src_error=e)
+
+
+def get_available_dates_message(reservations: list[ReservationEntity]) -> Result[str]:
+    """Returns a formatted string with the available dates for a room.
+
+    Args:
+        reservations (list[ReservationEntity]): A list of reservations **for a same room**.
+
+    Returns:
+        str: A formatted string with the available dates for a room.
+    """
+
+    def fmt_date(d):
+        return d.strftime('%d/%m/%Y')
+
+    msg_prefix = gt('Este quarto só está disponível para reserva apartir de')
+    msg: list[str] = []
+    lst: ReservationEntity | None = None
+    for reserva in reservations:
+        if lst is None:
+            lst = reserva
+            continue
+
+        if (reserva.checkin - lst.checkout).days >= 1:
+            start, end = (
+                fmt_date(lst.checkout),
+                fmt_date(reserva.checkin - timedelta(days=1)),
+            )
+            msg.append(
+                gtl('%(from_date)s a %(to_date)s') % {'from_date': start, 'to_date': end}
+            )
+
+        lst = reserva
+
+    if msg:
+        msg.append(msg_prefix)
+        msg.append(gtl('e %(date)s para frente.') % {'date': fmt_date(reserva.checkout)})
+        return Result.Ok(', '.join(msg))
+
+    msg.append(msg_prefix)
+    msg.append(gtl('%(fmt_date)s.') % {'fmt_date': fmt_date(reserva.checkout)})
+    return Result.Ok(' '.join(msg))

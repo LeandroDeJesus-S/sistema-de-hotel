@@ -1,11 +1,10 @@
-from pydantic import BaseModel
-
+from base.entity import BaseEntity
 from clients.domain.entities import Client
 from payments.domain.dtos import CheckoutSessionInputDTO
 from reservations.domain.entities import Reservation
 
 
-class CheckoutUseCaseInputDTO(BaseModel):
+class CheckoutUseCaseInputDTO(BaseEntity):
     """Data Transfer Object for initiating a checkout."""
 
     client: Client

@@ -81,30 +81,7 @@ def test_invalid_stay_duration_raises_validation_error(
     # Act & Assert
     with pytest.raises(ValidationError) as excinfo:
         reservation_model.full_clean()
-    assert any(str(error_message) in msg for msg in excinfo.value.messages)
-
-
-@pytest.mark.django_db
-def test_reserving_unavailable_room_raises_validation_error(client_model, room_model):
-    """
-    Tests if a ValidationError is raised when reserving an unavailable room.
-    """
-    # Arrange
-    room_model.available = False
-    room_model.save()
-    checkin = datetime.now().date() + timedelta(days=1)
-    checkout = checkin + timedelta(days=5)
-    reservation = Reservation(
-        client=client_model,
-        room=room_model,
-        checkin=checkin,
-        checkout=checkout,
-        amount=Decimal('500.00'),
-    )
-
-    # Act & Assert
-    with pytest.raises(ValidationError):
-        reservation.full_clean()
+    assert any(str(error_message) in msg for msg in excinfo.value.messages), excinfo.value.messages
 
 
 @pytest.mark.django_db

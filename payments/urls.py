@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import Checkout, payment_cancel, payment_success
+from .views import Checkout, payment_cancel, payment_success, stripe_webhook
 
 urlpatterns = [
     path('<int:reservation_pk>/', Checkout.as_view(), name='checkout'),
@@ -10,4 +10,5 @@ urlpatterns = [
         name='payment_success',
     ),
     path('cancel/<int:reservation_pk>/', payment_cancel, name='payment_cancel'),
+    path('webhook/', stripe_webhook, name='stripe_webhook'),
 ]

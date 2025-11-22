@@ -145,7 +145,7 @@ class Reservation(BaseEntity):
         observations: str
         amount: Decimal
         status: ReservationStatus
-        created_at: date
+        created_at: datetime
     """
 
     _messages = {
@@ -175,12 +175,6 @@ class Reservation(BaseEntity):
         return (self.checkout - self.checkin).days
 
     @model_validator(mode='after')
-    def validate_room(self):
-        if not self.id and not self.room.available:
-            raise ValueError(ReserveErrorMessages.UNAVAILABLE_ROOM)
-        return self
-
-    @model_validator(mode='after')
     def validate_dates(self):
         if self.id is None and self.checkin < date.today():
             raise ValueError(ReserveErrorMessages.INVALID_CHECKIN_DATE)
@@ -188,7 +182,7 @@ class Reservation(BaseEntity):
         if self.id is None and self.checkin > ReserveRules.checkin_anticipation_offset():
             raise ValueError(ReserveErrorMessages.INVALID_CHECKIN_ANTICIPATION)
 
-        if self.checkin >= self.checkout:
+        if self.checkin > self.checkout:
             raise ValueError(ReserveErrorMessages.INVALID_CHECKIN_DATE)
 
         stayed_days = (self.checkout - self.checkin).days

@@ -36,9 +36,9 @@ class BaseEntity(PydanticBaseModel):
             A Result tuple with the model instance or an Error.
         """
         try:
-            logger.debug(f'validating {data}')
+            # logger.debug(f'validating {data}')
             instance = cls.model_validate(data, from_attributes=True)
-            logger.debug(f'validated {instance}')
+            # logger.debug(f'validated {instance}')
             return Result.Ok(instance)
         except ValidationError as e:
             logger.debug(e, exc_info=True)

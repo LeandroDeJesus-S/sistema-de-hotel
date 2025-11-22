@@ -17,7 +17,6 @@ from clients.infra.validators import PasswordValidator
 from .feedback_messages import ClientErrorMessages, ContactErrorMessages
 from .infra.validators import (
     BirthDateValidator,
-    DjangoValidatorAdapter,
     PhoneNumberValidator,
     UsernameValidator,
 )
@@ -29,7 +28,7 @@ class Client(AbstractUser):
     """model que representa o usuário final"""
 
     _PW_VALIDATORS = [
-        PasswordValidator([validate_password]),
+        PasswordValidator([validate_password], raise_exc=True).validate,
     ]
 
     username = models.CharField(
@@ -37,9 +36,23 @@ class Client(AbstractUser):
         max_length=ClientRules.USERNAME_MAX_SIZE,
         unique=True,
         validators=[
-            DjangoValidatorAdapter(
-                UsernameValidator(dj_extra=[UnicodeUsernameValidator()]),
+            MinLengthValidator(
+                ClientRules.USERNAME_MIN_SIZE,
+                ClientErrorMessages.INVALID_USERNAME_LEN
+                % {
+                    'min_len': ClientRules.USERNAME_MIN_SIZE,
+                    'max_len': ClientRules.USERNAME_MAX_SIZE,
+                },
             ),
+            MaxLengthValidator(
+                ClientRules.USERNAME_MAX_SIZE,
+                ClientErrorMessages.INVALID_USERNAME_LEN
+                % {
+                    'min_len': ClientRules.USERNAME_MIN_SIZE,
+                    'max_len': ClientRules.USERNAME_MAX_SIZE,
+                },
+            ),
+            UsernameValidator(dj_extra=[UnicodeUsernameValidator()], raise_exc=True).validate,
         ],
         error_messages={
             'blank': ClientErrorMessages.NOT_PROVIDED_USERNAME,
@@ -93,7 +106,7 @@ class Client(AbstractUser):
         blank=False,
         null=False,
         validators=[
-            DjangoValidatorAdapter(BirthDateValidator()),
+            BirthDateValidator(raise_exc=True).validate,
         ],
     )
     email = models.EmailField(
@@ -119,7 +132,7 @@ class Client(AbstractUser):
         blank=False,
         unique=True,
         validators=[
-            DjangoValidatorAdapter(PhoneNumberValidator()),
+            PhoneNumberValidator(raise_exc=True).validate,
         ],
         error_messages={
             'blank': ClientErrorMessages.NOT_PROVIDED_PHONE,
@@ -147,7 +160,7 @@ class Client(AbstractUser):
     def clean(self):
         super().clean()
         for pw_validator in self._PW_VALIDATORS:
-            result = pw_validator.validate(self.password)
+            result = pw_validator(self.password)
             if result.is_err():
                 raise ValidationError(result.unwrap_err().msg)
 

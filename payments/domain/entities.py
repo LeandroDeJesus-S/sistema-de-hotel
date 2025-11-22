@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
 
@@ -16,6 +16,7 @@ class PaymentStatus(str, Enum):
     COMPLETED = 'completed'
     FAILED = 'failed'
     REFUNDED = 'refunded'
+    CANCELLED = 'cancelled'
 
 
 class PaymentMethodType(str, Enum):
@@ -53,8 +54,8 @@ class Payment(BaseEntity):
     gateway_payment_intent_id: str | None = None
     gateway_charge_id: str | None = None
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_completed(self) -> bool:
         """Checks if the payment was successfully completed."""

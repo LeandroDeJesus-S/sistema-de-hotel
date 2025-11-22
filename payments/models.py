@@ -8,6 +8,7 @@ from reservations.models import Reservation
 from .error_messages import PaymentErrorMessages
 
 
+# TODO: there is no way, I will need remodeling thins or it will be a mess
 class Payment(models.Model):
     """
     Stores a single payment transaction, tracking its status and key

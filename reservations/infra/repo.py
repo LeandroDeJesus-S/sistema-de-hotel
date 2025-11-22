@@ -111,11 +111,14 @@ class RoomRepository(AbsRoomRepository):
         # HACK: should I keep m2m logic here? I don't think so
 
         # Extract M2M data before converting
-        benefits_data = room.benefits.copy()
+        # benefits_data = room.benefits.copy()
 
         model_instance_result = entity_to_model(room, self._modelclass)
         if model_instance_result.is_err():
-            return model_instance_result
+            return Result.Err(
+                msg='Failed to convert room entity to model',
+                src_error=model_instance_result.unwrap_err(),
+            )
 
         model_instance = model_instance_result.unwrap()
         if not model_instance:
@@ -126,9 +129,9 @@ class RoomRepository(AbsRoomRepository):
             model_instance.save()
 
             # Handle M2M relationship
-            if benefits_data:
-                benefit_ids = [b.id for b in benefits_data if b.id is not None]
-                model_instance.benefits.set(benefit_ids)
+            # if benefits_data:
+            #     benefit_ids = [b.id for b in benefits_data if b.id is not None]
+            #     model_instance.benefits.set(benefit_ids)
 
         except ValidationError as e:
             return Result.Err(msg='Invalid room', src_error=e)
@@ -177,7 +180,7 @@ class ReservationRepository(AbsReservationRepository):
         try:
             exists = self._modelclass.objects.filter(
                 room_id=room_id,
-                checkout__gte=check_in,
+                checkout__gt=check_in,
                 checkin__lt=check_out,
                 status__in=[
                     ReservationStatusEnum.ACTIVE.value,
@@ -258,3 +261,16 @@ class ReservationRepository(AbsReservationRepository):
             return Result.Err('Reservation not found')
 
         return model_to_entity(reservation, self._entityclass)
+
+    def from_room(
+        self, room_id: int, occuped_only: bool = False
+    ) -> Result[list[entities.Reservation]]:
+        q: dict[str, object] = {'room_id': room_id}
+        if occuped_only:
+            q['status__in'] = ['A', 'S']
+
+        reservations = self._modelclass.objects.filter(**q)
+        if reservations.count() == 0:
+            return Result.Err('No reservations found')
+
+        return models_to_entities(reservations, self._entityclass)

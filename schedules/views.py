@@ -17,7 +17,7 @@ from django_q.tasks import Schedule, Task, async_task
 from payments.error_messages import CheckoutMessages
 from payments.models import Payment
 from payments.stripe_payment import ReservationSessionBasedPaymentCreator
-from payments.tasks import create_payment_pdf
+from payments.tasks import send_payment_confirmation
 from reservations.decorators import check_reservation_ownership
 from reservations.mixins import LoginRequired
 from reservations.models import Reservation, Room
@@ -182,9 +182,9 @@ def schedule_success(request: HttpRequest, reservation_pk: int):
         )
         logger.info(f'schedule {schedule_name} created')
 
-    task_name = f'create_payment_pdf_{payment.pk}'
+    task_name = f'send_payment_confirmation_{payment.pk}'
     if not Task.objects.filter(name=task_name).exists():
-        async_task(create_payment_pdf, payment, task_name=task_name)
+        async_task(send_payment_confirmation, payment.pk, task_name=task_name)
         logger.info(f'task {task_name} created')
 
     logger.debug('rendering schedule_success.html')

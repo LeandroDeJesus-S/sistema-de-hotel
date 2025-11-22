@@ -69,6 +69,19 @@ class AbsPaymentsRepository(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def get_by_id(self, payment_id: int) -> Result[Payment]:
+        """
+        Gets a payment by its ID.
+
+        Args:
+            payment_id: The ID of the payment.
+
+        Returns:
+            A Result containing the payment entity or None if not found, or an Error on failure
+        """
+        raise NotImplementedError
+
 
 WebhookIdent = TypeVar('WebhookIdent')
 
@@ -90,5 +103,13 @@ class PaymentWebhookHandler(Protocol, Generic[WebhookIdent]):
     def with_events(self, *event: WebhookEvent[WebhookIdent]) -> Result[None]:
         """Registers a list of events to be handled."""
 
-    def handle_webhook(self, event_ident: WebhookIdent, data: dict[str, Any]) -> Result[None]:
+    def handle_webhook(self, data: dict[str, Any]) -> Result[None]:
         """Handles a webhook event dispatching by its identifier."""
+
+
+class WebhookSignatureError(Exception):
+    pass
+
+
+class WebhookPayloadError(Exception):
+    pass

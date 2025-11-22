@@ -1,7 +1,12 @@
-from typing import Any
+import json
+import logging
+from datetime import datetime, time
+from typing import Any, Callable
 
 import stripe
+from django.conf import settings
 
+from base.ports.queue import TaskQueuer
 from exc import Result
 from payments.domain.dtos import CheckoutResultDTO, CheckoutSessionInputDTO
 from payments.domain.entities import PaymentStatus
@@ -10,7 +15,10 @@ from payments.domain.ports import (
     AbsSessionBasedPayment,
     PaymentWebhookHandler,
     WebhookEvent,
-    WebhookIdent,
+)
+from reservations.application.usecases import (
+    ActivateReservationUseCase,
+    ScheduleReservationUseCase,
 )
 from reservations.domain.value_objects import ReservationStatusEnum
 
@@ -20,6 +28,7 @@ class StripeCheckoutSession(AbsSessionBasedPayment):
 
     def __init__(self, stripe_api_key: str):
         self._stripe_api_key = stripe_api_key
+        self._logger = logging.getLogger('djangoLogger')
 
     def create_checkout_session(
         self, dto: CheckoutSessionInputDTO
@@ -55,45 +64,75 @@ class StripeCheckoutSession(AbsSessionBasedPayment):
             }
 
             session = stripe.checkout.Session.create(**params, api_key=self._stripe_api_key)
-            if not isinstance(session.customer, stripe.Customer):
-                return Result.Err('Failed to create Stripe customer')
-
             result = CheckoutResultDTO.safe_create(
                 session_id=session.id,
                 session_url=session.url or '',
-                client_id=session.customer.id,
+                client_id=session.customer or '',
             )
             if result.is_err():
                 return Result.Err(
                     'Failed to create Stripe session', src_error=result.unwrap_err()
                 )
+
+            self._logger.debug(f'payment session successfully created: {session}')
             return Result.Ok(result.unwrap())
 
         except Exception as e:
             return Result.Err('Failed to create Stripe session', src_error=e)
 
 
-class StripePaymentWebhookHandler(PaymentWebhookHandler[WebhookIdent]):
+class WebhookSignatureError(Exception):
+    pass
+
+
+class WebhookPayloadError(Exception):
+    pass
+
+
+class StripePaymentWebhookHandler(PaymentWebhookHandler[str]):
     """Class responsible for handling payment webhooks from stripe."""
 
     def __init__(self) -> None:
-        self.events: dict[WebhookIdent, WebhookEvent[WebhookIdent]] = {}
+        self.events: dict[str, WebhookEvent[str]] = {}
+        self.logger = logging.getLogger('djangoLogger')
 
-    def with_events(self, *events: WebhookEvent[WebhookIdent]) -> Result[None]:
+    def with_events(self, *events: WebhookEvent[str]) -> Result[None]:
         """Registers a list of events to be handled."""
         for event in events:
             self.events[event.ident] = event
         return Result.Ok(None)
 
-    def handle_webhook(self, event_ident: WebhookIdent, data: dict[str, Any]) -> Result[None]:
+    def handle_webhook(self, data: dict[str, Any]) -> Result[None]:
         """Handles a webhook event dispatching by its identifier."""
-        if event_ident not in self.events:
-            return Result.Err(f'Event {event_ident} not found')
+        payload = data.get('request_body', {})
+        endpoint_secret = getattr(settings, 'STRIPE_WEBHOOK_SECRET', None)
 
-        event = self.events[event_ident]
-        result = event.handle(data)
+        try:
+            stripe_event = stripe.Event.construct_from(json.loads(payload), stripe.api_key)
+        except ValueError as e:
+            return Result.Err('invalid payload', src_error=WebhookPayloadError(str(e)))
+
+        if endpoint_secret:
+            sig_header = data.get('stripe_signature_header', '')
+            try:
+                stripe_event = stripe.Webhook.construct_event(
+                    payload, sig_header, endpoint_secret
+                )
+            except stripe.SignatureVerificationError as e:
+                self.logger.warn('Webhook signature verification failed.', exc_info=e)
+                return Result.Err('invalid signature', src_error=WebhookSignatureError(str(e)))
+
+        event = self.events.get(str(stripe_event.type))
+        if not event:
+            return Result.Ok(None)
+
+        result = event.handle(stripe_event.data.object)
 
         if result.is_err():
+            self.logger.error(
+                'Failed to handle webhook event',
+                exc_info=result.unwrap_err(),
+            )
             return Result.Err(
                 'Failed to handle webhook event',
                 src_error=result.unwrap_err(),
@@ -107,39 +146,94 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
 
     ident = 'checkout.session.completed'
 
-    def __init__(self, payments_repo: AbsPaymentsRepository):
+    def __init__(  # noqa: PLR0913, PLR0917
+        self,
+        task_queue: TaskQueuer,
+        payments_repo: AbsPaymentsRepository,
+        send_configuration_task: Callable[..., Any],
+        activate_reservation_usecase: ActivateReservationUseCase,
+        release_reservation_task: Callable[[int], Any],
+        schedule_reservation_usecase: ScheduleReservationUseCase,
+    ):
+        self._task_queue = task_queue
         self._payments_repo = payments_repo
+        self._send_confirmation_task = send_configuration_task
+        self._activate_reservation_usecase = activate_reservation_usecase
+        self._release_reservation_task = release_reservation_task
+        self._schedule_reservation_usecase = schedule_reservation_usecase
 
-    def handle(self, data: dict[str, Any]) -> Result[None]:
+        self._logger = logging.getLogger('djangoLogger')
+
+    def handle(self, data: dict[str, Any]) -> Result[None]:  # noqa: PLR0911
         """
         Updates the payment and reservation status upon successful checkout.
+        It expects receive a stipre Charge object from the gateway.
         """
+        payment_id = data.get('metadata', {}).get('internal_payment_id')
         payment_intent_id = data.get('payment_intent')
-        if not payment_intent_id:
-            return Result.Err('Payment intent ID not found in webhook data')
 
-        payment_result = self._payments_repo.get_by_gateway_payment_intent_id(
-            payment_intent_id
-        )
+        if not (payment_id and payment_intent_id):
+            return Result.Err('Missing payment or payment intent ID')
+
+        try:
+            pi = stripe.PaymentIntent.retrieve(
+                payment_intent_id, api_key=settings.STRIPE_API_KEY_SECRET
+            )
+        except stripe.StripeError as e:
+            return Result.Err('Failed to retrieve payment intent', src_error=e)
+
+        if not pi.latest_charge:
+            return Result.Err('Payment intent has no charge')
+
+        payment_result = self._payments_repo.get_by_id(payment_id)
         if payment_result.is_err():
             return Result.Err(
-                'Failed to retrieve payment by payment intent ID',
-                src_error=payment_result.unwrap_err(),
+                'Failed to retrieve payment by payment', src_error=payment_result.unwrap_err()
             )
 
         payment = payment_result.unwrap()
         payment.status = PaymentStatus.COMPLETED
-        payment.gateway_charge_id = data.get('latest_charge')
-        if payment.reservation:
-            payment.reservation.status = ReservationStatusEnum.SCHEDULED
+        payment.gateway_charge_id = str(pi.latest_charge)
+        payment.gateway_payment_intent_id = payment_intent_id
+        payment.gateway_customer_id = str(pi.customer)
+        self._payments_repo.update(payment)
 
-        update_result = self._payments_repo.update(payment)
-        if update_result.is_err():
-            return Result.Err(
-                'Failed to update payment and reservation status',
-                src_error=update_result.unwrap_err(),
+        run_at = datetime.combine(payment.reservation.checkout, time(0, 0))
+        if payment.reservation.room.available:
+            self._logger.info(f'Reservation {payment.reservation.id} activation started')
+            res = self._activate_reservation_usecase(payment.reservation)
+            if res.is_err():
+                self._logger.error(f'Failed to activate reservation {payment.reservation.id}')
+                # return Result.Err('Failed to activate reservation', src_error=res.unwrap_err())  # noqa: E501
+
+            self._task_queue.queue_task(self._send_confirmation_task, (payment.id,))
+            self._task_queue.schedule_task(
+                func_path=self._release_reservation_task,
+                run_at=run_at,
+                args=(payment.reservation.id,),
             )
+            return Result.Ok(None)
 
+        self._logger.info(f'Reservation {payment.reservation.id} scheduling started')
+        schedule_result = self._schedule_reservation_usecase(payment.reservation)
+        if schedule_result.is_err():
+            self._logger.error(
+                f'Failed to schedule reservation {payment.reservation.id}',
+                exc_info=schedule_result.unwrap_err(),
+            )
+            # XXX: It might make sense send the the confirmation email even though something
+            # goes wrong on schedule
+            #
+            # return Result.Err(
+            #     'Failed to schedule reservation',
+            #     src_error=schedule_result.unwrap_err(),
+            # )
+        self._task_queue.queue_task(self._send_confirmation_task, (payment.id,))
+        self._task_queue.schedule_task(
+            func_path=self._release_reservation_task,
+            run_at=run_at,
+            args=(payment.reservation.id,),
+        )
         return Result.Ok(None)
 
 
@@ -169,7 +263,7 @@ class CheckoutExpiredEvent(WebhookEvent[str]):
             )
 
         payment = payment_result.unwrap()
-        payment.status = PaymentStatus.FAILED
+        payment.status = PaymentStatus.CANCELLED
         if payment.reservation:
             payment.reservation.status = ReservationStatusEnum.CANCELLED
 
@@ -183,7 +277,7 @@ class CheckoutExpiredEvent(WebhookEvent[str]):
         return Result.Ok(None)
 
 
-class PaymentRefundEvent(WebhookEvent[str]):
+class PaymentChargeRefundedEvent(WebhookEvent[str]):
     """Handles the event when a user refunds a payment."""
 
     ident = 'charge.refunded'
@@ -218,4 +312,18 @@ class PaymentRefundEvent(WebhookEvent[str]):
                 src_error=update_result.unwrap_err(),
             )
 
+        return Result.Ok(None)
+
+
+class CheckoutSessionCreatedEvent(WebhookEvent[str]):
+    """Handles the event when a checkout session is created."""
+
+    ident = 'checkout.session.created'
+
+    def __init__(self) -> None:
+        pass
+
+    def handle(self, data: dict[str, Any]) -> Result[None]:  # noqa: PLR6301
+        print('checkout session created')
+        print(data)
         return Result.Ok(None)

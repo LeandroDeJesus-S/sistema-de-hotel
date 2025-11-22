@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 
 
 class TaskQueuer(Protocol):
@@ -9,7 +9,7 @@ class TaskQueuer(Protocol):
 
     def schedule_task(
         self,
-        func_path: str,
+        func_path: str | Callable[[Any], Any],
         run_at: datetime,
         args: tuple,
         name: str | None = None,
@@ -30,12 +30,14 @@ class TaskQueuer(Protocol):
         """
         ...
 
-    def queue_task(self, func_path: str, args: tuple, name: str | None = None) -> Any:
+    def queue_task(
+        self, func_path: str | Callable[[Any], Any], args: tuple, name: str | None = None
+    ) -> Any:
         """
         Queues a task to run immediately.
 
         Args:
-            func_path: The path to the function to execute.
+            func_path: The path or callable to execute.
             args: The arguments to pass to the function.
             name: An optional name for the task.
 
