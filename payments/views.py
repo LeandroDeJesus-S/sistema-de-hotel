@@ -27,7 +27,7 @@ from reservations.application.usecases import (
 )
 from reservations.decorators import check_reservation_ownership
 from reservations.infra.repo import ReservationRepository, RoomRepository
-from reservations.infra.tasks import activate_reservation_task, release_reservation_task
+from reservations.infra.tasks import release_reservation_task
 from reservations.models import Reservation
 from utils.adapters.email import DjangoEmailSender
 from utils.adapters.pdf import ReportLabPDFReceiptGenerator
@@ -35,7 +35,7 @@ from utils.adapters.queue import DjangoQTaskQueuer
 from utils.adapters.unit_of_work import UnitOfWork
 from utils.support import captcha_required
 
-from .error_messages import CheckoutMessages, PaymentCancelMessages
+from .error_messages import CheckoutMessages
 from .infra.adapters import (
     CheckoutExpiredEvent,
     CheckoutSessionCreatedEvent,
@@ -58,7 +58,6 @@ confirmation_usecase = SendPaymentConfirmationUseCase(mailer, pdf_generator)
 activate_reservatoin_usecase = ActivateReservationUseCase(reservation_repo, room_repo, uow)
 schedule_reservation_usecase = ScheduleReservationUseCase(
     reservation_repo,
-    activate_reservation_task,
     uow,
     task_queuer,
 )
@@ -169,25 +168,25 @@ def payment_cancel(request: HttpRequest, reservation_pk: int):
     do pagamento para cancelado e libera o quarto"""
     logger = logging.getLogger('djangoLogger')
     logger.info(f'reservation {reservation_pk} received to cancel')
-    try:
-        payment = get_object_or_404(Payment, reservation__pk=reservation_pk)
-        if payment.status != Payment.Status.FAILED:
-            payment.reservation.status = Reservation.Status.CANCELLED
-            payment.reservation.active = False
-            payment.reservation.room.available = True
-            payment.reservation.room.save()
-            payment.reservation.save()
-
-            payment.status = Payment.Status.FAILED
-            payment.save()
-            logger.info(
-                f'payment {payment.pk} for {payment.reservation.pk} successfully canceled'
-            )
-
-    except Exception as exc:
-        logger.critical(f'unexpected error reverting reservation {reservation_pk}: {str(exc)}')
-        messages.error(request, PaymentCancelMessages.UNEXPECTED_ERROR)
-        return redirect('rooms')
+    # try:
+    #     payment = get_object_or_404(Payment, reservation__pk=reservation_pk)
+    #     if payment.status != Payment.Status.FAILED:
+    #         payment.reservation.status = Reservation.Status.CANCELLED
+    #         payment.reservation.active = False
+    #         payment.reservation.room.available = True
+    #         payment.reservation.room.save()
+    #         payment.reservation.save()
+    #
+    #         payment.status = Payment.Status.FAILED
+    #         payment.save()
+    #         logger.info(
+    #             f'payment {payment.pk} for {payment.reservation.pk} successfully canceled'
+    #         )
+    #
+    # except Exception as exc:
+    #     logger.critical(f'unexpected error reverting reservation {reservation_pk}: {str(exc)}')  # noqa: E501
+    #     messages.error(request, PaymentCancelMessages.UNEXPECTED_ERROR)
+    #     return redirect('rooms')
 
     return render(request, 'cancel.html')
 
@@ -210,7 +209,7 @@ def stripe_webhook(request: HttpRequest):
             release_reservation_task,
             schedule_reservation_usecase,
         ),
-        CheckoutExpiredEvent(payment_repo),
+        CheckoutExpiredEvent(payment_repo, reservation_repo),
         CheckoutSessionCreatedEvent(),
     ).unwrap()  # XXX: unwrap is safe here, since it never returns an error
 

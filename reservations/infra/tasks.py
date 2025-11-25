@@ -139,7 +139,6 @@ def schedule_reservation_task(reservation_id: int) -> Result[None]:
 
     usecase = ScheduleReservationUseCase(
         reservation_repo=reservation_repo,
-        activate_reservation_task=activate_reservation_task,
         unit_of_work=unit_of_work,
         task_queuer=task_queuer,
     )

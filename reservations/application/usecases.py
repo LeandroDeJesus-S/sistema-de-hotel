@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, time
 from decimal import Decimal
-from typing import Any, Callable, Dict
+from typing import Dict
 
 from base.ports.queue import TaskQueuer
 from base.ports.unit_of_work import AbsUnitOfWork
@@ -219,12 +219,10 @@ class ScheduleReservationUseCase:
     def __init__(
         self,
         reservation_repo: AbsReservationRepository,
-        activate_reservation_task: Callable[[int], Any],
         unit_of_work: AbsUnitOfWork,
         task_queuer: TaskQueuer,
     ) -> None:
         self._reservation_repo = reservation_repo
-        self._activate_reservation_task = activate_reservation_task
         self._unit_of_work = unit_of_work
         self._task_queuer = task_queuer
         self._logger = logging.getLogger('djangoLogger')
@@ -262,7 +260,7 @@ class ScheduleReservationUseCase:
             activation_time = datetime.combine(reservation.checkin, time(0, DELTA_MINS))
             task_name = f'activate_reservation_{reservation.id}'
             self._task_queuer.schedule_task(
-                func_path=self._activate_reservation_task,
+                func_path='reservations.infra.tasks.activate_reservation_task',
                 run_at=activation_time,
                 args=(reservation.id,),
                 name=task_name,

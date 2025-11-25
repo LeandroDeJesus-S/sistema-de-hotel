@@ -20,6 +20,7 @@ class Payment(models.Model):
         COMPLETED = 'completed', _('Completed')
         FAILED = 'failed', _('Failed')
         REFUNDED = 'refunded', _('Refunded')
+        CANCELLED = 'cancelled', _('Cancelled')
 
     class MethodType(models.TextChoices):
         CREDIT_CARD = 'credit_card', _('Credit Card')

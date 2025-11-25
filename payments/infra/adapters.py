@@ -20,6 +20,7 @@ from reservations.application.usecases import (
     ActivateReservationUseCase,
     ScheduleReservationUseCase,
 )
+from reservations.domain.repo import AbsReservationRepository
 from reservations.domain.value_objects import ReservationStatusEnum
 
 
@@ -119,7 +120,7 @@ class StripePaymentWebhookHandler(PaymentWebhookHandler[str]):
                     payload, sig_header, endpoint_secret
                 )
             except stripe.SignatureVerificationError as e:
-                self.logger.warn('Webhook signature verification failed.', exc_info=e)
+                self.logger.warning('Webhook signature verification failed.', exc_info=e)
                 return Result.Err('invalid signature', src_error=WebhookSignatureError(str(e)))
 
         event = self.events.get(str(stripe_event.type))
@@ -169,6 +170,8 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
         Updates the payment and reservation status upon successful checkout.
         It expects receive a stipre Charge object from the gateway.
         """
+        self._logger.debug(f'[{self.ident}] {data}')
+
         payment_id = data.get('metadata', {}).get('internal_payment_id')
         payment_intent_id = data.get('payment_intent')
 
@@ -199,6 +202,7 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
         self._payments_repo.update(payment)
 
         run_at = datetime.combine(payment.reservation.checkout, time(0, 0))
+        # XXX: It might make sense send the the confirmation email even though something went wrong on schedule  # noqa: E501
         if payment.reservation.room.available:
             self._logger.info(f'Reservation {payment.reservation.id} activation started')
             res = self._activate_reservation_usecase(payment.reservation)
@@ -206,11 +210,16 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
                 self._logger.error(f'Failed to activate reservation {payment.reservation.id}')
                 # return Result.Err('Failed to activate reservation', src_error=res.unwrap_err())  # noqa: E501
 
-            self._task_queue.queue_task(self._send_confirmation_task, (payment.id,))
+            self._task_queue.queue_task(
+                'payments.infra.tasks.send_payment_confirmation',
+                (payment.id,),
+                name=f'send_payment_confirmation_{payment.id}',
+            )
             self._task_queue.schedule_task(
-                func_path=self._release_reservation_task,
+                func_path='reservations.infra.tasks.release_reservation_task',
                 run_at=run_at,
                 args=(payment.reservation.id,),
+                name=f'release_reservation_{payment.reservation.id}',
             )
             return Result.Ok(None)
 
@@ -221,18 +230,21 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
                 f'Failed to schedule reservation {payment.reservation.id}',
                 exc_info=schedule_result.unwrap_err(),
             )
-            # XXX: It might make sense send the the confirmation email even though something
-            # goes wrong on schedule
             #
             # return Result.Err(
             #     'Failed to schedule reservation',
             #     src_error=schedule_result.unwrap_err(),
             # )
-        self._task_queue.queue_task(self._send_confirmation_task, (payment.id,))
+        self._task_queue.queue_task(
+            self._send_confirmation_task,
+            (payment.id,),
+            name=f'send_payment_confirmation_{payment.id}',
+        )
         self._task_queue.schedule_task(
-            func_path=self._release_reservation_task,
+            func_path='reservations.infra.tasks.release_reservation_task',
             run_at=run_at,
             args=(payment.reservation.id,),
+            name=f'release_reservation_{payment.reservation.id}',
         )
         return Result.Ok(None)
 
@@ -242,20 +254,21 @@ class CheckoutExpiredEvent(WebhookEvent[str]):
 
     ident = 'checkout.session.expired'
 
-    def __init__(self, payments_repo: AbsPaymentsRepository):
+    def __init__(
+        self, payments_repo: AbsPaymentsRepository, reservation_repo: AbsReservationRepository
+    ):
         self._payments_repo = payments_repo
+        self._reservation_repo = reservation_repo
 
     def handle(self, data: dict[str, Any]) -> Result[None]:
         """
         Updates the payment and reservation status to cancelled.
         """
-        payment_intent_id = data.get('payment_intent')
-        if not payment_intent_id:
+        payment_id = data.get('metadata', {}).get('internal_payment_id')
+        if not payment_id:
             return Result.Err('Payment intent ID not found in webhook data')
 
-        payment_result = self._payments_repo.get_by_gateway_payment_intent_id(
-            payment_intent_id
-        )
+        payment_result = self._payments_repo.get_by_id(payment_id)
         if payment_result.is_err():
             return Result.Err(
                 'Failed to retrieve payment by payment intent ID',
@@ -266,6 +279,7 @@ class CheckoutExpiredEvent(WebhookEvent[str]):
         payment.status = PaymentStatus.CANCELLED
         if payment.reservation:
             payment.reservation.status = ReservationStatusEnum.CANCELLED
+            self._reservation_repo.save(payment.reservation)
 
         update_result = self._payments_repo.update(payment)
         if update_result.is_err():
