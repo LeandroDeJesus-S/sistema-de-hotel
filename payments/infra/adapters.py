@@ -187,18 +187,10 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
         self._logger.debug(f'[{self.ident}] {data}')
 
         payment_id = data.get('metadata', {}).get('internal_payment_id')
-        session_id = data.get('id')
-
-        if not (payment_id and session_id):
-            return Result.Err('Missing payment or session ID')
+        pi_id = data.get('payment_intent', '')
 
         try:
-            session = stripe.checkout.Session.retrieve(
-                session_id, api_key=settings.STRIPE_API_KEY_SECRET
-            )
-            pi = stripe.PaymentIntent.retrieve(
-                session.payment_intent, api_key=settings.STRIPE_API_KEY_SECRET
-            )
+            pi = stripe.PaymentIntent.retrieve(pi_id, api_key=settings.STRIPE_API_KEY_SECRET)
         except stripe.StripeError as e:
             return Result.Err('Failed to retrieve payment intent', src_error=e)
 
@@ -216,7 +208,6 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
         payment.gateway_charge_id = str(pi.latest_charge)
         payment.gateway_payment_intent_id = pi.id
         payment.gateway_customer_id = str(pi.customer)
-        payment.gateway_payment_session_id = session_id
         self._payments_repo.update(payment)
 
         run_at = datetime.combine(

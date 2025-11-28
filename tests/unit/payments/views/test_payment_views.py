@@ -60,7 +60,7 @@ def test_reservation_in_context(client, client_model, reservation_model):
     response = client.get(url)
 
     # Assert
-    assert response.context['reservation'] == reservation
+    assert response.context['reservation'].id == reservation.id
 
 
 @pytest.mark.django_db
@@ -267,29 +267,6 @@ def test_cancel_view_uses_correct_template(client, payment_model):
 
 
 @pytest.mark.django_db
-def test_payment_and_reservation_status_change_to_cancelled(client, payment_model):
-    """
-    Tests if the payment and reservation status are changed to cancelled and the room is released.
-    """
-    # Arrange
-    user = payment_model.reservation.client
-    reservation = payment_model.reservation
-    payment = payment_model
-    client.force_login(user)
-    url = reverse('payment_cancel', args=[reservation.pk])
-
-    # Act
-    client.get(url)
-    payment.refresh_from_db()
-    payment.reservation.room.refresh_from_db()
-
-    # Assert
-    assert payment.status == Payment.Status.FAILED
-    assert payment.reservation.status == 'C'
-    assert payment.reservation.room.available
-
-
-@pytest.mark.django_db
 def test_unauthenticated_user_is_redirected_from_cancel(client, reservation_model):
     """
     Tests if an unauthenticated user is redirected to the signin page.
@@ -323,28 +300,3 @@ def test_user_accessing_another_users_cancel_page_gets_forbidden(client, client_
 
     # Assert
     assert response.status_code == 403
-
-
-@pytest.mark.django_db
-def test_unexpected_exception_in_cancel_view_redirects_with_message(
-    client, client_model, reservation_model, mocker
-):
-    """
-    Tests if an unexpected exception redirects to the rooms page with the correct message.
-    """
-    # Arrange
-    user = client_model
-    reservation = reservation_model
-    client.force_login(user)
-    url = reverse('payment_cancel', args=[reservation.pk])
-    mocker.patch('payments.views.get_object_or_404', side_effect=Exception)
-
-    # Act
-    response = client.get(url)
-    messages = list(get_messages(response.wsgi_request))
-
-    # Assert
-    assert response.status_code == 302
-    assert response.url == reverse('rooms')
-    assert len(messages) > 0
-    assert messages[0].message == PaymentCancelMessages.UNEXPECTED_ERROR

@@ -90,12 +90,12 @@ class Checkout(LoginRequiredMixin, View):
         self.logger = logging.getLogger('djangoLogger')
 
     def get(self, request: HttpRequest, reservation_pk: int, *args, **kwargs):
-        reservation = reservation_repo.find_by_id(reservation_pk)
-        if reservation.is_err():
+        reservation_res = reservation_repo.find_by_id(reservation_pk)
+        if reservation_res.is_err():
             messages.error(request, 'invalid operation')
             return redirect(reverse('rooms'))
 
-        reservation = reservation.unwrap()
+        reservation = reservation_res.unwrap()
         self.logger.debug(f'Rendering {self.template_name}')
         return render(
             request, self.template_name, {'reservation': reservation, **RECAPTCHA_CTX}
