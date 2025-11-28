@@ -33,6 +33,9 @@ class AbsReservationRepository(Protocol):
     def from_room(
         self, room_id: int, occuped_only: bool = False
     ) -> Result[list[entities.Reservation]]: ...
+    def fetch_pending(
+        self, client_id: int, room_id: int, check_in: date, check_out: date
+    ) -> Result[entities.Reservation]: ...
 
 
 class AbsBenefitRepository(Protocol):

@@ -64,8 +64,9 @@ schedule_reservation_usecase = ScheduleReservationUseCase(
 release_reservation_usecase = ReleaseReservationUseCase(
     room_repo, reservation_repo, payment_repo, uow
 )
+payment_gateway = StripeCheckoutSession(settings.STRIPE_API_KEY_SECRET)
 svc = PaymentService(
-    payment_gateway=StripeCheckoutSession(settings.STRIPE_API_KEY_SECRET),
+    payment_gateway=payment_gateway,
     payment_repo=payment_repo,
     uow=uow,
     logger=logging.getLogger('djangoLogger'),
@@ -89,7 +90,12 @@ class Checkout(LoginRequiredMixin, View):
         self.logger = logging.getLogger('djangoLogger')
 
     def get(self, request: HttpRequest, reservation_pk: int, *args, **kwargs):
-        reservation = get_object_or_404(Reservation, pk__exact=reservation_pk)
+        reservation = reservation_repo.find_by_id(reservation_pk)
+        if reservation.is_err():
+            messages.error(request, 'invalid operation')
+            return redirect(reverse('rooms'))
+
+        reservation = reservation.unwrap()
         self.logger.debug(f'Rendering {self.template_name}')
         return render(
             request, self.template_name, {'reservation': reservation, **RECAPTCHA_CTX}
@@ -98,7 +104,9 @@ class Checkout(LoginRequiredMixin, View):
     def post(self, request: HttpRequest, reservation_pk: int, *args, **kwargs):
         def _on_err(err):
             messages.error(request, CheckoutMessages.PAYMENT_FAIL)
-            self.logger.critical('Checkout use case failed', exc_info=err.src_error)
+            self.logger.critical(
+                'Checkout use case failed: %s', str(err), exc_info=err.src_error
+            )
             return redirect(request.META.get('HTTP_REFERER', reverse('rooms')))
 
         def _on_ok(result):
@@ -130,7 +138,6 @@ class Checkout(LoginRequiredMixin, View):
         return super().dispatch(request, *args, **kwargs)
 
 
-# TODO: success and cancel only renders its pages
 @require_GET
 @login_required(login_url=reverse_lazy('signin'))
 @check_reservation_ownership
@@ -143,19 +150,6 @@ def payment_success(request: HttpRequest, reservation_pk: int):
     payment = get_object_or_404(
         Payment, reservation__client=request.user, reservation__pk=reservation_pk
     )
-    # if payment.status == Payment.Status.PENDING:
-    #     payment.reservation.status = Reservation.Status.ACTIVE
-    #     payment.reservation.active = True
-    #     payment.reservation.save()
-    #
-    #     payment.status = Payment.Status.COMPLETED
-    #     payment.save()
-    #
-    # task_name = f'create_payment_pdf_{payment.pk}'
-    # if not Task.objects.filter(name=task_name).exists():
-    #     logger.info(f'task {task_name} created')
-    #     async_task(create_payment_pdf, payment, task_name=task_name)
-
     logger.debug(f'rendering success page for payment: {payment.pk}')
     return render(request, 'success.html', {'payment': payment})
 
@@ -168,26 +162,6 @@ def payment_cancel(request: HttpRequest, reservation_pk: int):
     do pagamento para cancelado e libera o quarto"""
     logger = logging.getLogger('djangoLogger')
     logger.info(f'reservation {reservation_pk} received to cancel')
-    # try:
-    #     payment = get_object_or_404(Payment, reservation__pk=reservation_pk)
-    #     if payment.status != Payment.Status.FAILED:
-    #         payment.reservation.status = Reservation.Status.CANCELLED
-    #         payment.reservation.active = False
-    #         payment.reservation.room.available = True
-    #         payment.reservation.room.save()
-    #         payment.reservation.save()
-    #
-    #         payment.status = Payment.Status.FAILED
-    #         payment.save()
-    #         logger.info(
-    #             f'payment {payment.pk} for {payment.reservation.pk} successfully canceled'
-    #         )
-    #
-    # except Exception as exc:
-    #     logger.critical(f'unexpected error reverting reservation {reservation_pk}: {str(exc)}')  # noqa: E501
-    #     messages.error(request, PaymentCancelMessages.UNEXPECTED_ERROR)
-    #     return redirect('rooms')
-
     return render(request, 'cancel.html')
 
 

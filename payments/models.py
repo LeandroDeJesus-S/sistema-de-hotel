@@ -61,6 +61,13 @@ class Payment(models.Model):
         db_index=True,
         help_text=_('Payment Intent ID from the payment gateway'),
     )
+    gateway_payment_session_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text=_('Session ID from the payment gateway'),
+    )
     gateway_charge_id = models.CharField(
         max_length=255,
         null=True,

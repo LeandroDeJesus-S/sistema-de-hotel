@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 from decimal import Decimal
 from typing import Dict
 
@@ -257,7 +257,9 @@ class ScheduleReservationUseCase:
                 )
 
             # Schedule the task to activate the reservation at check-in time
-            activation_time = datetime.combine(reservation.checkin, time(0, DELTA_MINS))
+            activation_time = datetime.combine(
+                reservation.checkin, time(0, DELTA_MINS), tzinfo=timezone.utc
+            )
             task_name = f'activate_reservation_{reservation.id}'
             self._task_queuer.schedule_task(
                 func_path='reservations.infra.tasks.activate_reservation_task',

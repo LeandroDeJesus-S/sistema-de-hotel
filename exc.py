@@ -1,4 +1,4 @@
-from typing import Callable, Generic, TypeVar
+from typing import Any, Callable, Generic, TypeVar
 
 
 class Error(Exception):
@@ -95,7 +95,7 @@ class Result(Generic[T]):
             return self._value  # type: ignore
         raise Exception(f'Unwrap called on Err: {self._value}')
 
-    def unwrap_or(self, default: T) -> T:
+    def unwrap_or(self, default: Any) -> T | Any:
         """
         Return the success value or a default if it's an error.
 

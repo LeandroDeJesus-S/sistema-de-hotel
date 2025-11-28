@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 from typing import Any, Callable
 
 import stripe
@@ -69,6 +69,7 @@ class StripeCheckoutSession(AbsSessionBasedPayment):
                 session_id=session.id,
                 session_url=session.url or '',
                 client_id=session.customer or '',
+                pi_id=session.payment_intent or '',
             )
             if result.is_err():
                 return Result.Err(
@@ -80,6 +81,19 @@ class StripeCheckoutSession(AbsSessionBasedPayment):
 
         except Exception as e:
             return Result.Err('Failed to create Stripe session', src_error=e)
+
+    def retrieve_checkout_session(self, session_id: str) -> Result[CheckoutResultDTO]:
+        """Retrieves a Stripe checkout session"""
+        try:
+            cs = stripe.checkout.Session.retrieve(session_id, api_key=self._stripe_api_key)
+        except stripe.StripeError as e:
+            return Result.Err('Failed to retrieve payment session', src_error=e)
+
+        return CheckoutResultDTO.safe_create(
+            session_id=cs.id,
+            session_url=cs.url or '',
+            client_id=cs.customer or '',
+        )
 
 
 class WebhookSignatureError(Exception):
@@ -173,14 +187,17 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
         self._logger.debug(f'[{self.ident}] {data}')
 
         payment_id = data.get('metadata', {}).get('internal_payment_id')
-        payment_intent_id = data.get('payment_intent')
+        session_id = data.get('id')
 
-        if not (payment_id and payment_intent_id):
-            return Result.Err('Missing payment or payment intent ID')
+        if not (payment_id and session_id):
+            return Result.Err('Missing payment or session ID')
 
         try:
+            session = stripe.checkout.Session.retrieve(
+                session_id, api_key=settings.STRIPE_API_KEY_SECRET
+            )
             pi = stripe.PaymentIntent.retrieve(
-                payment_intent_id, api_key=settings.STRIPE_API_KEY_SECRET
+                session.payment_intent, api_key=settings.STRIPE_API_KEY_SECRET
             )
         except stripe.StripeError as e:
             return Result.Err('Failed to retrieve payment intent', src_error=e)
@@ -197,11 +214,14 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
         payment = payment_result.unwrap()
         payment.status = PaymentStatus.COMPLETED
         payment.gateway_charge_id = str(pi.latest_charge)
-        payment.gateway_payment_intent_id = payment_intent_id
+        payment.gateway_payment_intent_id = pi.id
         payment.gateway_customer_id = str(pi.customer)
+        payment.gateway_payment_session_id = session_id
         self._payments_repo.update(payment)
 
-        run_at = datetime.combine(payment.reservation.checkout, time(0, 0))
+        run_at = datetime.combine(
+            payment.reservation.checkout, time(0, 0), tzinfo=timezone.utc
+        )
         # XXX: It might make sense send the the confirmation email even though something went wrong on schedule  # noqa: E501
         if payment.reservation.room.available:
             self._logger.info(f'Reservation {payment.reservation.id} activation started')

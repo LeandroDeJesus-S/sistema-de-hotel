@@ -10,6 +10,7 @@ from clients.domain.ports import AbsClientRepository
 from exc import Result
 from payments.application.dtos import CheckoutUseCaseInputDTO
 from payments.domain.dtos import CheckoutItemDTO, CheckoutResultDTO, CheckoutSessionInputDTO
+from payments.domain.entities import PaymentStatus
 from payments.domain.ports import (
     AbsPaymentsRepository,
     AbsSessionBasedPayment,
@@ -57,6 +58,18 @@ class PaymentService:
     def start_checkout(
         self, reservation_id: int, client_id: int, success_url: str, cancel_url: str
     ) -> Result[CheckoutResultDTO]:
+        payment = self._payment_repo.get_by_reservation_id(reservation_id).unwrap_or(None)
+        if payment and payment.status == PaymentStatus.PENDING:
+            dto = CheckoutUseCaseInputDTO.safe_create(
+                pending_payment=payment,
+            )
+            if dto.is_err():
+                return Result.Err(
+                    'Failed to create checkout session input',
+                    src_error=dto.unwrap_err(),
+                )
+            return self._checkout_usecase(dto.unwrap())
+
         client = self._client_repo.get_by_id(client_id)
         if client.is_err():
             return Result.Err(

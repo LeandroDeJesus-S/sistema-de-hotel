@@ -12,6 +12,7 @@ class AbsSessionBasedPayment(Protocol):
         self,
         dto: CheckoutSessionInputDTO,
     ) -> Result[CheckoutResultDTO]: ...
+    def retrieve_checkout_session(self, session_id: str) -> Result[CheckoutResultDTO]: ...
 
 
 class AbsPaymentsRepository(ABC):
@@ -37,6 +38,19 @@ class AbsPaymentsRepository(ABC):
 
         Args:
             reservation_id: The ID of the reservation.
+
+        Returns:
+            A Result containing the payment entity or None if not found, or an Error on failure
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_by_gateway_session_id(self, session_id: str) -> Result[Payment]:
+        """
+        Gets a payment by its gateway session ID.
+
+        Args:
+            session_id: The session ID from the gateway.
 
         Returns:
             A Result containing the payment entity or None if not found, or an Error on failure

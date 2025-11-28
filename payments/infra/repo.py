@@ -64,6 +64,30 @@ class PaymentRepository(AbsPaymentsRepository):
                 f'Failed to get payment for reservation {reservation_id}', src_error=e
             )
 
+    def get_by_gateway_session_id(self, session_id: str) -> Result[Payment]:
+        """
+        Gets a payment from the database by its gateway session ID.
+        """
+        try:
+            payment_model = self._model_cls.objects.filter(
+                gateway_payment_session_id=session_id
+            ).first()
+            if not payment_model:
+                return Result.Err(msg='Payment not found for session', src_error=None)
+
+            entity_result = model_to_entity(payment_model, self._entity_cls)
+            if entity_result.is_err():
+                return Result.Err(
+                    'Failed to convert payment model to entity',
+                    src_error=entity_result.unwrap_err(),
+                )
+            return Result.Ok(entity_result.unwrap())
+        except Exception as e:
+            return Result.Err(
+                f'Failed to get payment for session {session_id}',
+                src_error=e,
+            )
+
     def get_by_gateway_payment_intent_id(self, payment_intent_id: str) -> Result[Payment]:
         """
         Gets a payment from the database by its gateway payment intent ID.

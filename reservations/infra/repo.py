@@ -223,12 +223,6 @@ class ReservationRepository(AbsReservationRepository):
         try:
             reservations = self._modelclass.objects.filter(
                 client_id=client_id,
-                status__in=[
-                    ReservationStatusEnum.ACTIVE.value,
-                    ReservationStatusEnum.SCHEDULED.value,
-                    ReservationStatusEnum.CANCELLED.value,
-                    ReservationStatusEnum.FINISHED.value,
-                ],
             ).order_by('-id')
 
             return models_to_entities(reservations, self._entityclass)
@@ -241,12 +235,6 @@ class ReservationRepository(AbsReservationRepository):
         reservation = self._modelclass.objects.filter(
             pk=reservation_id,
             client__id=client_id,
-            status__in=[
-                ReservationStatusEnum.ACTIVE.value,
-                ReservationStatusEnum.SCHEDULED.value,
-                ReservationStatusEnum.CANCELLED.value,
-                ReservationStatusEnum.FINISHED.value,
-            ],
         ).first()
         if reservation is None:
             return Result.Err(msg='Reservation not found')
@@ -274,3 +262,18 @@ class ReservationRepository(AbsReservationRepository):
             return Result.Err('No reservations found')
 
         return models_to_entities(reservations, self._entityclass)
+
+    def fetch_pending(
+        self, client_id: int, room_id: int, check_in: date, check_out: date
+    ) -> Result[entities.Reservation]:
+        reservation = self._modelclass.objects.filter(
+            client_id=client_id,
+            room_id=room_id,
+            checkin=check_in,
+            checkout=check_out,
+            status=ReservationStatusEnum.INITIALIZED.value,
+        ).first()
+        if reservation is None:
+            return Result.Err('Reservation not found')
+
+        return model_to_entity(reservation, self._entityclass)

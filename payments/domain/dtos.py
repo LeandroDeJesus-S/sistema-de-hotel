@@ -7,13 +7,13 @@ class CheckoutResultDTO(BaseEntity):
     """Standardized response object for payment session creation.
 
     Attributes:
-        client_id (int | str): The client ID on gateway.
-        session_id (int | str): The checkout session ID.
+        client_id (str): The client ID on gateway.
+        session_id (str): The checkout session ID.
         session_url (str): The checkout session URL.
     """
 
-    client_id: int | str
-    session_id: int | str
+    client_id: str
+    session_id: str
     session_url: str
 
 

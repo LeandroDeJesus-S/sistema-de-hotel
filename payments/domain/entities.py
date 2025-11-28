@@ -52,6 +52,7 @@ class Payment(BaseEntity):
     payment_gateway: PaymentGateway = PaymentGateway.UNKNOWN
     gateway_customer_id: str | None = None
     gateway_payment_intent_id: str | None = None
+    gateway_payment_session_id: str | None = None
     gateway_charge_id: str | None = None
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

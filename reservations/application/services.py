@@ -41,6 +41,13 @@ class ReservationService:
         if command.is_err():
             return Result.Err(msg='invalid data', src_error=command.unwrap_err())
 
+        cmd = command.unwrap()
+        pending = self.reservation_repo.fetch_pending(
+            cmd.client_id, cmd.room_pk, cmd.check_in, cmd.check_out
+        ).unwrap_or(None)
+        if pending:
+            return Result.Ok(pending)
+
         result = self.initialize_reservation(command.unwrap())
         if result.is_err():
             return Result.Err(result.unwrap_err().msg, result.unwrap_err())
