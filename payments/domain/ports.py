@@ -96,6 +96,10 @@ class AbsPaymentsRepository(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def get_pending_from(self, reservation_id: int) -> Result[Payment]:
+        """Returns a pending payment from the database by its reservation ID if it exists."""
+
 
 WebhookIdent = TypeVar('WebhookIdent')
 

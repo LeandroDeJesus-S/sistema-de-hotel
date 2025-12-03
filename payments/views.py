@@ -14,6 +14,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 
+from base.dtos import RedirectResultDTO
 from clients.infra.repo import ClientRepository
 from payments.application.services import PaymentService
 from payments.application.usecases import (
@@ -46,7 +47,6 @@ from .infra.adapters import (
 from .infra.repo import PaymentRepository
 from .models import Payment
 
-RECAPTCHA_CTX = {'recaptcha_site_key': settings.G_RECAPTCHA_KEY_SITE}
 uow = UnitOfWork()
 payment_repo = PaymentRepository()
 reservation_repo = ReservationRepository()
@@ -90,16 +90,15 @@ class Checkout(LoginRequiredMixin, View):
         self.logger = logging.getLogger('djangoLogger')
 
     def get(self, request: HttpRequest, reservation_pk: int, *args, **kwargs):
-        reservation_res = reservation_repo.find_by_id(reservation_pk)
-        if reservation_res.is_err():
-            messages.error(request, 'invalid operation')
-            return redirect(reverse('rooms'))
-
-        reservation = reservation_res.unwrap()
-        self.logger.debug(f'Rendering {self.template_name}')
-        return render(
-            request, self.template_name, {'reservation': reservation, **RECAPTCHA_CTX}
+        response = svc.render_checkout(reservation_pk).unwrap_or(
+            RedirectResultDTO.safe_create(url='rooms', code=302)
         )
+
+        if isinstance(response, RedirectResultDTO):
+            return redirect(response.url, status=response.code)
+
+        self.logger.debug(f'Rendering {response.template_name}')
+        return render(request, self.template_name, response.context)
 
     def post(self, request: HttpRequest, reservation_pk: int, *args, **kwargs):
         def _on_err(err):
@@ -112,7 +111,7 @@ class Checkout(LoginRequiredMixin, View):
         def _on_ok(result):
             return redirect(result.session_url)
 
-        response = svc.start_checkout(
+        response = svc.handle_checkout(
             reservation_id=reservation_pk,
             client_id=request.user.pk,
             success_url=request.build_absolute_uri(
@@ -127,7 +126,9 @@ class Checkout(LoginRequiredMixin, View):
         )
         return response
 
-    def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+    def dispatch(
+        self, request: HttpRequest, *args, **kwargs
+    ) -> HttpResponse:  # TODO: create decorator for this
         reservation = get_object_or_404(Reservation, pk=kwargs.get('reservation_pk'))
         if request.user.is_authenticated and reservation.client != request.user:
             self.logger.warning(

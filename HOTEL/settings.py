@@ -85,7 +85,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'home.context_processors.hotel',
                 'django.template.context_processors.media',
-                # 'home.context_processors.recaptcha',
+                'home.context_processors.recaptcha',
             ],
         },
     },

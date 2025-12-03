@@ -1,15 +1,20 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
+
+from django.utils import timezone
 
 from base.ports.pdf import AbsPDFGenerator
 from base.ports.unit_of_work import AbsUnitOfWork
+from clients.domain.ports import AbsClientRepository
 from exc import Result
+from payments.application.dtos import CheckoutUseCaseInputDTO
+from payments.domain.dtos import CheckoutItemDTO, CheckoutResultDTO, CheckoutSessionInputDTO
+from payments.rules import PaymentRules
+from reservations.domain.repo import AbsReservationRepository
 from utils.adapters.email import AbsEmailSender
 
-from ..domain.dtos import CheckoutResultDTO
 from ..domain.entities import Payment, PaymentGateway, PaymentStatus
 from ..domain.ports import AbsPaymentsRepository, AbsSessionBasedPayment
-from .dtos import CheckoutUseCaseInputDTO
 
 
 class CheckoutUseCase:
@@ -19,19 +24,23 @@ class CheckoutUseCase:
     This use case orchestrates the creation of a payment session and a payment record.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
+        client_repo: AbsClientRepository,
         payment_repo: AbsPaymentsRepository,
         payment_gateway: AbsSessionBasedPayment,
+        reservation_repo: AbsReservationRepository,
         uow: AbsUnitOfWork,
         logger: logging.Logger,
     ):
+        self._client_repo = client_repo
         self._payment_repo = payment_repo
         self._payment_gateway = payment_gateway
+        self._reservation_repo = reservation_repo
         self._uow = uow
         self._logger = logger
 
-    def __call__(self, dto: CheckoutUseCaseInputDTO) -> Result[CheckoutResultDTO]:
+    def __call__(self, dto: CheckoutUseCaseInputDTO) -> Result[CheckoutResultDTO]:  # noqa: PLR0911
         """
         Executes the checkout use case.
 
@@ -41,50 +50,97 @@ class CheckoutUseCase:
         Returns:
             A Result containing the checkout result DTO on success, or an Error on failure.
         """
+
         with self._uow as w:
-            payment = dto.pending_payment
-            if payment is None and dto.checkout_session_input is not None:
-                assert dto.reservation is not None  # nosec
-                new_payment = Payment.safe_create(
-                    client=dto.client,
-                    reservation=dto.reservation,
-                    amount=dto.reservation.amount,
+            payment = self._payment_repo.get_pending_from(dto.reservation_id).unwrap_or(None)
+            if not payment:  # we create a new payment record and a new session
+                assert dto.client_id is not None  # nosec
+                client = self._client_repo.get_by_id(dto.client_id)
+                if client.is_err():
+                    return Result.Err(
+                        'Failed to find client',
+                        src_error=client.unwrap_err(),
+                    )
+
+                reservation_result = self._reservation_repo.find_by_id(dto.reservation_id)
+                if reservation_result.is_err():
+                    return Result.Err(
+                        'Failed to find reservation',
+                        src_error=reservation_result.unwrap_err(),
+                    )
+
+                reservation = reservation_result.unwrap()
+                reservation_days = reservation.reservation_days().unwrap()
+
+                session_input_result = CheckoutSessionInputDTO.safe_create(
+                    currency='brl',  # TODO: make it dynamic
+                    expires_at=timezone.now()
+                    + timedelta(minutes=PaymentRules.CHECKOUT_SESSION_EXPIRES_MIN),
+                    success_url=dto.success_url,
+                    return_url=dto.cancel_url,
+                    items=[
+                        CheckoutItemDTO.safe_create(
+                            name=(
+                                f'Reserva: Quarto Nº{reservation.room.number}, '  # XXX: put it in another place for i18n  # noqa: E501
+                                f'classe {reservation.room.room_class.name}.'
+                            ),
+                            unit_price_cents=int(reservation.room.daily_price * 100),
+                            quantity=reservation_days,
+                        ).unwrap()
+                    ],
+                )
+                if session_input_result.is_err():
+                    return Result.Err(
+                        'Failed to create checkout session input',
+                        src_error=session_input_result.unwrap_err(),
+                    )
+                session = session_input_result.unwrap()
+
+                assert dto.reservation_id is not None  # nosec
+                new_payment_result = Payment.safe_create(
+                    client=client.unwrap(),
+                    reservation=reservation,
+                    amount=reservation.amount,
                     status=PaymentStatus.PENDING,
                     created_at=datetime.now(timezone.utc),
                     updated_at=datetime.now(timezone.utc),
                     payment_gateway=PaymentGateway.STRIPE,
                 ).then(self._payment_repo.create)
 
-                if new_payment.is_err():
+                if new_payment_result.is_err():
                     self._logger.error(
-                        'Failed to create payment', exc_info=new_payment.unwrap_err()
+                        'Failed to create payment', exc_info=new_payment_result.unwrap_err()
                     )
                     w.rollback()
                     return Result.Err(
                         'Failed to create payment',
-                        src_error=new_payment.unwrap_err(),
+                        src_error=new_payment_result.unwrap_err(),
                     )
 
-                payment = new_payment.unwrap()
+                new_payment = new_payment_result.unwrap()
 
-                metadata = dto.checkout_session_input.metadata or {}
-                metadata['internal_payment_id'] = payment.id
-                dto.checkout_session_input.metadata = metadata
+                metadata = session.metadata or {}
+                metadata['internal_payment_id'] = new_payment.id
+                session.metadata = metadata
 
-                session_result = self._payment_gateway.create_checkout_session(
-                    dto.checkout_session_input
-                )
+                session_result = self._payment_gateway.create_checkout_session(session)
                 if session_result.is_err():
                     self._logger.error('Failed to create payment session')
-                    # w.rollback() WARN: be sure that there are no db operations in `create_checkout_session`  # noqa: E501
+                    w.rollback()
                     return Result.Err(
                         'Failed to create payment session',
                         src_error=session_result.unwrap_err(),
                     )
-                payment.gateway_payment_session_id = session_result.unwrap().session_id
-                self._payment_repo.update(payment).match(
-                    on_ok=lambda _: w.commit(), on_err=lambda _: w.rollback()
-                )
+                new_payment.gateway_payment_session_id = session_result.unwrap().session_id
+                res = self._payment_repo.update(new_payment)
+                if res.is_err():
+                    self._logger.error('Failed to create payment', exc_info=res.unwrap_err())
+                    w.rollback()
+                    return Result.Err(
+                        'Failed to create payment',
+                        src_error=res.unwrap_err(),
+                    )
+                w.commit()
                 return session_result
 
         if not payment or not payment.gateway_payment_session_id:

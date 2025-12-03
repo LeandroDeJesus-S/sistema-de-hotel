@@ -20,7 +20,7 @@ from payments.error_messages import CheckoutMessages, PaymentCancelMessages
 @pytest.fixture
 def mock_payment_creator(mocker):
     mock_svc = MagicMock()
-    mock_svc.start_checkout.return_value = Result.Ok(
+    mock_svc.handle_checkout.return_value = Result.Ok(
         MagicMock(session_url='http://stripepayment-hostedpage.url')
     )
     mocker.patch('payments.views.svc', mock_svc)
@@ -127,7 +127,7 @@ def test_operational_error_redirects_to_rooms_with_message(client, client_model,
     reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
-    mock_payment_creator.start_checkout.return_value = Result.Err('Database error', OperationalError('Database error'))
+    mock_payment_creator.handle_checkout.return_value = Result.Err('Database error', OperationalError('Database error'))
 
     # Act
     response = client.post(url)
@@ -150,7 +150,7 @@ def test_unexpected_exception_redirects_to_rooms_with_message(client, client_mod
     reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
-    mock_payment_creator.start_checkout.return_value = Result.Err('unexpected exception', Exception('unexpected exception'))
+    mock_payment_creator.handle_checkout.return_value = Result.Err('unexpected exception', Exception('unexpected exception'))
 
     # Act
     response = client.post(url)
@@ -178,7 +178,7 @@ def test_payment_is_created_correctly(client, client_model, reservation_model, m
     client.post(url, follow=True)
 
     # Assert
-    mock_payment_creator.start_checkout.assert_called_once_with(
+    mock_payment_creator.handle_checkout.assert_called_once_with(
         reservation_id=reservation.pk,
         client_id=user.pk,
         success_url=f'http://testserver/pagamento/success/{reservation.pk}/',

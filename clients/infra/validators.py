@@ -103,7 +103,7 @@ class BirthDateValidator(AbsValidator):
 
     def validate(self, value: date) -> Result[date]:
         _now = now()
-        age = (_now.year - value.year) - (value.month < _now.month)
+        age = (_now.year - value.year) - ((_now.month, _now.day) < (value.month, value.day))
         if not (self._min_age <= age <= self._max_age):
             if self.raise_exc:
                 raise ValidationError(ClientErrorMessages.INVALID_BIRTHDATE)

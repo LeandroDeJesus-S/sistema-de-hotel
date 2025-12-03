@@ -1,7 +1,7 @@
 from exc import Result
 from utils.support import entity_to_model, model_to_entity
 
-from ..domain.entities import Payment
+from ..domain.entities import Payment, PaymentStatus
 from ..domain.ports import AbsPaymentsRepository
 from ..models import Payment as PaymentModel
 
@@ -141,4 +141,11 @@ class PaymentRepository(AbsPaymentsRepository):
         """returns a payment by its id"""
         if payment_model := self._model_cls.objects.filter(id=payment_id).first():
             return model_to_entity(payment_model, self._entity_cls)
+        return Result.Err('Payment not found')
+
+    def get_pending_from(self, reservation_id: int) -> Result[Payment]:
+        if model := self._model_cls.objects.filter(
+            reservation__id=reservation_id, status=PaymentStatus.PENDING
+        ).first():
+            return model_to_entity(model, self._entity_cls)
         return Result.Err('Payment not found')

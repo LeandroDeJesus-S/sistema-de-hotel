@@ -209,16 +209,21 @@ def test_complete_name_property(valid_client_data_factory):
     assert result == expected_complete_name
 
 
+
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     'birthdate, error_message',
     [
         (
-            datetime.now().date() - timedelta(days=365 * (ClientRules.MIN_AGE - 1)),
+            datetime.now().date().replace(
+                year=datetime.now().year - (ClientRules.MIN_AGE - 1)
+            ),
             ClientErrorMessages.INVALID_BIRTHDATE,
         ),
         (
-            datetime.now().date() - timedelta(days=365 * (ClientRules.MAX_AGE + 1)),
+            datetime.now().date().replace(
+                year=datetime.now().year - (ClientRules.MAX_AGE + 1)
+            ),
             ClientErrorMessages.INVALID_BIRTHDATE,
         ),
     ],
