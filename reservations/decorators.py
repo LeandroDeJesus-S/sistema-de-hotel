@@ -9,8 +9,11 @@ from reservations.models import Reservation
 def check_reservation_ownership(view):
     @wraps(view)
     def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return view(request, *args, **kwargs)
+
         reservation = get_object_or_404(Reservation, pk=kwargs.get('reservation_pk'))
-        if reservation.client != request.user:
+        if reservation.client.id != request.user.id:
             raise PermissionDenied
         return view(request, *args, **kwargs)
 

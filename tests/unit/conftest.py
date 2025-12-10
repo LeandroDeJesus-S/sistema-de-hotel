@@ -35,6 +35,7 @@ def valid_client_data_factory(faker):
     """
     Provides a dictionary with valid data for creating a Client instance.
     """
+
     def f():
         first_name = re.sub(r'[^a-zA-Z]', '', faker.first_name().split(' ')[0])
         last_name = re.sub(r'[^a-zA-Z]', '', faker.last_name().split(' ')[0])
@@ -50,7 +51,9 @@ def valid_client_data_factory(faker):
             'phone': faker.phone_number(),
             'cpf': faker.cpf().replace('.', '').replace('-', ''),
         }
+
     return f
+
 
 @pytest.fixture
 def client_model_factory(db, valid_client_data_factory, monkeypatch):
@@ -61,7 +64,9 @@ def client_model_factory(db, valid_client_data_factory, monkeypatch):
         u.save()
         monkeypatch.setattr(u, 'raw_password', valid_client_data['password'], raising=False)
         return u
+
     return f
+
 
 @pytest.fixture(scope='function')
 def client_model(db, valid_client_data_factory, monkeypatch):
@@ -94,6 +99,7 @@ def mock_recaptcha(responses):
         status=200,
     )
 
+
 @pytest.fixture
 def hotel_model(db):
     """
@@ -116,8 +122,8 @@ def benefit_model(db):
     Fixture to create a Benefit instance for a room.
     """
     benefit, _ = Benefit.objects.get_or_create(
-        name="Wi-Fi Grátis",
-        defaults={'short_desc': "Acesso à internet de alta velocidade em todo o hotel."}
+        name='Wi-Fi Grátis',
+        defaults={'short_desc': 'Acesso à internet de alta velocidade em todo o hotel.'},
     )
     return benefit
 
@@ -127,7 +133,7 @@ def room_class_model(db):
     """
     Fixture to create a Class instance for a room.
     """
-    room_class, _ = Class.objects.get_or_create(name="Standard")
+    room_class, _ = Class.objects.get_or_create(name='Standard')
     return room_class
 
 
@@ -139,14 +145,18 @@ def room_model(db, room_class_model, benefit_model, hotel_model, faker):
     """
     room = G(
         Room,
-        number=faker.bothify("###?"),
+        number=faker.bothify('###?'),
         room_class=room_class_model,
         hotel=hotel_model,
-        daily_price=Decimal("200.00"),
+        daily_price=Decimal('200.00'),
         size=faker.pyint(min_value=RoomRules.MIN_SIZE + 1, max_value=RoomRules.MAX_SIZE - 1),
         short_desc=faker.sentence(nb_words=5),
-        adults_capacity=faker.pyint(min_value=RoomRules.MIN_ADULTS, max_value=RoomRules.MAX_ADULTS),
-        children_capacity=faker.pyint(min_value=RoomRules.MIN_CHILDREN, max_value=RoomRules.MAX_CHILDREN),
+        adults_capacity=faker.pyint(
+            min_value=RoomRules.MIN_ADULTS, max_value=RoomRules.MAX_ADULTS
+        ),
+        children_capacity=faker.pyint(
+            min_value=RoomRules.MIN_CHILDREN, max_value=RoomRules.MAX_CHILDREN
+        ),
     )
     room.benefits.add(benefit_model)
     return room
@@ -165,12 +175,38 @@ def reservation_model(db, client_model, room_model):
         room=room_model,
         checkin=checkin,
         checkout=checkout,
-        status="I",
+        status='I',
     )
     # Calculate and set the amount
     reservation.amount = reservation.calc_reservation_value()
     reservation.save()  # Save after setting amount
     return reservation
+
+
+
+@pytest.fixture
+def reservation_model_factory(db, client_model, room_model):
+    """
+    Fixture to create Reservation instances via a factory.
+    """
+
+    def f(client=None, room=None, status='I'):
+        checkin = date.today() + timedelta(days=10)
+        checkout = checkin + timedelta(days=15)  # Example: 5 days reservation
+        reservation = G(
+            Reservation,
+            client=client if client else client_model,
+            room=room if room else room_model,
+            checkin=checkin,
+            checkout=checkout,
+            status=status,
+        )
+        # Calculate and set the amount
+        reservation.amount = reservation.calc_reservation_value()
+        reservation.save()  # Save after setting amount
+        return reservation
+
+    return f
 
 
 @pytest.fixture
@@ -202,6 +238,7 @@ def service_model(db, hotel_model):
     Fixture to create a Service instance.
     """
     return G(Service, hotel=hotel_model)
+
 
 @pytest.fixture
 def db_setup(db):

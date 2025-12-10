@@ -11,9 +11,7 @@ from django.db import OperationalError
 from django.urls import reverse
 
 from exc import Result
-from payments.models import Payment
-from payments.error_messages import CheckoutMessages, PaymentCancelMessages
-
+from payments.error_messages import CheckoutMessages
 # Checkout view tests
 
 
@@ -27,13 +25,15 @@ def mock_payment_creator(mocker):
     return mock_svc
 
 
-
 @pytest.mark.django_db
-def test_checkout_view_uses_correct_template(client, client_model, reservation_model):
+def test_checkout_view_uses_correct_template(
+    client, client_model, reservation_model, mocker
+):
     """
     Tests if the checkout view renders the correct template.
     """
     # Arrange
+
     client.force_login(client_model)
     url = reverse('checkout', args=[reservation_model.pk])
 
@@ -64,7 +64,9 @@ def test_reservation_in_context(client, client_model, reservation_model):
 
 
 @pytest.mark.django_db
-def test_unauthenticated_user_is_redirected_from_checkout(client, reservation_model):
+def test_unauthenticated_user_is_redirected_from_checkout(
+    client, reservation_model, mocker
+):
     """
     Tests if an unauthenticated user is redirected to the signin page.
     """
@@ -82,25 +84,29 @@ def test_unauthenticated_user_is_redirected_from_checkout(client, reservation_mo
 
 
 @pytest.mark.django_db
-def test_user_accessing_another_users_checkout_gets_forbidden(client, client_model_factory, reservation_model):
+def test_user_accessing_another_users_checkout_gets_forbidden(
+    client_model_factory, reservation_model_factory, authenticated_client
+):
     """
     Tests if a user gets a 403 Forbidden error when trying to access another user's checkout.
     """
     # Arrange
-    user = client_model_factory()
-    reservation = reservation_model
-    client.force_login(user)
+    http_client, _ = authenticated_client
+    another_user = client_model_factory()
+    reservation = reservation_model_factory(client=another_user)
     url = reverse('checkout', args=[reservation.pk])
 
     # Act
-    response = client.get(url)
+    response = http_client.get(url)
 
     # Assert
     assert response.status_code == 403
 
 
 @pytest.mark.django_db
-def test_payment_created_successfully(client, client_model, reservation_model, mock_payment_creator, mock_recaptcha):
+def test_payment_created_successfully(
+    client, client_model, reservation_model, mock_payment_creator, mock_recaptcha
+):
     """
     Tests if the payment is created successfully and redirects to the payment page.
     """
@@ -118,7 +124,9 @@ def test_payment_created_successfully(client, client_model, reservation_model, m
 
 
 @pytest.mark.django_db
-def test_operational_error_redirects_to_rooms_with_message(client, client_model, reservation_model, mock_payment_creator, mock_recaptcha):
+def test_operational_error_redirects_to_rooms_with_message(
+    client, client_model, reservation_model, mock_payment_creator, mock_recaptcha
+):
     """
     Tests if an OperationalError redirects to the rooms page with the correct message.
     """
@@ -127,7 +135,9 @@ def test_operational_error_redirects_to_rooms_with_message(client, client_model,
     reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
-    mock_payment_creator.handle_checkout.return_value = Result.Err('Database error', OperationalError('Database error'))
+    mock_payment_creator.handle_checkout.return_value = Result.Err(
+        'Database error', OperationalError('Database error')
+    )
 
     # Act
     response = client.post(url)
@@ -141,7 +151,9 @@ def test_operational_error_redirects_to_rooms_with_message(client, client_model,
 
 
 @pytest.mark.django_db
-def test_unexpected_exception_redirects_to_rooms_with_message(client, client_model, reservation_model, mock_payment_creator, mock_recaptcha):
+def test_unexpected_exception_redirects_to_rooms_with_message(
+    client, client_model, reservation_model, mock_payment_creator, mock_recaptcha
+):
     """
     Tests if an unexpected exception redirects to the rooms page with the correct message.
     """
@@ -150,7 +162,9 @@ def test_unexpected_exception_redirects_to_rooms_with_message(client, client_mod
     reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
-    mock_payment_creator.handle_checkout.return_value = Result.Err('unexpected exception', Exception('unexpected exception'))
+    mock_payment_creator.handle_checkout.return_value = Result.Err(
+        'unexpected exception', Exception('unexpected exception')
+    )
 
     # Act
     response = client.post(url)
@@ -164,7 +178,9 @@ def test_unexpected_exception_redirects_to_rooms_with_message(client, client_mod
 
 
 @pytest.mark.django_db
-def test_payment_is_created_correctly(client, client_model, reservation_model, mock_payment_creator, mock_recaptcha):
+def test_payment_is_created_correctly(
+    client, client_model, reservation_model, mock_payment_creator, mock_recaptcha, mocker
+):
     """
     Tests if the payment is created correctly in the database.
     """
@@ -209,11 +225,12 @@ def test_success_view_uses_correct_template(client, payment_model):
 
 
 @pytest.mark.django_db
-def test_unauthenticated_user_is_redirected_from_success(client, reservation_model):
+def test_unauthenticated_user_is_redirected_from_success(client, reservation_model, mocker):
     """
     Tests if an unauthenticated user is redirected to the signin page.
     """
     # Arrange
+
     reservation = reservation_model
     url = reverse('payment_success', args=[reservation.pk])
 
@@ -227,18 +244,21 @@ def test_unauthenticated_user_is_redirected_from_success(client, reservation_mod
 
 
 @pytest.mark.django_db
-def test_user_accessing_another_users_success_page_gets_forbidden(client, client_model_factory, reservation_model):
+def test_user_accessing_another_users_success_page_gets_forbidden(
+    client_model_factory, reservation_model_factory, authenticated_client
+):
     """
     Tests if a user gets a 403 Forbidden error when trying to access another user's success page.
     """
     # Arrange
-    user = client_model_factory()
-    reservation = reservation_model
-    client.force_login(user)
+    http_client, _ = authenticated_client
+    another_user = client_model_factory()
+    reservation = reservation_model_factory(client=another_user)
+
     url = reverse('payment_success', args=[reservation.pk])
 
     # Act
-    response = client.get(url)
+    response = http_client.get(url)
 
     # Assert
     assert response.status_code == 403
@@ -267,11 +287,12 @@ def test_cancel_view_uses_correct_template(client, payment_model):
 
 
 @pytest.mark.django_db
-def test_unauthenticated_user_is_redirected_from_cancel(client, reservation_model):
+def test_unauthenticated_user_is_redirected_from_cancel(client, reservation_model, mocker):
     """
     Tests if an unauthenticated user is redirected to the signin page.
     """
     # Arrange
+    mocker.patch('reservations.decorators.check_reservation_ownership', new=lambda x: x)
     reservation = reservation_model
     url = reverse('payment_cancel', args=[reservation.pk])
 
@@ -285,18 +306,20 @@ def test_unauthenticated_user_is_redirected_from_cancel(client, reservation_mode
 
 
 @pytest.mark.django_db
-def test_user_accessing_another_users_cancel_page_gets_forbidden(client, client_model_factory, reservation_model):
+def test_user_accessing_another_users_cancel_page_gets_forbidden(
+    authenticated_client, client_model_factory, reservation_model_factory
+):
     """
     Tests if a user gets a 403 Forbidden error when trying to access another user's cancel page.
     """
     # Arrange
-    user = client_model_factory()
-    reservation = reservation_model
-    client.force_login(user)
+    http_client, _ = authenticated_client
+    another_user = client_model_factory()
+    reservation = reservation_model_factory(client=another_user)
     url = reverse('payment_cancel', args=[reservation.pk])
 
     # Act
-    response = client.get(url)
+    response = http_client.get(url)
 
     # Assert
     assert response.status_code == 403

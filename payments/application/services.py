@@ -1,6 +1,6 @@
 from http import HTTPStatus
 from logging import Logger
-from typing import Any
+from typing import Any, Union
 
 from base.dtos import RedirectResultDTO, TemplateRenderResultDTO
 from base.ports.unit_of_work import AbsUnitOfWork
@@ -15,7 +15,6 @@ from payments.domain.ports import (
     WebhookPayloadError,
     WebhookSignatureError,
 )
-from reservations.domain.entities import Reservation
 from reservations.domain.repo import AbsReservationRepository
 
 from .usecases import CheckoutUseCase
@@ -25,31 +24,6 @@ class WebhookResultDTO:
     def __init__(self, response_code: int, err_msg: str | None = None):
         self.response_code = response_code
         self.err_msg = err_msg
-
-
-def checkout_presenter(
-    o: Result[Reservation],
-) -> Result[TemplateRenderResultDTO | RedirectResultDTO]:
-    if o.is_err():
-        redirect_res: Result[RedirectResultDTO] = RedirectResultDTO.safe_create(
-            url='rooms',
-            code=302,
-        )
-        if redirect_res.is_err():
-            return Result.Err(
-                'Failed to create RedirectResultDTO', src_error=redirect_res.unwrap_err()
-            )
-        return Result.Ok(redirect_res.unwrap())
-
-    reservation = o.unwrap()
-    template_res: Result[TemplateRenderResultDTO] = TemplateRenderResultDTO.safe_create(
-        template_name='checkout.html', context={'reservation': reservation}
-    )
-    if template_res.is_err():
-        return Result.Err(
-            'Failed to create TemplateRenderResultDTO', src_error=template_res.unwrap_err()
-        )
-    return Result.Ok(template_res.unwrap())
 
 
 class PaymentService:
@@ -81,9 +55,13 @@ class PaymentService:
 
     def render_checkout(
         self, reservation_id: int
-    ) -> Result[TemplateRenderResultDTO | RedirectResultDTO]:
+    ) -> Union[Result[TemplateRenderResultDTO], Result[RedirectResultDTO]]:
         reservation_res = self._reservation_repo.find_by_id(reservation_id)
-        return checkout_presenter(reservation_res)
+        if reservation_res.is_err():
+            return RedirectResultDTO.safe_create(url='rooms', code=302)
+        return TemplateRenderResultDTO.safe_create(
+            template_name='checkout.html', context={'reservation': reservation_res.unwrap()}
+        )
 
     def handle_checkout(
         self, reservation_id: int, client_id: int, success_url: str, cancel_url: str
@@ -129,3 +107,29 @@ class PaymentService:
             )
 
         return Result.Ok(WebhookResultDTO(response_code=HTTPStatus.OK))
+
+    def render_payment_success(
+        self, reservation_id: int
+    ) -> Union[Result[TemplateRenderResultDTO], Result[RedirectResultDTO]]:
+        reservation_res = self._reservation_repo.find_by_id(reservation_id)
+        if reservation_res.is_err():
+            self._logger.error(
+                'Failed to find reservation', exc_info=reservation_res.unwrap_err()
+            )
+            return RedirectResultDTO.safe_create(url='rooms', code=302)
+        return TemplateRenderResultDTO.safe_create(
+            template_name='success.html', context={'reservation': reservation_res.unwrap()}
+        )
+
+    def render_payment_cancel(
+        self, reservation_id: int
+    ) -> Union[Result[TemplateRenderResultDTO], Result[RedirectResultDTO]]:
+        reservation_res = self._reservation_repo.find_by_id(reservation_id)
+        if reservation_res.is_err():
+            self._logger.error(
+                'Failed to find reservation', exc_info=reservation_res.unwrap_err()
+            )
+            return RedirectResultDTO.safe_create(url='rooms', code=302)
+        return TemplateRenderResultDTO.safe_create(
+            template_name='cancel.html', context={'reservation': reservation_res.unwrap()}
+        )
