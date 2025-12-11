@@ -76,14 +76,11 @@ def test_authenticated_client_cannot_access_another_perfil_delete_receives_403(
 
 
 @pytest.mark.django_db
-def test_authenticated_client_cannot_delete_another_perfil_receives_403(
-    mocker, authenticated_client
-):
+def test_authenticated_client_cannot_delete_another_perfil_receives_403(authenticated_client):
     """
     Test if a logged-in client is not able to delete another client's profile, receiving HTTP Forbidden.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     client, _ = authenticated_client
     other_user = G(Client)
     url = reverse('delete_perfil', args=[other_user.pk])
@@ -96,12 +93,13 @@ def test_authenticated_client_cannot_delete_another_perfil_receives_403(
 
 
 @pytest.mark.django_db
-def test_success_url_after_delete_is_redirect(mocker, authenticated_client, perfil_urls):
+def test_success_url_after_delete_is_redirect(
+    authenticated_client, perfil_urls, mock_recaptcha
+):
     """
     Test if it redirects after deleting the profile.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     client, _ = authenticated_client
     url = perfil_urls['perfil_delete_url']
 
@@ -113,12 +111,13 @@ def test_success_url_after_delete_is_redirect(mocker, authenticated_client, perf
 
 
 @pytest.mark.django_db
-def test_success_url_after_delete_is_correct(mocker, authenticated_client, perfil_urls):
+def test_success_url_after_delete_is_correct(
+    authenticated_client, perfil_urls, mock_recaptcha
+):
     """
     Test if it redirects to the correct URL after deleting the profile.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     client, _ = authenticated_client
     url = perfil_urls['perfil_delete_url']
     success_url = perfil_urls['perfil_delete_success_url']
@@ -132,13 +131,12 @@ def test_success_url_after_delete_is_correct(mocker, authenticated_client, perfi
 
 @pytest.mark.django_db
 def test_client_is_deleted_if_all_goes_as_expected(
-    mocker, authenticated_client, perfil_urls, client_model
+    authenticated_client, perfil_urls, client_model, mock_recaptcha
 ):
     """
     Test the deletion of a client if everything goes as expected.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     client, _ = authenticated_client
     url = perfil_urls['perfil_delete_url']
 

@@ -21,20 +21,12 @@ def test_signin_success(client, client_model, mock_recaptcha):
 
 
 @pytest.mark.django_db
-def test_signin_invalid_credentials(client, client_model, responses, settings):
+def test_signin_invalid_credentials(client, client_model, responses, settings, mock_recaptcha):
     """Test that sign in fails with invalid credentials."""
     # Disable django-axes middleware for this test
     settings.MIDDLEWARE = [
         m for m in settings.MIDDLEWARE if m != 'axes.middleware.AxesMiddleware'
     ]
-
-    # Mock the captcha API call
-    responses.add(
-        responses.POST,
-        'https://www.google.com/recaptcha/api/siteverify',
-        json={'success': True, 'score': 0.9},
-        status=200,
-    )
 
     signin_url = reverse('signin')
     post_data = {

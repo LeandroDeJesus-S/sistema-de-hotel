@@ -68,13 +68,12 @@ def test_unauthenticated_client_is_redirected_to_signin(client, perfil_urls):
 
 @pytest.mark.django_db
 def test_authenticated_client_cannot_change_another_client_password_forbidden(
-    mocker, authenticated_client, change_password_data
+    authenticated_client, change_password_data
 ):
     """
     Test if a logged-in client trying to change another client's password receives HTTP Forbidden.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     client, _ = authenticated_client
     other_user = G(Client)
     url = reverse('update_perfil_password', args=[other_user.pk])
@@ -88,13 +87,12 @@ def test_authenticated_client_cannot_change_another_client_password_forbidden(
 
 @pytest.mark.django_db
 def test_authenticated_client_cannot_change_another_client_password_not_persisted(
-    mocker, authenticated_client, change_password_data
+    authenticated_client, change_password_data
 ):
     """
     Test if a logged-in client trying to change another client's password is not persisted.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     client, _ = authenticated_client
     other_user = G(Client)
     url = reverse('update_perfil_password', args=[other_user.pk])
@@ -109,14 +107,13 @@ def test_authenticated_client_cannot_change_another_client_password_not_persiste
 
 @pytest.mark.django_db
 def test_different_passwords_do_not_pass_validation_and_redirects(
-    mocker, authenticated_client, perfil_urls, change_password_data
+    mocker, authenticated_client, perfil_urls, change_password_data, mock_recaptcha
 ):
     """
     If the client does not send identical passwords, validation does not proceed
     and redirects.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     client, _ = authenticated_client
     url = perfil_urls['perfil_change_pw_url']
     data = change_password_data.copy()
@@ -131,14 +128,13 @@ def test_different_passwords_do_not_pass_validation_and_redirects(
 
 @pytest.mark.django_db
 def test_different_passwords_do_not_pass_validation_and_redirects_to_perfil(
-    mocker, authenticated_client, perfil_urls, change_password_data
+    authenticated_client, perfil_urls, change_password_data, mock_recaptcha
 ):
     """
     If the client does not send identical passwords, validation does not proceed
     and redirects to the profile page.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     client, _ = authenticated_client
     url = perfil_urls['perfil_change_pw_url']
     data = change_password_data.copy()
@@ -153,13 +149,12 @@ def test_different_passwords_do_not_pass_validation_and_redirects_to_perfil(
 
 @pytest.mark.django_db
 def test_message_when_passwords_differ(
-    mocker, authenticated_client, perfil_urls, change_password_data
+    authenticated_client, perfil_urls, change_password_data, mock_recaptcha
 ):
     """
     Test if the message for different passwords is correct.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     client, _ = authenticated_client
     url = perfil_urls['perfil_change_pw_url']
     data = change_password_data.copy()
@@ -195,13 +190,12 @@ def test_message_when_password_changed_successfully(
 
 @pytest.mark.django_db
 def test_password_persisted_correctly_in_database(
-    mocker, authenticated_client, perfil_urls, change_password_data, client_model
+    authenticated_client, perfil_urls, change_password_data, client_model, mock_recaptcha
 ):
     """
     Test if the password is validly persisted in the database.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     client, auth_user = authenticated_client
     client.force_login(auth_user)
     url = perfil_urls['perfil_change_pw_url']

@@ -104,12 +104,13 @@ def test_authenticated_client_updating_another_perfil_receives_http_forbidden(
 
 
 @pytest.mark.django_db
-def test_client_updates_email_correctly(mocker, authenticated_client, perfil_urls, client_model):
+def test_client_updates_email_correctly(
+    authenticated_client, perfil_urls, client_model, mock_recaptcha
+):
     """
     Test if a logged-in client can update their email correctly as expected.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     client, _ = authenticated_client
     url = perfil_urls['perfil_update_url']
     new_email = 'updated@email.com'
@@ -132,12 +133,13 @@ def test_client_updates_email_correctly(mocker, authenticated_client, perfil_url
 
 
 @pytest.mark.django_db
-def test_client_updates_username_correctly(mocker, authenticated_client, perfil_urls, client_model):
+def test_client_updates_username_correctly(
+    authenticated_client, perfil_urls, client_model, mock_recaptcha
+):
     """
     Test if a logged-in client can update their username correctly as expected.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     client, _ = authenticated_client
     url = perfil_urls['perfil_update_url']
     new_username = 'updatedusername'

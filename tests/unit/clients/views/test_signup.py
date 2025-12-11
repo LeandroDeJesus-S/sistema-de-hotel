@@ -39,16 +39,15 @@ def test_signup_template(client):
 )
 @pytest.mark.django_db
 def test_signup_missing_field_renders_signup_with_message(
-    mocker,
     client,
     valid_signup_data,
     field,
+    mock_recaptcha,
 ):
     """
     Test if when sending some missing information, the correct message is sent.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     url = reverse('signup')
     data = valid_signup_data.copy()
     del data[field]
@@ -76,16 +75,15 @@ def test_signup_missing_field_renders_signup_with_message(
 )
 @pytest.mark.django_db
 def test_signup_missing_field_renders_correct_template(
-    mocker,
     client,
     valid_signup_data,
     field,
+    mock_recaptcha,
 ):
     """
     Test if when sending some missing information, the correct template is rendered.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     url = reverse('signup')
     data = valid_signup_data.copy()
     data[field] = ''
@@ -108,18 +106,17 @@ def test_signup_missing_field_renders_correct_template(
 )
 @pytest.mark.django_db
 def test_signup_duplicated_unique_field_renders_signup_with_message(
-    mocker,
     client,
     valid_signup_data,
     existing_user_data,
     field,
+    mock_recaptcha,
 ):
     """
     Test if fields that must be unique are validated correctly,
     rendering signup again with the correct message.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     url = reverse('signup')
     data = valid_signup_data.copy()
     data[field] = existing_user_data[field]
@@ -144,18 +141,17 @@ def test_signup_duplicated_unique_field_renders_signup_with_message(
 )
 @pytest.mark.django_db
 def test_signup_duplicated_unique_field_renders_correct_template(
-    mocker,
     client,
     valid_signup_data,
     existing_user_data,
     field,
+    mock_recaptcha,
 ):
     """
     Test if fields that must be unique are validated correctly,
     rendering signup again with the correct template.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     url = reverse('signup')
     data = valid_signup_data.copy()
     data[field] = existing_user_data[field]
@@ -179,7 +175,7 @@ def test_signup_duplicated_unique_field_renders_correct_template(
         ),
         (
             '1' * (ClientRules.USERNAME_MAX_SIZE + 1),
-            ClientErrorMessages.INVALID_USERNAME_LEN ,
+            ClientErrorMessages.INVALID_USERNAME_LEN,
         ),
         ('dah#1234', ClientErrorMessages.INVALID_USERNAME_CHARS),
         ('dah$1234', ClientErrorMessages.INVALID_USERNAME_CHARS),
@@ -187,18 +183,17 @@ def test_signup_duplicated_unique_field_renders_correct_template(
 )
 @pytest.mark.django_db
 def test_signup_invalid_username_renders_signup_with_message(
-    mocker,
     client,
     valid_signup_data,
     case_value,
     case_message,
+    mock_recaptcha,
 ):
     """
     Test if using an invalid username renders the signup page
     again with the corresponding valid message.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     url = reverse('signup')
     data = valid_signup_data.copy()
     data['username'] = case_value
@@ -216,14 +211,16 @@ def test_signup_invalid_username_renders_signup_with_message(
     [
         (
             '1' * (ClientRules.USERNAME_MIN_SIZE - 1),
-            ClientErrorMessages.INVALID_USERNAME_LEN % {
+            ClientErrorMessages.INVALID_USERNAME_LEN
+            % {
                 'min_len': ClientRules.USERNAME_MIN_SIZE,
                 'max_len': ClientRules.USERNAME_MAX_SIZE,
             },
         ),
         (
             '1' * (ClientRules.USERNAME_MAX_SIZE + 1),
-            ClientErrorMessages.INVALID_USERNAME_LEN % {
+            ClientErrorMessages.INVALID_USERNAME_LEN
+            % {
                 'min_len': ClientRules.USERNAME_MIN_SIZE,
                 'max_len': ClientRules.USERNAME_MAX_SIZE,
             },
@@ -234,18 +231,17 @@ def test_signup_invalid_username_renders_signup_with_message(
 )
 @pytest.mark.django_db
 def test_signup_invalid_username_renders_correct_template(
-    mocker,
     client,
     valid_signup_data,
     case_value,
     case_message,
+    mock_recaptcha,
 ):
     """
     Test if using an invalid username renders the signup page
     again with the corresponding valid template.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     url = reverse('signup')
     data = valid_signup_data.copy()
     data['username'] = case_value
@@ -258,12 +254,13 @@ def test_signup_invalid_username_renders_correct_template(
 
 
 @pytest.mark.django_db
-def test_signup_valid_data_authenticates_user(mocker, client, valid_signup_data, settings):
+def test_signup_valid_data_authenticates_user(
+    client, valid_signup_data, settings, mock_recaptcha
+):
     """
     Test if the client is logged in correctly when all data provided is valid.
     """
     # Arrange
-    mocker.patch('clients.views.support.verify_captcha', return_value=True)
     url = reverse('signup')
 
     # Act

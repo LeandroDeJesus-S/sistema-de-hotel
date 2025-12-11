@@ -51,14 +51,18 @@ def test_room_pk_passed_to_context(client_logged_in, room_fixture):
 
 @pytest.mark.django_db
 def test_scheduling_created_if_form_is_valid(
-    mocker, client_logged_in, client_fixture, active_room_fixture, schedule_form_data
+    mocker,
+    client_logged_in,
+    client_fixture,
+    active_room_fixture,
+    schedule_form_data,
+    mock_recaptcha,
 ):
     """
     Scheduling is created if the submitted data is valid.
     """
     # Arrange
     # active_room_fixture ensures the room is occupied
-    mocker.patch('utils.support.verify_captcha', return_value=True)
     mock_payment_creator = mocker.patch('schedules.views.Schedules.payment_creator_cls')
     mock_payment_creator.return_value.session.redirect_url = 'http://fakestripesession.com/'
     mocker.patch(
@@ -95,13 +99,17 @@ def test_scheduling_created_if_form_is_valid(
 
 @pytest.mark.django_db
 def test_validation_error_renders_schedule_page_with_message(
-    mocker, client_logged_in, active_room_fixture, schedule_form_data, get_message
+    mocker,
+    client_logged_in,
+    active_room_fixture,
+    schedule_form_data,
+    get_message,
+    mock_recaptcha,
 ):
     """
     Renders the schedule page again with a message if a validation error occurs.
     """
     # Arrange
-    mocker.patch('schedules.views.support.verify_captcha', return_value=True)
     mocker.patch('schedules.views.Schedules.payment_creator_cls')  # Mock this to avoid issues
     mock_payment_full_clean = mocker.patch('schedules.views.Payment.full_clean')
     mock_payment_full_clean.side_effect = ValidationError({'msg': 'error message'})
@@ -119,13 +127,17 @@ def test_validation_error_renders_schedule_page_with_message(
 
 @pytest.mark.django_db
 def test_operational_error_redirects_to_rooms_with_message(
-    mocker, client_logged_in, active_room_fixture, schedule_form_data, get_message
+    mocker,
+    client_logged_in,
+    active_room_fixture,
+    schedule_form_data,
+    get_message,
+    mock_recaptcha,
 ):
     """
     Tests if an OperationalError redirects to the rooms page with the correct message.
     """
     # Arrange
-    mocker.patch('schedules.views.support.verify_captcha', return_value=True)
     mocker.patch('schedules.views.Schedules.payment_creator_cls')  # Mock this to avoid issues
     mock_payment_full_clean = mocker.patch('schedules.views.Payment.full_clean')
     mock_payment_full_clean.side_effect = OperationalError
@@ -144,13 +156,17 @@ def test_operational_error_redirects_to_rooms_with_message(
 
 @pytest.mark.django_db
 def test_unexpected_exception_redirects_to_rooms_with_message(
-    mocker, client_logged_in, active_room_fixture, schedule_form_data, get_message
+    mocker,
+    client_logged_in,
+    active_room_fixture,
+    schedule_form_data,
+    get_message,
+    mock_recaptcha,
 ):
     """
     Tests if an unexpected exception redirects to the rooms page with the correct message.
     """
     # Arrange
-    mocker.patch('schedules.views.support.verify_captcha', return_value=True)
     mocker.patch('schedules.views.Schedules.payment_creator_cls')  # Mock this to avoid issues
     mock_payment_full_clean = mocker.patch('schedules.views.Payment.full_clean')
     mock_payment_full_clean.side_effect = Exception
@@ -169,13 +185,12 @@ def test_unexpected_exception_redirects_to_rooms_with_message(
 
 @pytest.mark.django_db
 def test_reservation_validation_failure_renders_schedule_page_with_message(
-    mocker, client_logged_in, active_room_fixture, client_fixture, get_message
+    mocker, client_logged_in, active_room_fixture, client_fixture, get_message, mock_recaptcha
 ):
     """
     If reservation validation fails and raises ValidationError, renders the schedule page again with the respective message.
     """
     # Arrange
-    mocker.patch('schedules.views.support.verify_captcha', return_value=True)
     mocker.patch('schedules.views.Schedules.payment_creator_cls')  # Mock this to avoid issues
 
     # Form data that will cause a reservation validation error (e.g., invalid checkin date)
