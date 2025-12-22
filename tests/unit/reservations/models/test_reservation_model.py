@@ -199,32 +199,3 @@ def test_creating_overlapping_reservation_raises_validation_error(reservation_mo
     # Act & Assert
     with pytest.raises(ValidationError):
         overlapping_reservation.full_clean()
-
-
-@pytest.mark.django_db
-def test_available_dates_returns_correct_string(reservation_model):
-    """
-    Tests if the available_dates method returns the correct string of available dates.
-    """
-    # Arrange
-    reservation_model.status = 'S'
-    reservation_model.save()
-
-    checkin2 = reservation_model.checkout + timedelta(days=2)
-    checkout2 = checkin2 + timedelta(days=1)
-
-    reservation2 = G(
-        Reservation, client=reservation_model.client, room=reservation_model.room, checkin=checkin2, checkout=checkout2, status='S'
-    )
-
-    date_1 = reservation_model.checkout.strftime('%d/%m/%Y')
-    date_2 = (reservation2.checkin - timedelta(days=1)).strftime('%d/%m/%Y')
-    date_3 = reservation2.checkout.strftime('%d/%m/%Y')
-
-    expected = f'{date_1} a {date_2}, e {date_3} para frente.'
-
-    # Act
-    result = Reservation.available_dates(reservation_model.room)
-
-    # Assert
-    assert result == expected

@@ -1,7 +1,5 @@
 import re
-from datetime import datetime
 from decimal import Decimal
-from typing import Self
 
 from django.core.exceptions import ValidationError
 from django.core.validators import (
@@ -21,10 +19,15 @@ from reservations.domain.value_objects import ReservationStatusEnum
 from reservations.feedback_messages import (
     BenefitErrorMessages,
     ClasseErrorMessages,
-    ReserveErrorMessages,
     RoomErrorMessages,
 )
 from utils import support
+from utils.adapters.image_validators import (
+    MaxDimensionsImageValidator,
+    MaxSizeImageValidator,
+    django_image_validator,
+)
+from utils.models.middleware import ResizeImageMiddleware, model_middleware
 
 from .rules import BenefitRules, ReserveRules, RoomRules
 
@@ -56,6 +59,22 @@ class Benefit(models.Model):
         unique=False,
         help_text='ícone com tamanho 64x64',
         upload_to='benefits/icon',
+        validators=[
+            django_image_validator(
+                MaxDimensionsImageValidator(
+                    max_width=BenefitRules.ICON_SIZE[0],
+                    max_height=BenefitRules.ICON_SIZE[1],
+                    raise_exception=True,
+                    exception_class=ValidationError,
+                    error_message=BenefitErrorMessages.INVALID_ICON_SIZE,
+                )
+            ),
+            django_image_validator(
+                MaxSizeImageValidator(
+                    max_size=5, raise_exception=True, exception_class=ValidationError
+                )
+            ),
+        ],
     )
     displayable_on_homepage = models.BooleanField(
         'Visível na página inicial', default=False, null=False, blank=False
@@ -64,21 +83,6 @@ class Benefit(models.Model):
     class Meta:
         verbose_name = 'Benefício'
         verbose_name_plural = 'Benefícios'
-
-    def clean(self) -> None:
-        super().clean()
-        self.error_messages: dict[str, str] = {}
-        self._validate_icon_size()
-
-        if self.error_messages:
-            raise ValidationError(self.error_messages)
-
-    def _validate_icon_size(self):
-        """valida se o ícone possui dimensão maxima de até 64x64"""
-        if self.icon:
-            w, h = BenefitRules.ICON_SIZE
-            if self.icon.width > w or self.icon.height > h:
-                self.error_messages['icon'] = BenefitErrorMessages.INVALID_ICON_SIZE
 
     def __str__(self) -> str:
         return str(self.name)
@@ -104,6 +108,14 @@ class Class(models.Model):
         verbose_name_plural = 'Classes'
 
 
+@model_middleware(
+    ResizeImageMiddleware(
+        field_name='image',
+        w=RoomRules.IMAGE_SIZE[0],
+        h=RoomRules.IMAGE_SIZE[1],
+        create_only=False,
+    )
+)
 class Room(models.Model):
     """representa os quartos de um determinado hotel"""
 
@@ -226,11 +238,6 @@ class Room(models.Model):
         com api do stripe"""
         return int(self.daily_price * Decimal('100'))
 
-    def save(self, *args, **kwargs) -> None:
-        super().save(*args, **kwargs)
-        if self.image:
-            support.resize_image(self.image.path, *RoomRules.IMAGE_SIZE)
-
 
 class Reservation(models.Model):
     """representa o registro de uma reserva"""
@@ -348,110 +355,11 @@ class Reservation(models.Model):
 
     def clean(self) -> None:
         super().clean()
-        # self.error_messages: dict[str, str] = {}
-        # self._validate_check_in()
-        # # self._validate_room()
-        #
-        # if self.error_messages:
-        #     raise ValidationError(self.error_messages)
-        #
         result = support.model_to_entity(self, entities.Reservation)
         if result.is_err():
             res_err = result.unwrap_err()
             err = res_err.src_error or res_err
             raise ValidationError(getattr(err, 'msg', str(err)))
-
-    @classmethod
-    def get_free_dates(cls, reservations) -> str:
-        """retorna as datas de reserva livres para um conjunto
-        de reservas, considerando os períodos de gap entre as datas com
-        número de dias de diferença maior que 1
-        Ex.:
-        >>> reservations = Reservation.objects.filter(status__in=['A', 'S'])
-        >>> [
-        ...     (r.checkin.strftime('%d/%m/%Y'), r.checkout.strftime('%d/%m/%Y'))
-        ...     for r in reservations
-        >>> ]
-        >>> ('01/01/2024', '02/01/2024'), ('05/01/2024', '07/01/2024')
-        >>> Reservation.get_free_dates(reservations)
-        >>> "02/01/2024 a 04/01/2024, e 07/01/2024 para frente."
-        """
-
-        def fmt_date(d):
-            return d.strftime('%d/%m/%Y')
-
-        dates: list[str] = []
-        lst: Self | None = None
-        for reserva in reservations:
-            if lst is None:
-                lst = reserva
-                continue
-
-            if (reserva.checkin - lst.checkout).days >= 1:
-                start, end = (
-                    fmt_date(lst.checkout),
-                    fmt_date(reserva.checkin - timezone.timedelta(days=1)),
-                )
-                dates.append(f'{start} a {end}')
-
-            lst = reserva
-
-        if dates:
-            dates.append(f'e {fmt_date(reserva.checkout)} para frente.')
-            return ', '.join(dates)
-        return f'de {fmt_date(reserva.checkout)} para frente'
-
-    @classmethod
-    def available_dates(cls, room) -> str:
-        """retorna as datas de reservas disponíveis para o quarto especificado
-        considerando reserva ativa e agendamentos, chamando Reservation.get_free_dates
-        para reservas agendadas ou ativas
-
-        Args:
-            room (reservations.models.Quarto): uma instancia da model Quarto
-
-        Returns:
-            str: string com msg de datas disponíveis (e.g d/m/Y a d/m/Y, e d/m/Y para frente)
-        """
-        reservas = Reservation.objects.filter(room=room, status__in=['A', 'S']).order_by(
-            'checkin'
-        )
-        return cls.get_free_dates(reservas)
-
-    def _validate_date_availability(self, msg_dict, k) -> bool:
-        """verifica se a data da reserva sobrepõe um reserva ativa ou agendada"""
-        reservations = Reservation.objects.filter(
-            room=self.room,
-            checkout__gt=self.checkin,
-            checkin__lte=self.checkout,
-            status__in=['A', 'S'],
-        )
-        if reservations.exists():
-            dates = self.get_free_dates(reservations)
-            msg = ReserveErrorMessages.UNAVAILABLE_DATE.format_map({'dates': dates})
-            msg_dict[k] = msg
-            return False
-        return True
-
-    def _validate_check_in(self):
-        """realiza as validações relacionadas ao check-in"""
-        if self.checkin < datetime.now().date():
-            self.error_messages['checkin'] = ReserveErrorMessages.INVALID_CHECKIN_DATE
-
-        elif self.checkin > ReserveRules.checkin_anticipation_offset():
-            self.error_messages['checkin'] = ReserveErrorMessages.INVALID_CHECKIN_ANTICIPATION
-
-        elif (
-            not ReserveRules.MIN_RESERVATION_DAYS
-            <= self.reservation_days
-            <= ReserveRules.MAX_RESERVATION_DAYS
-        ):
-            self.error_messages['checkin'] = ReserveErrorMessages.INVALID_STAYED_DAYS
-
-    def _validate_room(self):
-        """realiza as validações relacionadas ao quarto"""
-        if not self.room.available:
-            self.error_messages['room'] = ReserveErrorMessages.UNAVAILABLE_ROOM
 
     @property
     def reservation_days(self) -> int:

@@ -1,11 +1,21 @@
+from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
 
 from home.models import Hotel
 from services.rules import ServicesRules
-from utils import support
+from utils.adapters.image_validators import MaxSizeImageValidator, django_image_validator
+from utils.models.middleware import ResizeImageMiddleware, model_middleware
 
 
+@model_middleware(
+    ResizeImageMiddleware(
+        field_name='logo',
+        w=ServicesRules.IMG_SIZE[0],
+        h=ServicesRules.IMG_SIZE[1],
+        create_only=False,
+    )
+)
 class Service(models.Model):
     """serviços de um determinado hotel"""
 
@@ -27,6 +37,13 @@ class Service(models.Model):
     logo = models.ImageField(
         'Logo',
         upload_to='services/logo',
+        validators=[
+            django_image_validator(
+                MaxSizeImageValidator(
+                    max_size=5, raise_exception=True, exception_class=ValidationError
+                )
+            )
+        ],
     )
     hotel = models.ForeignKey(
         Hotel,
@@ -37,11 +54,6 @@ class Service(models.Model):
 
     def __str__(self) -> str:
         return str(self.name)
-
-    def save(self, *args, **kwargs) -> None:
-        super().save(*args, **kwargs)
-        if self.logo:
-            support.resize_image(self.logo.path, *ServicesRules.IMG_SIZE)
 
     class Meta:
         verbose_name = 'Serviço'
