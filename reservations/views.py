@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, time, timedelta
 from typing import Any
 
 from django.conf import settings
@@ -6,18 +7,22 @@ from django.contrib import messages
 from django.http import Http404, HttpRequest
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 
 from clients.infra.repo import ClientRepository
+from payments.infra.repo import PaymentRepository
 from reservations.domain.entities import Reservation
 from reservations.infra.repo import ReservationRepository, RoomRepository
 from utils import support
+from utils.adapters.queue import DjangoQTaskQueuer
 from utils.adapters.unit_of_work import UnitOfWork
 
 from .application import services
+from .application.usecases import CancelReservationUseCase
 from .feedback_messages import ReservationMessages
 from .mixins import LoginRequired
 from .models import Room
@@ -189,6 +194,33 @@ class ReservationsHistory(LoginRequired, ListView):
         )
         return reservations
 
+    def get_context_data(self, **kwargs):
+        """Add cancellation eligibility information."""
+        context = super().get_context_data(**kwargs)
+
+        now = timezone.now()
+
+        # Create reservation items with cancellation info
+        reservation_items = []
+        for reservation in context['reservations']:
+            # Create check-in datetime at start of day in the same timezone as now
+            checkin_datetime = datetime.combine(
+                reservation.checkin, time.min, tzinfo=now.tzinfo
+            )
+            time_diff = checkin_datetime - now
+            can_cancel = (
+                reservation.status in {'A', 'S'}  # ACTIVE or SCHEDULED
+                and time_diff >= timedelta(hours=24)
+            )
+
+            reservation_items.append({
+                'reservation': reservation,
+                'can_cancel': can_cancel,
+            })
+
+        context['reservation_items'] = reservation_items
+        return context
+
 
 class ReservationHistory(LoginRequired, DetailView):
     """exibe os dados de um reserva específica do histórico de reservas"""
@@ -209,3 +241,66 @@ class ReservationHistory(LoginRequired, DetailView):
             ),
         )
         return reservation
+
+
+@method_decorator(support.captcha_required('cancel_reservation'), 'post')
+class CancelReservationView(LoginRequired, View):
+    """Handle reservation cancellation requests."""
+
+    logger = logging.getLogger('djangoLogger')
+
+    def get(self, request, pk):
+        """Show cancellation confirmation page."""
+        result = svc.fetch_reservation_detail(reservation_id=pk, client_id=request.user.pk)
+
+        reservation = result.match(
+            on_ok=lambda r: r,
+            on_err=lambda err: (
+                self.logger.error(err.msg, exc_info=err.src_error),
+                messages.error(request, err.msg),
+                None,
+            ),
+        )
+
+        if not reservation:
+            return redirect('reservations_history')
+
+        # Check if reservation can be cancelled
+        now = timezone.now()
+        checkin_datetime = datetime.combine(reservation.checkin, time.min, tzinfo=now.tzinfo)
+
+        can_cancel = (
+            reservation.status in {'A', 'S'}  # ACTIVE or SCHEDULED
+            and checkin_datetime - now >= timedelta(hours=24)
+        )
+
+        context = {
+            'reservation': reservation,
+            'can_cancel': can_cancel,
+        }
+
+        return render(request, 'cancel_reservation.html', context)
+
+    def post(self, request, pk):  # noqa: PLR6301
+        """Process reservation cancellation."""
+        reason = request.POST.get('reason', '').strip()
+
+        # Initialize use case dependencies
+
+        usecase = CancelReservationUseCase(
+            reservation_repo=ReservationRepository(),
+            room_repo=RoomRepository(),
+            payments_repo=PaymentRepository(),
+            unit_of_work=UnitOfWork(),
+            task_queuer=DjangoQTaskQueuer(),
+        )
+
+        # Execute cancellation
+        result = usecase(pk, request.user.pk, reason)
+
+        if result.is_err():
+            messages.error(request, result.unwrap_err().msg)
+        else:
+            messages.success(request, 'Reserva cancelada com sucesso.')
+
+        return redirect('reservations_history')

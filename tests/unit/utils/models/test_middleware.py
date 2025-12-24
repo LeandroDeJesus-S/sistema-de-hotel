@@ -19,11 +19,11 @@ def test_resizes_on_create_with_create_only_true(mocker):
         image = models.ImageField()
 
         class Meta:
-            app_label = 'test'
+            app_label = 'test_middleware'
 
     instance = TestModel()
     instance.image = MockImageFile()
-    middleware.before_save(instance, is_create=True)
+    middleware.after_save(instance, is_create=True)
     resize_mock.assert_called_once_with('/tmp/test.jpg', 100, 200)
 
 
@@ -35,11 +35,11 @@ def test_skips_resize_on_update_with_create_only_true(mocker):
         image = models.ImageField()
 
         class Meta:
-            app_label = 'test'
+            app_label = 'test_middleware'
 
     instance = TestModel()
     instance.image = MockImageFile()
-    middleware.before_save(instance, is_create=False)
+    middleware.after_save(instance, is_create=False)
     resize_mock.assert_not_called()
 
 
@@ -51,19 +51,19 @@ def test_resizes_on_create_and_update_with_create_only_false(mocker):
         image = models.ImageField()
 
         class Meta:
-            app_label = 'test'
+            app_label = 'test_middleware'
 
     instance = TestModel()
     instance.image = MockImageFile()
 
     # Test create
-    middleware.before_save(instance, is_create=True)
+    middleware.after_save(instance, is_create=True)
     resize_mock.assert_called_once_with('/tmp/test.jpg', 100, 200)
 
     resize_mock.reset_mock()
 
     # Test update
-    middleware.before_save(instance, is_create=False)
+    middleware.after_save(instance, is_create=False)
     resize_mock.assert_called_once_with('/tmp/test.jpg', 100, 200)
 
 
@@ -74,10 +74,10 @@ def test_skips_if_field_missing(mocker):
     class TestModel(models.Model):
         # No image field
         class Meta:
-            app_label = 'test'
+            app_label = 'test_middleware'
 
     instance = TestModel()
-    middleware.before_save(instance, is_create=True)
+    middleware.after_save(instance, is_create=True)
     resize_mock.assert_not_called()
 
 
@@ -89,9 +89,9 @@ def test_skips_if_field_none(mocker):
         image = models.ImageField()
 
         class Meta:
-            app_label = 'test'
+            app_label = 'test_middleware'
 
     instance = TestModel()
     instance.image = None
-    middleware.before_save(instance, is_create=True)
+    middleware.after_save(instance, is_create=True)
     resize_mock.assert_not_called()

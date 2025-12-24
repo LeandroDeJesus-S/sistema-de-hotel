@@ -168,6 +168,8 @@ class Reservation(BaseEntity):
     status: ReservationStatus = ReservationStatusEnum.INITIALIZED
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     id: int | None = None
+    cancelled_at: datetime | None = None
+    cancellation_reason: str = ''
 
     @ensure_result
     def reservation_days(self) -> int:

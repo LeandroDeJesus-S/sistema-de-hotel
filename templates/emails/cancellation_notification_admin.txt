@@ -1,0 +1,30 @@
+Cancelamento de Reserva - ID: {{ reservation.id }}
+
+Uma reserva foi cancelada pelo cliente.
+
+Detalhes do Cliente:
+- Nome: {{ client.get_full_name }}
+- Email: {{ client.email }}
+- Telefone: {{ client.formatted_phone }}
+
+Detalhes da Reserva Cancelada:
+- ID da Reserva: {{ reservation.id }}
+- Quarto: {{ reservation.room }}
+- Check-in: {{ reservation.checkin|date:"d/m/Y" }}
+- Check-out: {{ reservation.checkout|date:"d/m/Y" }}
+- Valor Total: {{ reservation.formatted_price }}
+- Data do Cancelamento: {{ reservation.cancelled_at|date:"d/m/Y H:i" }}
+
+{% if reservation.cancellation_reason %}
+Motivo do Cancelamento: {{ reservation.cancellation_reason }}
+{% endif %}
+
+{% if refund_info %}
+Reembolso Processado:
+- Valor Reembolsado: R$ {{ refund_info.amount }}
+- Data do Reembolso: {{ refund_info.date|date:"d/m/Y H:i" }}
+{% else %}
+Nenhum reembolso foi processado para esta reserva.
+{% endif %}
+
+Verifique o painel administrativo para mais detalhes.

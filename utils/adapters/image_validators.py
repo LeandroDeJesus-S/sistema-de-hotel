@@ -73,6 +73,51 @@ class DjangoImageAdapter(AbsImage):
     size: int | float
 
 
+def validate_benefit_icon(image_file):
+    """Django validator for benefit icons (64x64 max, 5MB max)."""
+    if (
+        hasattr(image_file, 'width')
+        and hasattr(image_file, 'height')
+        and hasattr(image_file, 'size')
+    ):
+        abs_image = DjangoImageAdapter(
+            width=image_file.width, height=image_file.height, size=image_file.size
+        )
+
+        # Check dimensions
+        dim_validator = MaxDimensionsImageValidator(
+            max_width=64,
+            max_height=64,
+            raise_exception=False,
+            error_message='O ícone deve ter tamanho 64x64.',
+        )
+        dim_result = dim_validator(abs_image)
+        if dim_result.is_err():
+            raise ValidationError(dim_result.unwrap_err().msg)
+
+        # Check file size (5MB)
+        size_validator = MaxSizeImageValidator(max_size=5, raise_exception=False)
+        size_result = size_validator(abs_image)
+        if size_result.is_err():
+            raise ValidationError(size_result.unwrap_err().msg)
+
+
+def validate_service_logo(image_file):
+    """Django validator for service logos (5MB max)."""
+    if hasattr(image_file, 'size'):
+        abs_image = DjangoImageAdapter(
+            width=getattr(image_file, 'width', 0),
+            height=getattr(image_file, 'height', 0),
+            size=image_file.size,
+        )
+
+        # Check file size (5MB)
+        size_validator = MaxSizeImageValidator(max_size=5, raise_exception=False)
+        size_result = size_validator(abs_image)
+        if size_result.is_err():
+            raise ValidationError(size_result.unwrap_err().msg)
+
+
 def django_image_validator(validator: ImageValidator):
     """Wraps an ImageValidator to work as a Django field validator."""
 

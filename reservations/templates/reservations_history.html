@@ -8,7 +8,8 @@
 <div class="container">
 
     <div class="list-group d-flex justify-content-center">
-        {% for reservation in reservations %}
+        {% for item in reservation_items %}
+        {% with reservation=item.reservation %}
 <div class="list-group-item border-info {% if reservation.status == 'A' %}active{% endif %} mb-2" aria-current="true" style="background-color: var(--realce-color);">
                 <div class="row">
                     <div class="col-md-6">
@@ -29,11 +30,17 @@
                         {% if reservation.status == 'I' %}
                             <a href="{% url 'checkout' reservation.id %}" class="btn btn-primary btn-sm me-2">Continuar Reserva</a>
                         {% endif %}
+                        {% if item.can_cancel %}
+                            <a href="{% url 'cancel_reservation' reservation.id %}" class="btn btn-danger btn-sm me-2">
+                                Cancelar
+                            </a>
+                        {% endif %}
                         {% include "partials/_reservation_status_badge.html" %}
                     </div>
 
                 </div>
             </div>
+        {% endwith %}
         {% empty %}
             <p class="text-center position-absolute top-50 start-50 translate-middle">Nenhuma reserva encontrada.</p>
         {% endfor %}
@@ -45,7 +52,7 @@
 {% endblock content %}
 
 {% block footer %}
-    <footer class="{% if reservations|length < 3 %}  fixed-bottom{% endif %}">
+    <footer class="{% if reservation_items|length < 3 %}  fixed-bottom{% endif %}">
         {% include "partials/_footer.html" %}
     </footer>
 {% endblock footer %}

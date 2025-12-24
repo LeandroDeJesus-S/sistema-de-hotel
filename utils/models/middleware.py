@@ -44,8 +44,8 @@ def model_middleware(*middlewares: Middleware | BeforeMiddleware | AfterMiddlewa
     return decorator
 
 
-class ResizeImageMiddleware(BeforeMiddleware):
-    """a BeforeMiddleware that resizes an image field"""
+class ResizeImageMiddleware(AfterMiddleware):
+    """an AfterMiddleware that resizes an image field"""
 
     def __init__(
         self, field_name: str, w: int | float, h: int | float | None = None, create_only=True
@@ -55,7 +55,7 @@ class ResizeImageMiddleware(BeforeMiddleware):
         self.h = h
         self.create_only = create_only
 
-    def before_save(self, instance, is_create=False):
+    def after_save(self, instance, is_create=False):
         if not is_create and self.create_only:
             return
 

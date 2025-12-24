@@ -1,7 +1,7 @@
 import json
 import logging
 from datetime import datetime, time, timezone
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 import stripe
 from django.conf import settings
@@ -94,6 +94,30 @@ class StripeCheckoutSession(AbsSessionBasedPayment):
             session_url=cs.url or '',
             client_id=cs.customer or '',
         )
+
+    def process_refund(
+        self,
+        payment_intent_id: str,
+        amount: int,
+        reason: Literal[
+            'duplicate', 'fraudulent', 'requested_by_customer'
+        ] = 'requested_by_customer',
+    ) -> Result[dict]:
+        """Process a refund through Stripe."""
+        try:
+            refund = stripe.Refund.create(
+                payment_intent=payment_intent_id,
+                amount=amount,
+                reason=reason,
+                api_key=self._stripe_api_key,
+            )
+            return Result.Ok({
+                'refund_id': refund.id,
+                'amount': refund.amount,
+                'status': refund.status,
+            })
+        except stripe.StripeError as e:
+            return Result.Err('Failed to process refund', src_error=e)
 
 
 class WebhookSignatureError(Exception):
@@ -211,7 +235,7 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
         self._payments_repo.update(payment)
 
         run_at = datetime.combine(
-            payment.reservation.checkout, time(0, 0), tzinfo=timezone.utc
+            payment.reservation.checkout, time(23, 59), tzinfo=timezone.utc
         )
         # XXX: It might make sense send the the confirmation email even though something went wrong on schedule  # noqa: E501
         if payment.reservation.room.available:
@@ -226,11 +250,15 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
                 (payment.id,),
                 name=f'send_payment_confirmation_{payment.id}',
             )
+            self._logger.info(f'payment confirmation scheduled for {payment.id}')
             self._task_queue.schedule_task(
                 func_path='reservations.infra.tasks.release_reservation_task',
                 run_at=run_at,
                 args=(payment.reservation.id,),
                 name=f'release_reservation_{payment.reservation.id}',
+            )
+            self._logger.info(
+                f'reservation release scheduled for {payment.reservation.id} at {run_at}'
             )
             return Result.Ok(None)
 
@@ -251,11 +279,15 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
             (payment.id,),
             name=f'send_payment_confirmation_{payment.id}',
         )
+        self._logger.info(f'payment confirmation scheduled for {payment.id}')
         self._task_queue.schedule_task(
             func_path='reservations.infra.tasks.release_reservation_task',
             run_at=run_at,
             args=(payment.reservation.id,),
             name=f'release_reservation_{payment.reservation.id}',
+        )
+        self._logger.info(
+            f'reservation release scheduled for {payment.reservation.id} at {run_at}'
         )
         return Result.Ok(None)
 

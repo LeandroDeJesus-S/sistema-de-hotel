@@ -5,13 +5,13 @@
 
     <div class="col-md-12 d-flex flex-column justify-content-center align-items-center mt-5">
         <h5>Pagamento efetuado com sucesso.</h5>
-        <p>Data de pagamento: {{payment.date}}</p>
-        <p>Status: {{payment.get_status_display|title}}</p>
-        <p>Pagador: {{payment.reservation.client.complete_name}}</p>
+        <p>Data de pagamento: {{payment.created_at}}</p>
+        <p>Status: {{payment.status.value|title}}</p>
+        <p>Pagador: {{payment.reservation.client.first_name}} {{payment.reservation.client.last_name}}</p>
         <p>de {{payment.reservation.checkin}} a {{payment.reservation.checkout}}</p>
-        <p>Classe {{payment.reservation.room.room_class}}</p>
+        <p>Classe {{payment.reservation.room.room_class.name}}</p>
         <p>Nº{{payment.reservation.room.number}}</p>
-        <p>Total: {{payment.reservation.formatted_price}}</p>
+        <p>Total: {{payment.reservation.amount}}</p>
     </div>
 
 </div>

@@ -1,10 +1,15 @@
-from typing import Optional
+from typing import Literal, Optional
+
+from django.conf import settings
+from django.utils import timezone
 
 from base.ports.email import AbsEmailSender
 from base.ports.pdf import AbsPDFGenerator
 from exc import Result
 from payments.application.usecases import SendPaymentConfirmationUseCase
+from payments.domain.entities import PaymentStatus
 from payments.domain.ports import AbsPaymentsRepository
+from payments.infra.adapters import StripeCheckoutSession
 from payments.infra.repo import PaymentRepository
 from utils.adapters.email import DjangoEmailSender
 from utils.adapters.pdf import ReportLabPDFReceiptGenerator
@@ -60,5 +65,70 @@ def send_payment_confirmation(
     res = usecase(payment)
     if res.is_err():
         raise Result.Err(res.unwrap_err().msg).unwrap_err()
+
+    return Result.Ok(None)
+
+
+def process_refund(
+    payment_id: int,
+    refund_amount_cents: int,
+    reason: Literal[
+        'duplicate', 'fraudulent', 'requested_by_customer'
+    ] = 'requested_by_customer',
+    payment_repo: Optional[AbsPaymentsRepository] = None,
+) -> Result[None]:
+    """
+    Process a refund for a payment.
+
+    Args:
+        payment_id: The ID of the payment to refund.
+        refund_amount_cents: The refund amount in cents.
+        reason: The reason for the refund.
+        payment_repo: Optional. The payment repository to use. Defaults to PaymentRepository.
+
+    Returns:
+        A Result indicating success or failure.
+    """
+
+    payment_repo = payment_repo or get_payment_repository()
+
+    # Get payment details
+    payment_result = payment_repo.get_by_id(payment_id)
+    if payment_result.is_err():
+        return Result.Err(f'Payment {payment_id} not found')
+
+    payment = payment_result.unwrap()
+
+    # Check if payment intent ID exists
+    if not payment.gateway_payment_intent_id:
+        return Result.Err('Payment has no associated payment intent ID')
+
+    # Initialize Stripe adapter
+    stripe_adapter = StripeCheckoutSession(settings.STRIPE_API_KEY_SECRET)
+
+    # Process refund through Stripe
+    refund_result = stripe_adapter.process_refund(
+        payment.gateway_payment_intent_id, refund_amount_cents, reason
+    )
+
+    if refund_result.is_err():
+        return Result.Err(
+            'Failed to process refund with Stripe', src_error=refund_result.unwrap_err()
+        )
+
+    # refund_data = refund_result.unwrap()
+
+    # Update payment record with refund information
+    payment.status = PaymentStatus.REFUNDED
+    payment.refunded_amount = refund_amount_cents / 100  # Convert cents to dollars
+    payment.refunded_at = timezone.now()
+    payment.refund_reason = reason
+
+    update_result = payment_repo.update(payment)
+    if update_result.is_err():
+        return Result.Err(
+            'Failed to update payment with refund information',
+            src_error=update_result.unwrap_err(),
+        )
 
     return Result.Ok(None)

@@ -1,10 +1,9 @@
-from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
 
 from home.models import Hotel
 from services.rules import ServicesRules
-from utils.adapters.image_validators import MaxSizeImageValidator, django_image_validator
+from utils.adapters.image_validators import validate_service_logo
 from utils.models.middleware import ResizeImageMiddleware, model_middleware
 
 
@@ -37,13 +36,7 @@ class Service(models.Model):
     logo = models.ImageField(
         'Logo',
         upload_to='services/logo',
-        validators=[
-            django_image_validator(
-                MaxSizeImageValidator(
-                    max_size=5, raise_exception=True, exception_class=ValidationError
-                )
-            )
-        ],
+        validators=[validate_service_logo],
     )
     hotel = models.ForeignKey(
         Hotel,

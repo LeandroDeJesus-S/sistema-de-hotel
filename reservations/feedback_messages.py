@@ -13,10 +13,16 @@ class ReservationMessages:
     INVALID_DATE_RANGE = _('A data de check-out deve ser posterior à data de check-in.')
     SUCCESS = _('Reserva realizada com sucesso.')
     NOT_FOUND = _('Reserva não encontrada.')
+    RESERVATION_NOT_FOUND = _('Reserva não encontrada.')
     CANCELED_SUCCESS = _('Reserva cancelada com sucesso.')
     CANCEL_ERROR = _('Não foi possível cancelar a reserva.')
     RESERVATION_FAIL = _('Não foi possível realizar a reserva.')
     ALREADY_HAVE_A_RESERVATION = _('Você já possui uma reserva ativa ou agendada')
+    UNAUTHORIZED_CANCELLATION = _('Você não tem permissão para cancelar esta reserva.')
+    CANNOT_CANCEL_RESERVATION = _('Esta reserva não pode ser cancelada.')
+    CANCELLATION_TOO_LATE = _(
+        'Cancelamentos só são permitidos até 24 horas antes do check-in.'
+    )
 
 
 class BenefitErrorMessages:

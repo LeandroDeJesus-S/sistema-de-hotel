@@ -141,7 +141,7 @@ def test_max_dimensions_validator_with_django_model_raises_validation_error():
         image = models.ImageField(validators=[django_image_validator(validator)])
 
         class Meta:
-            app_label = 'test'
+            app_label = 'test_validators'
 
     model_instance = TestModel()
     model_instance.image = MockImageFile(width=150, height=50, size=1000)
@@ -158,7 +158,7 @@ def test_max_size_validator_with_django_model_raises_validation_error():
         image = models.ImageField(validators=[django_image_validator(validator)])
 
         class Meta:
-            app_label = 'test'
+            app_label = 'test_validators'
 
     model_instance = TestModel()
     model_instance.image = MockImageFile(width=50, height=50, size=1500000)  # 1.5 MB

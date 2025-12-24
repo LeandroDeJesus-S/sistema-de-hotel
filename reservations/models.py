@@ -22,11 +22,7 @@ from reservations.feedback_messages import (
     RoomErrorMessages,
 )
 from utils import support
-from utils.adapters.image_validators import (
-    MaxDimensionsImageValidator,
-    MaxSizeImageValidator,
-    django_image_validator,
-)
+from utils.adapters.image_validators import validate_benefit_icon
 from utils.models.middleware import ResizeImageMiddleware, model_middleware
 
 from .rules import BenefitRules, ReserveRules, RoomRules
@@ -59,22 +55,7 @@ class Benefit(models.Model):
         unique=False,
         help_text='ícone com tamanho 64x64',
         upload_to='benefits/icon',
-        validators=[
-            django_image_validator(
-                MaxDimensionsImageValidator(
-                    max_width=BenefitRules.ICON_SIZE[0],
-                    max_height=BenefitRules.ICON_SIZE[1],
-                    raise_exception=True,
-                    exception_class=ValidationError,
-                    error_message=BenefitErrorMessages.INVALID_ICON_SIZE,
-                )
-            ),
-            django_image_validator(
-                MaxSizeImageValidator(
-                    max_size=5, raise_exception=True, exception_class=ValidationError
-                )
-            ),
-        ],
+        validators=[validate_benefit_icon],
     )
     displayable_on_homepage = models.BooleanField(
         'Visível na página inicial', default=False, null=False, blank=False
@@ -330,6 +311,8 @@ class Reservation(models.Model):
     created_at = models.DateTimeField(
         'Criada em', null=False, blank=False, default=timezone.now
     )
+    cancelled_at = models.DateTimeField('Cancelada em', null=True, blank=True)
+    cancellation_reason = models.TextField('Motivo do cancelamento', blank=True)
 
     def __str__(self) -> str:
         return f'<{self.__class__.__name__}: {self.pk}>'

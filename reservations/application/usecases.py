@@ -1,7 +1,9 @@
 import logging
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from typing import Dict
+
+from django.utils import timezone
 
 from base.ports.queue import TaskQueuer
 from base.ports.unit_of_work import AbsUnitOfWork
@@ -326,3 +328,190 @@ class ReleaseReservationUseCase:
             uow.commit()
 
         return Result.Ok(True)
+
+
+class CancelReservationUseCase:
+    """
+    Use case to cancel a reservation.
+
+    This involves validating ownership, checking cancellation policy,
+    updating reservation status, and triggering refund logic.
+    """
+
+    def __init__(
+        self,
+        reservation_repo: AbsReservationRepository,
+        room_repo: AbsRoomRepository,
+        payments_repo: AbsPaymentsRepository,
+        unit_of_work: AbsUnitOfWork,
+        task_queuer: TaskQueuer,
+    ) -> None:
+        self._reservation_repo = reservation_repo
+        self._room_repo = room_repo
+        self._payments_repo = payments_repo
+        self._unit_of_work = unit_of_work
+        self._task_queuer = task_queuer
+        self._logger = logging.getLogger('djangoLogger')
+
+    def __call__(
+        self, reservation_id: int, client_id: int, reason: str = ''
+    ) -> Result[Reservation]:
+        """
+        Cancels the given reservation.
+
+        Args:
+            reservation_id: ID of the reservation to cancel
+            client_id: ID of the client requesting cancellation
+            reason: Optional reason for cancellation
+
+        Returns:
+            Result[Reservation]: A Result containing the cancelled reservation
+                                or an Error if cancellation fails.
+        """
+        return (
+            self._find_reservation(reservation_id)
+            .then(self._validate_ownership(client_id))
+            .then(self._validate_cancellation_policy)
+            .then(self._cancel_reservation(reason))
+            .then(self._trigger_refund)
+            .then(self._send_notifications)
+        )
+
+    def _find_reservation(self, reservation_id: int) -> Result[Reservation]:
+        """Find the reservation by ID."""
+        result = self._reservation_repo.find_by_id(reservation_id)
+        if result.is_err():
+            return Result.Err(
+                msg=feedback_messages.ReservationMessages.RESERVATION_NOT_FOUND,
+                src_error=result.unwrap_err(),
+            )
+        return Result.Ok(result.unwrap())
+
+    def _validate_ownership(self, client_id: int):
+        """Return a function to validate reservation ownership."""
+
+        def validator(reservation: Reservation) -> Result[Reservation]:
+            if reservation.client.id != client_id:
+                return Result.Err(
+                    msg=feedback_messages.ReservationMessages.UNAUTHORIZED_CANCELLATION
+                )
+            return Result.Ok(reservation)
+
+        return validator
+
+    def _validate_cancellation_policy(self, reservation: Reservation) -> Result[Reservation]:
+        """Validate that the reservation can be cancelled according to policy."""
+        # Check if reservation is in a cancellable state
+        if reservation.status not in {
+            ReservationStatusEnum.ACTIVE,
+            ReservationStatusEnum.SCHEDULED,
+        }:
+            return Result.Err(
+                msg=feedback_messages.ReservationMessages.CANNOT_CANCEL_RESERVATION
+            )
+
+        # Check 24-hour cancellation policy
+        now = timezone.now()
+        checkin_datetime = datetime.combine(reservation.checkin, time.min, tzinfo=now.tzinfo)
+
+        if checkin_datetime - now < timedelta(hours=24):
+            return Result.Err(msg=feedback_messages.ReservationMessages.CANCELLATION_TOO_LATE)
+
+        return Result.Ok(reservation)
+
+    def _cancel_reservation(self, reason: str):
+        """Return a function to cancel the reservation."""
+
+        def cancel(reservation: Reservation) -> Result[Reservation]:
+            with self._unit_of_work as uow:
+                # If reservation was active, make room available again
+                was_active = reservation.status == ReservationStatusEnum.ACTIVE
+                if was_active:
+                    reservation.room.available = True
+                    room_save_result = self._room_repo.save(reservation.room)
+                    if room_save_result.is_err():
+                        uow.rollback()
+                        self._logger.error(
+                            'Failed to restore room availability for reservation %s: %s',
+                            reservation.id,
+                            room_save_result.unwrap_err(),
+                        )
+                        return Result.Err(
+                            msg='Failed to restore room availability',
+                            src_error=room_save_result.unwrap_err(),
+                        )
+
+                reservation.status = ReservationStatusEnum.CANCELLED
+                reservation.cancelled_at = timezone.now()
+                reservation.cancellation_reason = reason
+
+                save_result = self._reservation_repo.save(reservation)
+                if save_result.is_err():
+                    uow.rollback()
+                    self._logger.error(
+                        'Failed to cancel reservation %s: %s',
+                        reservation.id,
+                        save_result.unwrap_err(),
+                    )
+                    return Result.Err(
+                        msg='Failed to cancel reservation',
+                        src_error=save_result.unwrap_err(),
+                    )
+
+                uow.commit()
+                self._logger.info('Reservation %s cancelled successfully.', reservation.id)
+                return Result.Ok(save_result.unwrap())
+
+        return cancel
+
+    def _trigger_refund(self, reservation: Reservation) -> Result[Reservation]:
+        """Trigger refund process for the cancelled reservation."""
+        # Find associated payment
+        if not reservation.id:
+            self._logger.warning('Reservation has no ID, cannot process refund')
+            return Result.Ok(reservation)
+
+        payment_result = self._payments_repo.get_by_reservation_id(reservation.id)
+        if payment_result.is_err():
+            self._logger.warning(
+                'No payment found for reservation %s during cancellation', reservation.id
+            )
+            # Don't fail the cancellation if no payment exists
+            return Result.Ok(reservation)
+
+        payment = payment_result.unwrap()
+
+        # Only process refund if payment was completed
+        if payment.status == 'completed':
+            # Calculate refund amount based on policy
+            refund_amount = self._calculate_refund_amount(reservation, payment)
+
+            # Queue refund processing task
+            self._task_queuer.queue_task(
+                'payments.infra.tasks.process_refund',
+                (payment.id, refund_amount, 'requested_by_customer'),
+                name=f'process_refund_{payment.id}',
+            )
+
+        return Result.Ok(reservation)
+
+    def _calculate_refund_amount(self, reservation: Reservation, payment) -> int:
+        """Calculate refund amount in cents based on cancellation policy."""
+        now = timezone.now()
+        checkin_datetime = datetime.combine(reservation.checkin, time.min, tzinfo=now.tzinfo)
+
+        # Full refund if more than 24 hours before check-in
+        if checkin_datetime - now >= timedelta(hours=24):
+            return int(payment.amount * 100)  # Full refund in cents
+
+        # Partial refund (50%) if within 24 hours
+        return int(payment.amount * 100 * Decimal('0.5'))
+
+    def _send_notifications(self, reservation: Reservation) -> Result[Reservation]:
+        """Send cancellation notifications."""
+        self._task_queuer.queue_task(
+            'reservations.infra.tasks.send_cancellation_notification',
+            (reservation.id,),
+            name=f'send_cancellation_notification_{reservation.id}',
+        )
+        return Result.Ok(reservation)

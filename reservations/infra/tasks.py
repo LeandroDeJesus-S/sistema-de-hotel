@@ -1,5 +1,9 @@
 from typing import Optional
 
+from django.conf import settings
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+
 from base.ports.queue import TaskQueuer
 from base.ports.unit_of_work import AbsUnitOfWork
 from exc import Result
@@ -151,5 +155,88 @@ def schedule_reservation_task(reservation_id: int) -> Result[None]:
     res = usecase(reservation)
     if res.is_err():
         raise Result.Err(res.unwrap_err().msg).unwrap_err()
+
+    return Result.Ok(None)
+
+
+def send_cancellation_notification(reservation_id: int) -> Result[None]:
+    """
+    Send cancellation notification emails to client and admins.
+
+    Args:
+        reservation_id: The ID of the cancelled reservation.
+
+    Returns:
+        A Result indicating success or failure.
+    """
+    reservation_repo = get_reservation_repository()
+    payments_repo = get_payment_repository()
+
+    # Get reservation details
+    reservation_result = reservation_repo.find_by_id(reservation_id)
+    if reservation_result.is_err():
+        return Result.Err(f'Reservation {reservation_id} not found')
+
+    reservation = reservation_result.unwrap()
+
+    # Get payment details for refund information
+    payment_result = payments_repo.get_by_reservation_id(reservation_id)
+    refund_info = None
+    if payment_result.is_ok():
+        payment = payment_result.unwrap()
+        if payment.refunded_amount:
+            refund_info = {'amount': payment.refunded_amount, 'date': payment.refunded_at}
+
+    # Send email to client
+    client_subject = 'Confirmação de Cancelamento de Reserva'
+    client_context = {
+        'reservation': reservation,
+        'refund_info': refund_info,
+        'client': reservation.client,
+    }
+
+    client_html_message = render_to_string(
+        'emails/cancellation_notification_client.html', client_context
+    )
+    client_plain_message = render_to_string(
+        'emails/cancellation_notification_client.txt', client_context
+    )
+
+    try:
+        send_mail(
+            client_subject,
+            client_plain_message,
+            settings.DEFAULT_FROM_EMAIL,
+            [reservation.client.email],
+            html_message=client_html_message,
+        )
+    except Exception as e:
+        return Result.Err('Failed to send client notification email', src_error=e)
+
+    # Send email to admins
+    admin_subject = f'Reserva Cancelada - {reservation.id}'
+    admin_context = {
+        'reservation': reservation,
+        'refund_info': refund_info,
+        'client': reservation.client,
+    }
+
+    admin_html_message = render_to_string(
+        'emails/cancellation_notification_admin.html', admin_context
+    )
+    admin_plain_message = render_to_string(
+        'emails/cancellation_notification_admin.txt', admin_context
+    )
+
+    try:
+        send_mail(
+            admin_subject,
+            admin_plain_message,
+            settings.DEFAULT_FROM_EMAIL,
+            [admin_email for admin_email in settings.ADMINS],
+            html_message=admin_html_message,
+        )
+    except Exception as e:
+        return Result.Err('Failed to send admin notification email', src_error=e)
 
     return Result.Ok(None)

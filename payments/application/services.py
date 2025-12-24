@@ -111,14 +111,12 @@ class PaymentService:
     def render_payment_success(
         self, reservation_id: int
     ) -> Union[Result[TemplateRenderResultDTO], Result[RedirectResultDTO]]:
-        reservation_res = self._reservation_repo.find_by_id(reservation_id)
-        if reservation_res.is_err():
-            self._logger.error(
-                'Failed to find reservation', exc_info=reservation_res.unwrap_err()
-            )
+        pm_res = self._payment_repo.get_by_reservation_id(reservation_id)
+        if pm_res.is_err():
+            self._logger.error('Failed to find payment', exc_info=pm_res.unwrap_err())
             return RedirectResultDTO.safe_create(url='rooms', code=302)
         return TemplateRenderResultDTO.safe_create(
-            template_name='success.html', context={'reservation': reservation_res.unwrap()}
+            template_name='success.html', context={'payment': pm_res.unwrap()}
         )
 
     def render_payment_cancel(

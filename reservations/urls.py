@@ -1,6 +1,7 @@
 from django.urls import include, path
 
 from .views import (
+    CancelReservationView,
     ReservationHistory,
     ReservationsHistory,
     Reserve,
@@ -25,6 +26,11 @@ urlpatterns = [
                 '<int:pk>/',
                 ReservationHistory.as_view(),
                 name='reservation_history',
+            ),
+            path(
+                '<int:pk>/cancelar/',
+                CancelReservationView.as_view(),
+                name='cancel_reservation',
             ),
         ]),
     ),

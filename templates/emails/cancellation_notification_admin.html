@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Cancelamento de Reserva - ID: {{ reservation.id }}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #d9534f;">Cancelamento de Reserva</h1>
+
+        <p>Uma reserva foi cancelada pelo cliente.</p>
+
+        <div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;">
+            <h3>Detalhes do Cliente:</h3>
+            <ul style="list-style: none; padding: 0;">
+                <li><strong>Nome:</strong> {{ client.get_full_name }}</li>
+                <li><strong>Email:</strong> {{ client.email }}</li>
+                <li><strong>Telefone:</strong> {{ client.formatted_phone }}</li>
+            </ul>
+        </div>
+
+        <div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;">
+            <h3>Detalhes da Reserva Cancelada:</h3>
+            <ul style="list-style: none; padding: 0;">
+                <li><strong>ID da Reserva:</strong> {{ reservation.id }}</li>
+                <li><strong>Quarto:</strong> {{ reservation.room }}</li>
+                <li><strong>Check-in:</strong> {{ reservation.checkin|date:"d/m/Y" }}</li>
+                <li><strong>Check-out:</strong> {{ reservation.checkout|date:"d/m/Y" }}</li>
+                <li><strong>Valor Total:</strong> {{ reservation.formatted_price }}</li>
+                <li><strong>Data do Cancelamento:</strong> {{ reservation.cancelled_at|date:"d/m/Y H:i" }}</li>
+            </ul>
+
+            {% if reservation.cancellation_reason %}
+            <p><strong>Motivo do Cancelamento:</strong> {{ reservation.cancellation_reason }}</p>
+            {% endif %}
+        </div>
+
+        {% if refund_info %}
+        <div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; margin: 20px 0; border-radius: 5px;">
+            <h3 style="color: #155724;">Reembolso Processado</h3>
+            <ul style="list-style: none; padding: 0; color: #155724;">
+                <li><strong>Valor Reembolsado:</strong> R$ {{ refund_info.amount }}</li>
+                <li><strong>Data do Reembolso:</strong> {{ refund_info.date|date:"d/m/Y H:i" }}</li>
+            </ul>
+        </div>
+        {% else %}
+        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px 0; border-radius: 5px;">
+            <p style="color: #856404; margin: 0;"><strong>Nota:</strong> Nenhum reembolso foi processado para esta reserva.</p>
+        </div>
+        {% endif %}
+
+        <p>Verifique o painel administrativo para mais detalhes.</p>
+    </div>
+</body>
+</html>
