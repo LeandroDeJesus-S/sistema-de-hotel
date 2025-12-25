@@ -9,7 +9,7 @@
 
 <div class="container d-flex justify-content-center align-items-center p-5">
 
-    <form id="form" action="{% if "/agendar/" in request.path %} {% url "schedule" room_pk %}{% else %} {% url 'reserve' room_pk %}{% endif %}" method="post" class="form reserve-form text-light" >{% csrf_token %}
+    <form id="form" action="{% url 'reserve' room_pk %}" method="post" class="form reserve-form text-light" >{% csrf_token %}
         <div class="container">
             <div class="d-flex justify-content-center">
                 {% include "partials/_messages.html" %}

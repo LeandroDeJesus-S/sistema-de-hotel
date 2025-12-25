@@ -11,7 +11,7 @@ from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 
-from clients.infra.repo import ClientRepository
+from HOTEL import get_container
 from payments.infra.repo import PaymentRepository
 from reservations.domain.entities import Reservation
 from reservations.infra.repo import ReservationRepository, RoomRepository
@@ -25,12 +25,7 @@ from .feedback_messages import ReservationMessages
 from .mixins import LoginRequired
 from .models import Room
 
-svc = services.ReservationService(
-    reservation_repo=ReservationRepository(),
-    room_repo=RoomRepository(),
-    client_repo=ClientRepository(),
-    uow=UnitOfWork(),
-)
+svc = get_container().reservation_service()
 
 
 def setup_reservation_context(
@@ -184,7 +179,7 @@ class ReservationsHistory(LoginRequired, ListView):
             messages.error(self.request, err.msg)
             return []
 
-        reservations = result.match(
+        reservations: list[Reservation] = result.match(
             on_ok=lambda rs: rs,
             on_err=_on_err,
         )

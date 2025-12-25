@@ -13,20 +13,14 @@ from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, UpdateView
 
 from clients.models import Client
+from HOTEL import get_container
 from reservations.mixins import LoginRequired
 from utils import support
 
 from . import feedback_messages
-from .application.services import ClientService
 from .decorators import profile_ownership_required
 from .forms import UpdatePerfilForm
 from .infra import presenters
-from .infra.adapters import (
-    DjangoPasswordManager,
-    DjangoSessionManager,
-    GoogleRecaptchaV3Verifier,
-)
-from .infra.repo import ClientRepository
 
 CAPTCHA_CTX = {'recaptcha_site_key': settings.G_RECAPTCHA_KEY_SITE}
 
@@ -40,12 +34,7 @@ class SignUp(View):
         self.logger = logging.getLogger('djangoLogger')
         self.template_name = 'signup.html'
         self._redirect = redirect('rooms')
-        self.svc = ClientService(
-            repo=ClientRepository(),
-            password_manager=DjangoPasswordManager(),
-            session_manager=DjangoSessionManager(),
-            captcha_service=GoogleRecaptchaV3Verifier(settings.G_RECAPTCHA_KEY_SECRET),
-        )
+        self.svc = get_container().client_service()
 
     def get(self, request):
         if request.user.is_authenticated:
@@ -70,12 +59,7 @@ class SignIn(View):
         self.logger = logging.getLogger('djangoLogger')
         self.template = 'signin.html'
         self.next_url = reverse('rooms')
-        self.svc = ClientService(
-            repo=ClientRepository(),
-            password_manager=DjangoPasswordManager(),
-            session_manager=DjangoSessionManager(),
-            captcha_service=GoogleRecaptchaV3Verifier(settings.G_RECAPTCHA_KEY_SECRET),
-        )
+        self.svc = get_container().client_service()
 
     def get(self, request: HttpRequest, *args, **kwargs):
         next_url = request.GET.get('next', self.next_url)
@@ -151,12 +135,7 @@ class PerfilChangePassword(LoginRequired, View):
         super().setup(request, *args, **kwargs)
         self.logger = logging.getLogger('djangoLogger')
         self.template = 'perfil_update_password.html'
-        self.svc = ClientService(
-            repo=ClientRepository(),
-            password_manager=DjangoPasswordManager(),
-            session_manager=DjangoSessionManager(),
-            captcha_service=GoogleRecaptchaV3Verifier(settings.G_RECAPTCHA_KEY_SECRET),
-        )
+        self.svc = get_container().client_service()
 
     def get(self, *args, **kwargs):
         self.logger.debug(f'rendering {self.template}')

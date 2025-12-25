@@ -50,6 +50,7 @@ dependencies = [
     "wcwidth==0.2.13",
     "phonenumbers (>=9.0.13,<10.0.0)",
     "pydantic[email] (>=2.11.7,<3.0.0)",
+    "dependency-injector (>=4.48.3,<5.0.0)",
 ]
 
 [tool.poetry]

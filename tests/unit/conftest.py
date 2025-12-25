@@ -12,7 +12,6 @@ from home.models import Hotel, Contact
 from payments.models import Payment
 from reservations.models import Benefit, Class, Reservation, Room
 from reservations.rules import RoomRules
-from schedules.models import Scheduling
 from services.models import Service
 
 
@@ -222,14 +221,6 @@ def payment_model(db, reservation_model, contact_model):
         client=reservation_model.client,
         payment_gateway=Payment.Gateway.STRIPE,
     )
-
-
-@pytest.fixture
-def scheduling_model(db, client_model, reservation_model):
-    """
-    Fixture to create a Scheduling instance.
-    """
-    return G(Scheduling, client=client_model, reservation=reservation_model)
 
 
 @pytest.fixture

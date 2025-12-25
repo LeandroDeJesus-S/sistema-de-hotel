@@ -1,5 +1,76 @@
 # AGENTS.md
 
+## Dependency Injection (DI)
+
+The application uses `dependency-injector` for dependency injection to achieve loose coupling and better testability.
+
+### Container Setup
+- **Location**: `HOTEL/container.py`
+- **Initialization**: `HOTEL/__init__.py` (lazy-loaded to avoid Django setup issues)
+- **Access**: `from HOTEL import get_container; container = get_container()`
+
+### Current Services
+
+#### Clients Module
+```python
+# Infrastructure (Singletons)
+container.client_repo          # ClientRepository
+container.password_manager     # DjangoPasswordManager
+container.session_manager      # DjangoSessionManager
+container.captcha_service      # GoogleRecaptchaV3Verifier
+
+# Application (Factories)
+container.client_service()     # ClientService instance
+```
+
+#### Reservations Module
+```python
+# Infrastructure (Singletons)
+container.reservation_repo     # ReservationRepository
+container.room_repo            # RoomRepository
+container.unit_of_work         # UnitOfWork
+
+# Application (Factories)
+container.reservation_service() # ReservationService instance
+```
+
+#### Payments Module
+```python
+# Infrastructure (Singletons)
+container.payment_repo         # PaymentRepository
+container.payment_gateway      # StripeCheckoutSession
+container.webhook_handler      # StripePaymentWebhookHandler
+container.task_queuer          # DjangoQTaskQueuer
+container.email_sender         # DjangoEmailSender
+container.pdf_generator        # ReportLabPDFReceiptGenerator
+container.logger               # Python Logger
+
+# Use Cases (Singletons)
+container.confirmation_usecase # SendPaymentConfirmationUseCase
+container.activate_reservation_usecase # ActivateReservationUseCase
+container.schedule_reservation_usecase # ScheduleReservationUseCase
+container.release_reservation_usecase # ReleaseReservationUseCase
+
+# Application (Factories)
+container.payment_service()    # PaymentService instance
+```
+
+### Usage in Views
+```python
+from HOTEL import get_container
+
+def setup(self, request, *args, **kwargs):
+    self.svc = get_container().client_service()
+```
+
+### Adding New Dependencies
+1. **Infrastructure**: Add to `Container` as `providers.Singleton()`
+2. **Services**: Add to `Container` as `providers.Factory()`
+3. **Views**: Use `get_container().new_service()` in view setup
+
+### Testing with DI
+Tests automatically use the container. Override dependencies by mocking the container providers.
+
 ## Build/Lint/Test Commands
 - `poetry run task run` - Start Django development server
 - `poetry run python manage.py migrate` - Run database migrations
