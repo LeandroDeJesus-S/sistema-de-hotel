@@ -104,13 +104,15 @@ run = 'python manage.py runserver'
 Q = 'python manage.py qcluster'
 typecheck = 'mypy . --ignore-missing-imports'
 
-pre_test = 'task format && task typecheck'
+pre_test = 'task format && task typecheck && task pcommit'
 test = 'pytest tests/'
 post_test = 'task scan'
 
 scan = 'bandit -c pyproject.toml -r .'
 
 webhook = 'stripe listen --forward-to http://127.0.0.1:8000/pagamento/webhook/'
+
+pcommit = 'pre-commit run --all-files'
 
 [tool.mypy]
 exclude = [

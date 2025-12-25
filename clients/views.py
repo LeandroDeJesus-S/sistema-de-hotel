@@ -12,7 +12,6 @@ from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, UpdateView
 
-from clients.application.dtos import ChangePasswordInput
 from clients.models import Client
 from reservations.mixins import LoginRequired
 from utils import support
@@ -20,8 +19,8 @@ from utils import support
 from . import feedback_messages
 from .application.services import ClientService
 from .decorators import profile_ownership_required
-from .domain.entities import Client as DomainClient
 from .forms import UpdatePerfilForm
+from .infra import presenters
 from .infra.adapters import (
     DjangoPasswordManager,
     DjangoSessionManager,
@@ -56,62 +55,10 @@ class SignUp(View):
         return render(request, self.template_name, CAPTCHA_CTX)
 
     def post(self, request: HttpRequest):
-        username = self.request.POST.get('username', '').strip()
-        password = self.request.POST.get('password')
-        name = self.request.POST.get('nome', '').strip()
-        surname = self.request.POST.get('sobrenome', '').strip()
-        phone = self.request.POST.get('telefone', '').strip()
-        email = self.request.POST.get('email', '').strip()
-        birthdate = self.request.POST.get('nascimento')
-        cpf = self.request.POST.get('cpf', '').strip()
-
-        if not all((
-            username,
-            password,
-            name,
-            surname,
-            phone,
-            email,
-            birthdate,
-            cpf,
-        )):
-            messages.error(request, feedback_messages.SignUp.MISSING_FIELDS)
-            return render(request, self.template_name, CAPTCHA_CTX)
-
-        client_entity_result = DomainClient.safe_create(
-            username=username,
-            password=password,
-            first_name=name,
-            last_name=surname,
-            phone=phone,
-            birthdate=birthdate,
-            email=email,
-            cpf=cpf,
+        result = self.svc.signup_user(request.POST, request)
+        return presenters.signup_post_presenter(
+            request, result, self.template_name, CAPTCHA_CTX
         )
-        if client_entity_result.is_err():
-            messages.error(request, client_entity_result.unwrap_err().msg)
-            self.logger.error(str(client_entity_result.unwrap_err()))
-            return render(request, self.template_name, CAPTCHA_CTX)
-
-        created_user_result = self.svc.create_user(client_entity_result.unwrap())
-
-        if created_user_result.is_err():
-            messages.error(request, created_user_result.unwrap_err().msg)
-            self.logger.error(created_user_result.unwrap_err())
-            return render(request, self.template_name, CAPTCHA_CTX)
-
-        login_result = self.svc.session_manager.login(request, created_user_result.unwrap())
-        _redirect = self._redirect
-
-        if login_result.is_err():
-            _redirect = reverse('signin')
-            self.logger.error(
-                'User created, but failed to log in '
-                f'automatically: {login_result.unwrap_err()}'
-            )
-
-        self.logger.debug(f'redirecting to {_redirect}')
-        return _redirect
 
 
 @method_decorator(support.captcha_required('signin'), name='post')
@@ -144,31 +91,15 @@ class SignIn(View):
         return render(request, self.template, CAPTCHA_CTX)
 
     def post(self, request: HttpRequest, *args, **kwargs):
-        _std_rendering = render(request, self.template, CAPTCHA_CTX)
-        post_data = {
+        credentials = {
             'username': request.POST.get('username', ''),
             'password': request.POST.get('password', ''),
         }
 
-        user_result = self.svc.session_manager.authenticate(request, **post_data)
-        if user_result.is_err():
-            messages.error(request, user_result.unwrap_err().msg)
-            self.logger.error(
-                user_result.unwrap_err(), exc_info=user_result.unwrap_err().src_error
-            )
-            return _std_rendering
-
-        login_result = self.svc.session_manager.login(request, user_result.unwrap())
-        if login_result.is_err():
-            self.logger.error(
-                login_result.unwrap_err(), exc_info=login_result.unwrap_err().src_error
-            )
-            messages.error(request, login_result.unwrap_err().msg)
-            return _std_rendering
-
-        next_url = request.session.get('next_url', self.next_url)
-        self.logger.info(f'User logged in successfully. Redirecting to {next_url}')
-        return redirect(next_url)
+        result = self.svc.signin_user(credentials, request)
+        redirect_target = result.unwrap() if result.is_ok() else 'error'
+        self.logger.info(f'User logged in successfully. Redirecting to {redirect_target}')
+        return presenters.signin_post_presenter(request, result, self.template, CAPTCHA_CTX)
 
 
 def axes_locked_out(request, *args, **kwargs):
@@ -232,30 +163,14 @@ class PerfilChangePassword(LoginRequired, View):
         return render(self.request, self.template, CAPTCHA_CTX)
 
     def post(self, request, *args, **kwargs):
-        _redirect = redirect(reverse('perfil', args=(self.request.user.pk,)))
-        data = {
-            'user_id': self.request.user.pk,
-            'password': self.request.POST.get('new_password', '').strip(),
-            'password_repeat': self.request.POST.get('password_repeat', '').strip(),
-        }
+        redirect_url = reverse('perfil', args=(self.request.user.pk,))
 
-        inp_result = ChangePasswordInput.safe_validate(data)
-        if inp_result.is_err():
-            self.logger.error(inp_result.unwrap_err().msg)
-            messages.error(self.request, inp_result.unwrap_err().msg)
-            return _redirect
+        result = self.svc.process_password_change(request.POST, self.request.user.pk)
 
-        change_pw_result = self.svc.change_pw(inp_result.unwrap())
-        if change_pw_result.is_err():
-            self.logger.error(
-                change_pw_result.unwrap_err().msg,
-                exc_info=change_pw_result.unwrap_err().src_error,
-            )
-            messages.error(self.request, change_pw_result.unwrap_err().msg)
-            return _redirect
+        if result.is_err():
+            self.logger.error(result.unwrap_err().msg)
 
-        messages.success(self.request, feedback_messages.ChangePassword.SUCCESS)
-        return _redirect
+        return presenters.password_change_post_presenter(request, result, redirect_url)
 
 
 @method_decorator(support.captcha_required('delete_perfil', params=('pk',)), name='post')
