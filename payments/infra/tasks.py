@@ -1,15 +1,15 @@
-from typing import Literal, Optional
+from typing import Literal
 
-from django.conf import settings
+from dependency_injector.wiring import Provide, inject
 from django.utils import timezone
 
 from base.ports.email import AbsEmailSender
 from base.ports.pdf import AbsPDFGenerator
 from exc import Result
 from payments.application.usecases import SendPaymentConfirmationUseCase
+from payments.container import PaymentsContainer
 from payments.domain.entities import PaymentStatus
-from payments.domain.ports import AbsPaymentsRepository
-from payments.infra.adapters import StripeCheckoutSession
+from payments.domain.ports import AbsPaymentsRepository, AbsSessionBasedPayment
 from payments.infra.repo import PaymentRepository
 from utils.adapters.email import DjangoEmailSender
 from utils.adapters.pdf import ReportLabPDFReceiptGenerator
@@ -27,12 +27,11 @@ def get_email_sender() -> AbsEmailSender:
     return DjangoEmailSender()
 
 
-# XXX: you've finished to fix broken tests, now you should test if the live app works
+@inject
 def send_payment_confirmation(
     payment_id: int,
-    payment_repo: Optional[AbsPaymentsRepository] = None,
-    pdf_generator: Optional[AbsPDFGenerator] = None,
-    email_sender: Optional[AbsEmailSender] = None,
+    payment_repo: AbsPaymentsRepository = Provide[PaymentsContainer.payment_repo],
+    usecase: SendPaymentConfirmationUseCase = Provide[PaymentsContainer.confirmation_usecase],
 ) -> Result[None]:
     """
     Sends a payment confirmation email to the client.
@@ -49,14 +48,6 @@ def send_payment_confirmation(
     Returns:
         A Result indicating success or failure.
     """
-    payment_repo = payment_repo or get_payment_repository()
-    pdf_generator = pdf_generator or get_pdf_generator()
-    email_sender = email_sender or get_email_sender()
-    usecase = SendPaymentConfirmationUseCase(
-        mailer=email_sender,
-        pdf_generator=pdf_generator,
-    )
-
     payment_result = payment_repo.get_by_id(payment_id)
     if payment_result.is_err():
         raise Result.Err(f'Payment with id {payment_id} not found.').unwrap_err()
@@ -69,13 +60,15 @@ def send_payment_confirmation(
     return Result.Ok(None)
 
 
+@inject
 def process_refund(
     payment_id: int,
     refund_amount_cents: int,
     reason: Literal[
         'duplicate', 'fraudulent', 'requested_by_customer'
     ] = 'requested_by_customer',
-    payment_repo: Optional[AbsPaymentsRepository] = None,
+    payment_repo: AbsPaymentsRepository = Provide[PaymentsContainer.payment_repo],
+    stripe_adapter: AbsSessionBasedPayment = Provide[PaymentsContainer.payment_gateway],
 ) -> Result[None]:
     """
     Process a refund for a payment.
@@ -90,8 +83,6 @@ def process_refund(
         A Result indicating success or failure.
     """
 
-    payment_repo = payment_repo or get_payment_repository()
-
     # Get payment details
     payment_result = payment_repo.get_by_id(payment_id)
     if payment_result.is_err():
@@ -102,9 +93,6 @@ def process_refund(
     # Check if payment intent ID exists
     if not payment.gateway_payment_intent_id:
         return Result.Err('Payment has no associated payment intent ID')
-
-    # Initialize Stripe adapter
-    stripe_adapter = StripeCheckoutSession(settings.STRIPE_API_KEY_SECRET)
 
     # Process refund through Stripe
     refund_result = stripe_adapter.process_refund(

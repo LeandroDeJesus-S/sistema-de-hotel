@@ -10,6 +10,7 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title mb-0">Confirmar Cancelamento de Reserva</h3>
+                    {% include "partials/_messages.html" %}
                 </div>
                 <div class="card-body">
                     {% if can_cancel %}
@@ -36,8 +37,9 @@
                             </div>
                         </div>
 
-                        <form action="{% url 'cancel_reservation' reservation.id %}" method="post">
+                        <form action="{% url 'cancel_reservation' reservation.id %}" method="post" id="form">
                             {% csrf_token %}
+                            {% include "partials/_recaptcha_input.html" %}
                             <div class="mb-3">
                                 <label for="reason" class="form-label">Motivo do Cancelamento (Opcional)</label>
                                 <textarea class="form-control" id="reason" name="reason" rows="3"
@@ -70,4 +72,6 @@
         </div>
     </div>
 </div>
+
+{% include "partials/_recaptcha_v3.html" %}
 {% endblock %}

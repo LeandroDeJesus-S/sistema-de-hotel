@@ -51,7 +51,7 @@ def verify_captcha(captcha_resp) -> bool:
     Returns:
         bool: retorna True se o captcha é valido
     """
-    MIN_SCORE = 0.7
+    MIN_SCORE = settings.CAPTCHA_MIN_SCORE
     data = {
         'response': captcha_resp,
         'secret': settings.G_RECAPTCHA_KEY_SECRET,
@@ -64,9 +64,10 @@ def verify_captcha(captcha_resp) -> bool:
         return False
 
     json_resp = response.json()
-    logging.getLogger('djangoLogger').debug(f'recaptcha resp: {json_resp}')
+    logging.getLogger('djangoLogger').debug(f'captcha response: {json_resp}')
     success = json_resp.get('success', False)
-    good_score = json_resp.get('score', 0) >= MIN_SCORE
+    score = json_resp.get('score', 0)
+    good_score = score >= MIN_SCORE
     is_valid = success and good_score
     return True if is_valid else False
 
@@ -84,9 +85,6 @@ def captcha_required(
         on_fail_message (str, optional): message to display if the captcha is invalid.
             Defaults to INVALID_RECAPTCHA_MESSAGE.
     """
-
-    if settings.DEBUG:
-        return lambda func: func
 
     if not isinstance(params, tuple) and params is not None:
         raise TypeError('params must be a tuple')

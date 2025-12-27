@@ -31,14 +31,16 @@ class ReservationService:
         self.room_repo = room_repo
         self.client_repo = client_repo
 
-        self.initialize_reservation = InitializeReservationUseCase(
+        self._initialize_reservation = InitializeReservationUseCase(
             reservation_repo, room_repo, client_repo, uow
         )
-        self.fetch_client_active_reservations = FetchClientActiveReservations(reservation_repo)
-        self.fetch_client_reservation_history = FetchClientReservationHistoryUseCase(
+        self._fetch_client_active_reservations = FetchClientActiveReservations(
             reservation_repo
         )
-        self.fetch_reservation_detail = FetchReservationDetailUseCase(reservation_repo)
+        self._fetch_client_reservation_history = FetchClientReservationHistoryUseCase(
+            reservation_repo
+        )
+        self._fetch_reservation_detail = FetchReservationDetailUseCase(reservation_repo)
 
     def create_reservation(self, data: Dict[str, Any]) -> Result[Reservation]:
         command = CreateReservationInput.safe_validate(data)
@@ -52,7 +54,7 @@ class ReservationService:
         if pending:
             return Result.Ok(pending)
 
-        result = self.initialize_reservation(command.unwrap())
+        result = self._initialize_reservation(command.unwrap())
         if result.is_err():
             return Result.Err(result.unwrap_err().msg, result.unwrap_err())
 
@@ -86,3 +88,21 @@ class ReservationService:
                 'can_cancel': can_cancel,
             })
         return reservation_items
+
+    def fetch_reservation_detail(
+        self, client_id: int, reservation_id: int
+    ) -> Result[Reservation]:
+        """Fetch a reservation detail by its ID."""
+        return self._fetch_reservation_detail(
+            client_id=client_id, reservation_id=reservation_id
+        )
+
+    def fetch_client_active_reservations(
+        self, client_id: int, include_scheduled: bool
+    ) -> Result[list[Reservation]]:
+        """Fetch all active reservations for a client."""
+        return self._fetch_client_active_reservations(client_id, include_scheduled)
+
+    def fetch_client_reservation_history(self, client_id: int) -> Result[list[Reservation]]:
+        """Fetch all reservations for a client."""
+        return self._fetch_client_reservation_history(client_id)

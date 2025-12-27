@@ -237,7 +237,7 @@ class ReservationRepository(AbsReservationRepository):
             client__id=client_id,
         ).first()
         if reservation is None:
-            return Result.Err(msg='Reservation not found')
+            return Result.Err(msg=f'Reservation not found {reservation_id=} {client_id=}')
 
         return model_to_entity(reservation, self._entityclass)
 

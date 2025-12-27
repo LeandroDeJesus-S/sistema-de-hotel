@@ -12,6 +12,6 @@
 <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
   crossorigin="anonymous"></script>
 
-{% if recaptcha %}
-    <script src="https://www.google.com/recaptcha/api.js?render={{recaptcha}}"></script>
+{% if recaptcha_site_key %}
+    <script src="https://www.google.com/recaptcha/api.js?render={{recaptcha_site_key}}"></script>
 {% endif %}

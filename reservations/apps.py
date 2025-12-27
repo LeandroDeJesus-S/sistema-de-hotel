@@ -6,6 +6,13 @@ class ReservationsConfig(AppConfig):
     name = 'reservations'
 
     def ready(self) -> None:  # noqa: PLR6301
+        from HOTEL import settings  # noqa: PLC0415
+
+        from .container import ReservationsContainer  # noqa: PLC0415
+
+        reservations_container = ReservationsContainer()
+        reservations_container.config.from_dict(settings.__dict__)
+        reservations_container.wire(modules=['.views', '.infra.tasks'])
         try:
             from django.db.utils import OperationalError  # noqa: PLC0415
             from django_q.models import Schedule  # noqa: PLC0415

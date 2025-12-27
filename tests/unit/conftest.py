@@ -243,3 +243,28 @@ def db_setup(db):
     call_command('loaddata', 'tests/fixtures/quarto_fixture.json')
     call_command('loaddata', 'tests/fixtures/cliente_fixture.json')
     call_command('loaddata', 'tests/fixtures/reserva_fixture.json')
+
+@pytest.fixture
+def reservations_container(settings):
+    from reservations.container import ReservationsContainer  # noqa: PLC0415
+
+    reservations_container = ReservationsContainer()
+    reservations_container.config.from_dict(settings.__dict__)
+    reservations_container.wire(modules=['reservations.views', 'reservations.infra.tasks'])
+    return reservations_container
+
+@pytest.fixture
+def payments_container(settings):
+    from payments.container import PaymentsContainer  # noqa: PLC0415
+    payments_container = PaymentsContainer()
+    payments_container.config.from_dict(settings.__dict__)
+    payments_container.wire(modules=['payments.views', 'payments.infra.tasks'])
+    return payments_container
+
+@pytest.fixture
+def clients_container(settings):
+    from clients.container import ClientsContainer  # noqa: PLC0415
+    clients_container = ClientsContainer()
+    clients_container.config.from_dict(settings.__dict__)
+    clients_container.wire(modules=['clients.views'])
+    return clients_container

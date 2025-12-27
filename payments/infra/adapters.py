@@ -189,14 +189,14 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
         self,
         task_queue: TaskQueuer,
         payments_repo: AbsPaymentsRepository,
-        send_configuration_task: Callable[..., Any],
+        send_confirmation_task: Callable[..., Any],
         activate_reservation_usecase: ActivateReservationUseCase,
         release_reservation_task: Callable[[int], Any],
         schedule_reservation_usecase: ScheduleReservationUseCase,
     ):
         self._task_queue = task_queue
         self._payments_repo = payments_repo
-        self._send_confirmation_task = send_configuration_task
+        self._send_confirmation_task = send_confirmation_task
         self._activate_reservation_usecase = activate_reservation_usecase
         self._release_reservation_task = release_reservation_task
         self._schedule_reservation_usecase = schedule_reservation_usecase

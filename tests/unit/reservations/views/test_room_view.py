@@ -1,6 +1,7 @@
 """
 Tests for the Room detail view.
 """
+
 from datetime import datetime, timedelta
 
 import pytest
@@ -8,6 +9,7 @@ from ddf import G
 from django.urls import reverse
 
 from exc import Result
+from reservations.application.services import ReservationService
 from reservations.domain.entities import Benefit as BenefitEntity
 from reservations.models import Benefit, Reservation
 from utils.support import models_to_entities
@@ -61,20 +63,19 @@ def test_room_detail_view_benefits_are_sent_to_context(authenticated_client, roo
 
 @pytest.mark.django_db
 def test_room_detail_view_reservation_on_not_in_context_for_unauthenticated_user(
-    mocker, client, room_model
+    mocker, client, room_model, reservations_container
 ):
     """
     Tests that for an unauthenticated user, 'reservation_on' is not added to the context in room detail view.
     """
     # Arrange
     url = reverse('room', args=[room_model.pk])
-    mocker.patch(
-        'reservations.views.svc.room_repo.fetch_all_benefits',
-        return_value=Result.Ok([]),
-    )
+    svc_mock = mocker.MagicMock(spec=ReservationService, room_repo=mocker.MagicMock())
+    svc_mock.room_repo.fetch_all_benefits.return_value = Result.Ok([])
 
     # Act
-    response = client.get(url)
+    with reservations_container.reservation_service.override(svc_mock):
+        response = client.get(url)
 
     # Assert
     assert 'reservation_on' not in response.context
@@ -82,7 +83,7 @@ def test_room_detail_view_reservation_on_not_in_context_for_unauthenticated_user
 
 @pytest.mark.django_db
 def test_room_detail_view_reservation_on_not_in_context_for_user_with_no_reservations(
-    mocker, authenticated_client, room_model
+    mocker, authenticated_client, room_model, reservations_container
 ):
     """
     Tests that for an authenticated user with no active or scheduled reservations,
@@ -91,17 +92,13 @@ def test_room_detail_view_reservation_on_not_in_context_for_user_with_no_reserva
     # Arrange
     client, _ = authenticated_client
     url = reverse('room', args=[room_model.pk])
-    mocker.patch(
-        'reservations.views.svc.room_repo.fetch_all_benefits',
-        return_value=Result.Ok([]),
-    )
-    mocker.patch(
-        'reservations.views.svc.fetch_client_active_reservations',
-        return_value=Result.Ok([]),
-    )
+    svc_mock = mocker.MagicMock(spec=ReservationService, room_repo=mocker.MagicMock())
+    svc_mock.room_repo.fetch_all_benefits.return_value = Result.Ok([])
+    svc_mock.fetch_client_active_reservations.return_value = Result.Ok([])
 
     # Act
-    response = client.get(url)
+    with reservations_container.reservation_service.override(svc_mock):
+        response = client.get(url)
 
     # Assert
     assert response.context.get('reservation_on') == []
@@ -110,7 +107,7 @@ def test_room_detail_view_reservation_on_not_in_context_for_user_with_no_reserva
 @pytest.mark.django_db
 @pytest.mark.parametrize('status', ['A', 'S'])
 def test_room_detail_view_reservation_on_in_context_for_user_with_reservations(
-    mocker, authenticated_client, room_model, status
+    mocker, authenticated_client, room_model, status, reservations_container
 ):
     """
     Tests that for an authenticated user with active or scheduled reservations,
@@ -127,17 +124,13 @@ def test_room_detail_view_reservation_on_in_context_for_user_with_reservations(
         checkin=datetime.now().date(),
         checkout=datetime.now().date() + timedelta(days=1),
     )
-    mocker.patch(
-        'reservations.views.svc.room_repo.fetch_all_benefits',
-        return_value=Result.Ok([]),
-    )
-    mocker.patch(
-        'reservations.views.svc.fetch_client_active_reservations',
-        return_value=Result.Ok([reservation]),
-    )
+    svc_mock = mocker.MagicMock(spec=ReservationService, room_repo=mocker.MagicMock())
+    svc_mock.room_repo.fetch_all_benefits.return_value = Result.Ok([])
+    svc_mock.fetch_client_active_reservations.return_value = Result.Ok([reservation])
 
     # Act
-    response = client.get(url)
+    with reservations_container.reservation_service.override(svc_mock):
+        response = client.get(url)
 
     # Assert
     assert response.context.get('reservation_on') == [reservation]

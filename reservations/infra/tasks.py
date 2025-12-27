@@ -1,50 +1,28 @@
-from typing import Optional
-
+from dependency_injector.wiring import Provide, inject
 from django.conf import settings
-from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
-from base.ports.queue import TaskQueuer
-from base.ports.unit_of_work import AbsUnitOfWork
+from base.ports.email import AbsEmailSender
 from exc import Result
 from payments.domain.ports import AbsPaymentsRepository
-from payments.infra.repo import PaymentRepository
 from reservations.application.usecases import (
     ActivateReservationUseCase,
     ReleaseReservationUseCase,
     ScheduleReservationUseCase,
 )
-from reservations.domain.repo import AbsReservationRepository, AbsRoomRepository
-from reservations.infra.repo import ReservationRepository, RoomRepository
-from utils.adapters.queue import DjangoQTaskQueuer
-from utils.adapters.unit_of_work import UnitOfWork
+from reservations.container import ReservationsContainer
+from reservations.domain.repo import AbsReservationRepository
 
 
-def get_reservation_repository() -> AbsReservationRepository:
-    return ReservationRepository()
-
-
-def get_room_repository() -> AbsRoomRepository:
-    return RoomRepository()
-
-
-def get_payment_repository() -> AbsPaymentsRepository:
-    return PaymentRepository()
-
-
-def get_unit_of_work() -> AbsUnitOfWork:
-    return UnitOfWork()
-
-
-def get_task_queuer() -> TaskQueuer:
-    return DjangoQTaskQueuer()
-
-
+@inject
 def activate_reservation_task(
     reservation_id: int,
-    reservation_repo: Optional[AbsReservationRepository] = None,
-    room_repo: Optional[AbsRoomRepository] = None,
-    unit_of_work: Optional[AbsUnitOfWork] = None,
+    reservation_repo: AbsReservationRepository = Provide[
+        ReservationsContainer.reservation_repo
+    ],
+    usecase: ActivateReservationUseCase = Provide[
+        ReservationsContainer.activate_reservation_usecase
+    ],
 ) -> Result[None]:
     """
     Activates a reservation by setting its status to ACTIVE and making the room unavailable.
@@ -59,15 +37,6 @@ def activate_reservation_task(
     Returns:
         A Result indicating success or failure.
     """
-    reservation_repo = reservation_repo or get_reservation_repository()
-    room_repo = room_repo or get_room_repository()
-    unit_of_work = unit_of_work or get_unit_of_work()
-
-    usecase = ActivateReservationUseCase(
-        reservation_repo=reservation_repo,
-        room_repo=room_repo,
-        unit_of_work=unit_of_work,
-    )
 
     reservation_result = reservation_repo.find_by_id(reservation_id)
     if reservation_result.is_err():
@@ -81,12 +50,15 @@ def activate_reservation_task(
     return Result.Ok(None)
 
 
+@inject
 def release_reservation_task(
     reservation_id: int,
-    room_repo: Optional[AbsRoomRepository] = None,
-    reservation_repo: Optional[AbsReservationRepository] = None,
-    payment_repo: Optional[AbsPaymentsRepository] = None,
-    unit_of_work: Optional[AbsUnitOfWork] = None,
+    reservation_repo: AbsReservationRepository = Provide[
+        ReservationsContainer.reservation_repo
+    ],
+    usecase: ReleaseReservationUseCase = Provide[
+        ReservationsContainer.release_reservation_usecase
+    ],
 ) -> Result[None]:
     """
     Releases a reservation by setting its status to finished and making the room available.
@@ -102,17 +74,6 @@ def release_reservation_task(
     Returns:
         A Result indicating success or failure.
     """
-    room_repo = room_repo or get_room_repository()
-    reservation_repo = reservation_repo or get_reservation_repository()
-    payment_repo = payment_repo or get_payment_repository()
-    unit_of_work = unit_of_work or get_unit_of_work()
-
-    usecase = ReleaseReservationUseCase(
-        room_repo=room_repo,
-        reservations_repo=reservation_repo,
-        payments_repo=payment_repo,
-        unit_of_work=unit_of_work,
-    )
 
     reservation_result = reservation_repo.find_by_id(reservation_id)
     if reservation_result.is_err():
@@ -126,7 +87,16 @@ def release_reservation_task(
     return Result.Ok(None)
 
 
-def schedule_reservation_task(reservation_id: int) -> Result[None]:
+@inject
+def schedule_reservation_task(
+    reservation_id: int,
+    usecase: ScheduleReservationUseCase = Provide[
+        ReservationsContainer.schedule_reservation_usecase
+    ],
+    reservation_repo: AbsReservationRepository = Provide[
+        ReservationsContainer.reservation_repo
+    ],
+) -> Result[None]:
     """
     Schedules a reservation by setting its status to scheduled and making the reservation
     active.
@@ -137,15 +107,6 @@ def schedule_reservation_task(reservation_id: int) -> Result[None]:
     Returns:
         A Result indicating success or failure.
     """
-    reservation_repo = get_reservation_repository()
-    unit_of_work = get_unit_of_work()
-    task_queuer = get_task_queuer()
-
-    usecase = ScheduleReservationUseCase(
-        reservation_repo=reservation_repo,
-        unit_of_work=unit_of_work,
-        task_queuer=task_queuer,
-    )
 
     reservation_result = reservation_repo.find_by_id(reservation_id)
     if reservation_result.is_err():
@@ -159,7 +120,15 @@ def schedule_reservation_task(reservation_id: int) -> Result[None]:
     return Result.Ok(None)
 
 
-def send_cancellation_notification(reservation_id: int) -> Result[None]:
+@inject
+def send_cancellation_notification(
+    reservation_id: int,
+    payments_repo: AbsPaymentsRepository = Provide[ReservationsContainer.payment_repo],
+    reservation_repo: AbsReservationRepository = Provide[
+        ReservationsContainer.reservation_repo
+    ],
+    mailer: AbsEmailSender = Provide[ReservationsContainer.email_sender],
+) -> Result[None]:
     """
     Send cancellation notification emails to client and admins.
 
@@ -169,8 +138,6 @@ def send_cancellation_notification(reservation_id: int) -> Result[None]:
     Returns:
         A Result indicating success or failure.
     """
-    reservation_repo = get_reservation_repository()
-    payments_repo = get_payment_repository()
 
     # Get reservation details
     reservation_result = reservation_repo.find_by_id(reservation_id)
@@ -198,17 +165,12 @@ def send_cancellation_notification(reservation_id: int) -> Result[None]:
     client_html_message = render_to_string(
         'emails/cancellation_notification_client.html', client_context
     )
-    client_plain_message = render_to_string(
-        'emails/cancellation_notification_client.txt', client_context
-    )
-
     try:
-        send_mail(
-            client_subject,
-            client_plain_message,
-            settings.DEFAULT_FROM_EMAIL,
-            [reservation.client.email],
-            html_message=client_html_message,
+        mailer.send_single_mail(
+            subject=client_subject,
+            body=client_html_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to_emails=[reservation.client.email],
         )
     except Exception as e:
         return Result.Err('Failed to send client notification email', src_error=e)
@@ -224,17 +186,12 @@ def send_cancellation_notification(reservation_id: int) -> Result[None]:
     admin_html_message = render_to_string(
         'emails/cancellation_notification_admin.html', admin_context
     )
-    admin_plain_message = render_to_string(
-        'emails/cancellation_notification_admin.txt', admin_context
-    )
-
     try:
-        send_mail(
+        mailer.send_single_mail(
             admin_subject,
-            admin_plain_message,
+            admin_html_message,
             settings.DEFAULT_FROM_EMAIL,
             [admin_email for admin_email in settings.ADMINS],
-            html_message=admin_html_message,
         )
     except Exception as e:
         return Result.Err('Failed to send admin notification email', src_error=e)

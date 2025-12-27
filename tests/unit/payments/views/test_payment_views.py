@@ -11,24 +11,13 @@ from django.db import OperationalError
 from django.urls import reverse
 
 from exc import Result
+from payments.application.services import PaymentService
 from payments.error_messages import CheckoutMessages
 # Checkout view tests
 
 
-@pytest.fixture
-def mock_payment_creator(mocker):
-    mock_svc = MagicMock()
-    mock_svc.handle_checkout.return_value = Result.Ok(
-        MagicMock(session_url='http://stripepayment-hostedpage.url')
-    )
-    mocker.patch('payments.views.svc', mock_svc)
-    return mock_svc
-
-
 @pytest.mark.django_db
-def test_checkout_view_uses_correct_template(
-    client, client_model, reservation_model, mocker
-):
+def test_checkout_view_uses_correct_template(client, client_model, reservation_model, mocker):
     """
     Tests if the checkout view renders the correct template.
     """
@@ -64,9 +53,7 @@ def test_reservation_in_context(client, client_model, reservation_model):
 
 
 @pytest.mark.django_db
-def test_unauthenticated_user_is_redirected_from_checkout(
-    client, reservation_model, mocker
-):
+def test_unauthenticated_user_is_redirected_from_checkout(client, reservation_model, mocker):
     """
     Tests if an unauthenticated user is redirected to the signin page.
     """
@@ -105,7 +92,7 @@ def test_user_accessing_another_users_checkout_gets_forbidden(
 
 @pytest.mark.django_db
 def test_payment_created_successfully(
-    client, client_model, reservation_model, mock_payment_creator, mock_recaptcha
+    client, client_model, reservation_model, mock_recaptcha, mocker, payments_container
 ):
     """
     Tests if the payment is created successfully and redirects to the payment page.
@@ -115,9 +102,14 @@ def test_payment_created_successfully(
     reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
+    svc_mock = mocker.MagicMock(spec=PaymentService)
+    svc_mock.handle_checkout.return_value = Result.Ok(
+        MagicMock(session_url='http://stripepayment-hostedpage.url')
+    )
 
     # Act
-    response = client.post(url, follow=True)
+    with payments_container.payment_service.override(svc_mock):
+        response = client.post(url, follow=True)
 
     # Assert
     assert ('http://stripepayment-hostedpage.url', HTTPStatus.FOUND) in response.redirect_chain
@@ -125,7 +117,7 @@ def test_payment_created_successfully(
 
 @pytest.mark.django_db
 def test_operational_error_redirects_to_rooms_with_message(
-    client, client_model, reservation_model, mock_payment_creator, mock_recaptcha
+    client, client_model, reservation_model, mock_recaptcha, mocker, payments_container
 ):
     """
     Tests if an OperationalError redirects to the rooms page with the correct message.
@@ -135,12 +127,14 @@ def test_operational_error_redirects_to_rooms_with_message(
     reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
-    mock_payment_creator.handle_checkout.return_value = Result.Err(
+    svc_mock = mocker.MagicMock(spec=PaymentService)
+    svc_mock.handle_checkout.return_value = Result.Err(
         'Database error', OperationalError('Database error')
     )
 
     # Act
-    response = client.post(url)
+    with payments_container.payment_service.override(svc_mock):
+        response = client.post(url)
     messages = list(get_messages(response.wsgi_request))
 
     # Assert
@@ -152,7 +146,7 @@ def test_operational_error_redirects_to_rooms_with_message(
 
 @pytest.mark.django_db
 def test_unexpected_exception_redirects_to_rooms_with_message(
-    client, client_model, reservation_model, mock_payment_creator, mock_recaptcha
+    client, client_model, reservation_model, mock_recaptcha, mocker, payments_container
 ):
     """
     Tests if an unexpected exception redirects to the rooms page with the correct message.
@@ -162,12 +156,14 @@ def test_unexpected_exception_redirects_to_rooms_with_message(
     reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
-    mock_payment_creator.handle_checkout.return_value = Result.Err(
+    svc_mock = mocker.MagicMock(spec=PaymentService)
+    svc_mock.handle_checkout.return_value = Result.Err(
         'unexpected exception', Exception('unexpected exception')
     )
 
     # Act
-    response = client.post(url)
+    with payments_container.payment_service.override(svc_mock):
+        response = client.post(url)
     messages = list(get_messages(response.wsgi_request))
 
     # Assert
@@ -179,7 +175,7 @@ def test_unexpected_exception_redirects_to_rooms_with_message(
 
 @pytest.mark.django_db
 def test_payment_is_created_correctly(
-    client, client_model, reservation_model, mock_payment_creator, mock_recaptcha, mocker
+    client, client_model, reservation_model, mock_recaptcha, mocker, payments_container
 ):
     """
     Tests if the payment is created correctly in the database.
@@ -189,12 +185,17 @@ def test_payment_is_created_correctly(
     reservation = reservation_model
     client.force_login(user)
     url = reverse('checkout', args=[reservation.pk])
+    svc_mock = mocker.MagicMock(spec=PaymentService)
+    svc_mock.handle_checkout.return_value = Result.Ok(
+        MagicMock(session_url='http://stripepayment-hostedpage.url')
+    )
 
     # Act
-    client.post(url, follow=True)
+    with payments_container.payment_service.override(svc_mock):
+        client.post(url, follow=True)
 
     # Assert
-    mock_payment_creator.handle_checkout.assert_called_once_with(
+    svc_mock.handle_checkout.assert_called_once_with(
         reservation_id=reservation.pk,
         client_id=user.pk,
         success_url=f'http://testserver/pagamento/success/{reservation.pk}/',

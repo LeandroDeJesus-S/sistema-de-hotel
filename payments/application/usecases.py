@@ -125,7 +125,10 @@ class CheckoutUseCase:
 
                 session_result = self._payment_gateway.create_checkout_session(session)
                 if session_result.is_err():
-                    self._logger.error('Failed to create payment session')
+                    self._logger.error(
+                        'Failed to create payment session',
+                        exc_info=session_result.unwrap_err(),
+                    )
                     w.rollback()
                     return Result.Err(
                         'Failed to create payment session',

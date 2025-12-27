@@ -4,7 +4,7 @@
             e.preventDefault()
 
             const form = this;
-            const key = "{{ recaptcha|escapejs }}";
+            const key = "{{ recaptcha_site_key|escapejs }}";
 
             grecaptcha.execute(key, {action: 'generic'}).then(function(token) {
                 $('#g-recaptcha-response').val(token)

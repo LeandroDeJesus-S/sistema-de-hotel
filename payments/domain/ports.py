@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Protocol, TypeVar
+from typing import Any, Generic, Literal, Protocol, TypeVar
 
 from exc import Result
 from payments.domain.dtos import CheckoutResultDTO, CheckoutSessionInputDTO
@@ -13,6 +13,15 @@ class AbsSessionBasedPayment(Protocol):
         dto: CheckoutSessionInputDTO,
     ) -> Result[CheckoutResultDTO]: ...
     def retrieve_checkout_session(self, session_id: str) -> Result[CheckoutResultDTO]: ...
+    def process_refund(
+        self,
+        payment_intent_id: str,
+        amount: int,
+        reason: Literal[
+            'duplicate', 'fraudulent', 'requested_by_customer'
+        ] = 'requested_by_customer',
+    ) -> Result[dict]:
+        """Process a refund of a payment through the gateway."""
 
 
 class AbsPaymentsRepository(ABC):

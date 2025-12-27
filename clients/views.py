@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from django.conf import settings
+from dependency_injector.wiring import Provide, inject
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.http import HttpRequest
@@ -12,54 +12,67 @@ from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, UpdateView
 
+from clients.application.services import ClientService
 from clients.models import Client
-from HOTEL import get_container
 from reservations.mixins import LoginRequired
 from utils import support
 
 from . import feedback_messages
+from .container import ClientsContainer
 from .decorators import profile_ownership_required
 from .forms import UpdatePerfilForm
 from .infra import presenters
-
-CAPTCHA_CTX = {'recaptcha_site_key': settings.G_RECAPTCHA_KEY_SITE}
 
 
 @method_decorator(support.captcha_required('signup'), name='post')
 class SignUp(View):
     """View responsável por realizar o registro de novos usuários"""
 
-    def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
+    @inject
+    def setup(
+        self,
+        request: HttpRequest,
+        *args: Any,
+        svc: ClientService = Provide[ClientsContainer.client_service],
+        logger: logging.Logger = Provide[ClientsContainer.logger],
+        **kwargs: Any,
+    ) -> None:
         super().setup(request, *args, **kwargs)
-        self.logger = logging.getLogger('djangoLogger')
+        self.logger = logger
         self.template_name = 'signup.html'
         self._redirect = redirect('rooms')
-        self.svc = get_container().client_service()
+        self.svc = svc
 
     def get(self, request):
         if request.user.is_authenticated:
             self.logger.info(f'user already logged in. Redirecting to {self._redirect.url}')
             return self._redirect
 
-        return render(request, self.template_name, CAPTCHA_CTX)
+        return render(request, self.template_name)
 
     def post(self, request: HttpRequest):
         result = self.svc.signup_user(request.POST, request)
-        return presenters.signup_post_presenter(
-            request, result, self.template_name, CAPTCHA_CTX
-        )
+        return presenters.signup_post_presenter(request, result, self.template_name, {})
 
 
 @method_decorator(support.captcha_required('signin'), name='post')
 class SignIn(View):
     """View responsável por realizar a autenticação do usuário"""
 
-    def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
+    @inject
+    def setup(
+        self,
+        request: HttpRequest,
+        *args: Any,
+        svc: ClientService = Provide[ClientsContainer.client_service],
+        logger: logging.Logger = Provide[ClientsContainer.logger],
+        **kwargs: Any,
+    ) -> None:
         super().setup(request, *args, **kwargs)
-        self.logger = logging.getLogger('djangoLogger')
+        self.logger = logger
         self.template = 'signin.html'
         self.next_url = reverse('rooms')
-        self.svc = get_container().client_service()
+        self.svc = svc
 
     def get(self, request: HttpRequest, *args, **kwargs):
         next_url = request.GET.get('next', self.next_url)
@@ -72,7 +85,7 @@ class SignIn(View):
             return redirect('rooms')
 
         self.logger.debug(f'rendering {self.template}')
-        return render(request, self.template, CAPTCHA_CTX)
+        return render(request, self.template)
 
     def post(self, request: HttpRequest, *args, **kwargs):
         credentials = {
@@ -83,7 +96,7 @@ class SignIn(View):
         result = self.svc.signin_user(credentials, request)
         redirect_target = result.unwrap() if result.is_ok() else 'error'
         self.logger.info(f'User logged in successfully. Redirecting to {redirect_target}')
-        return presenters.signin_post_presenter(request, result, self.template, CAPTCHA_CTX)
+        return presenters.signin_post_presenter(request, result, self.template, {})
 
 
 def axes_locked_out(request, *args, **kwargs):
@@ -121,7 +134,7 @@ class PerfilUpdate(LoginRequired, UpdateView):
         return str(reverse_lazy('perfil', args=(self.object.pk,)))
 
     def get_context_data(self, **kwargs):
-        return {**super().get_context_data(**kwargs), **CAPTCHA_CTX}
+        return {**super().get_context_data(**kwargs)}
 
 
 @method_decorator(
@@ -131,15 +144,23 @@ class PerfilUpdate(LoginRequired, UpdateView):
 class PerfilChangePassword(LoginRequired, View):
     """view responsável por gerenciar a alteração da senha do usuário"""
 
-    def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
+    @inject
+    def setup(
+        self,
+        request: HttpRequest,
+        *args: Any,
+        svc: ClientService = Provide[ClientsContainer.client_service],
+        logger: logging.Logger = Provide[ClientsContainer.logger],
+        **kwargs: Any,
+    ) -> None:
         super().setup(request, *args, **kwargs)
-        self.logger = logging.getLogger('djangoLogger')
+        self.logger = logger
         self.template = 'perfil_update_password.html'
-        self.svc = get_container().client_service()
+        self.svc = svc
 
     def get(self, *args, **kwargs):
         self.logger.debug(f'rendering {self.template}')
-        return render(self.request, self.template, CAPTCHA_CTX)
+        return render(self.request, self.template)
 
     def post(self, request, *args, **kwargs):
         redirect_url = reverse('perfil', args=(self.request.user.pk,))
@@ -163,4 +184,4 @@ class PerfilDelete(LoginRequired, DeleteView):
         return str(reverse_lazy('rooms'))
 
     def get_context_data(self, **kwargs):
-        return {**super().get_context_data(**kwargs), **CAPTCHA_CTX}
+        return {**super().get_context_data(**kwargs)}

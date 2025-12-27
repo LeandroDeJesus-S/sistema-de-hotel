@@ -1,3 +1,6 @@
+from typing import Any, Callable
+
+from dependency_injector.wiring import Provide, inject
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpRequest, HttpResponseNotAllowed
@@ -8,26 +11,24 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 
-from HOTEL import get_container
+from base.ports.queue import TaskQueuer
+from payments.application.services import PaymentService
+from payments.container import PaymentsContainer
+from payments.domain.ports import AbsPaymentsRepository
 from payments.infra import presenters
-from payments.infra.tasks import send_payment_confirmation
+from reservations.application.usecases import (
+    ActivateReservationUseCase,
+    ScheduleReservationUseCase,
+)
 from reservations.decorators import check_reservation_ownership
+from reservations.domain.repo import AbsReservationRepository
 from reservations.infra.tasks import release_reservation_task
 from utils.support import captcha_required
 
 from .infra.adapters import (
     CheckoutExpiredEvent,
-    CheckoutSessionCreatedEvent,
     CheckoutSucceededEvent,
 )
-
-# Resolve services from container
-_container = get_container()
-svc = _container.payment_service()
-confirmation_usecase = _container.confirmation_usecase
-activate_reservatoin_usecase = _container.activate_reservation_usecase
-schedule_reservation_usecase = _container.schedule_reservation_usecase
-release_reservation_usecase = _container.release_reservation_usecase
 
 
 @method_decorator(captcha_required('rooms'), name='post')
@@ -40,11 +41,27 @@ class Checkout(LoginRequiredMixin, View):
     login_url = reverse_lazy('signin')
     # template_name = 'checkout.html'
 
-    def get(self, request: HttpRequest, reservation_pk: int, *args, **kwargs):  # noqa: PLR6301
+    @inject
+    def get(
+        self,
+        request: HttpRequest,
+        reservation_pk: int,
+        *args,
+        svc: PaymentService = Provide[PaymentsContainer.payment_service],
+        **kwargs,
+    ):  # noqa: PLR6301
         checkout_res = svc.render_checkout(reservation_pk)
         return presenters.checkout_get_presenter(request, checkout_res).unwrap()
 
-    def post(self, request: HttpRequest, reservation_pk: int, *args, **kwargs):  # noqa: PLR6301
+    @inject
+    def post(
+        self,
+        request: HttpRequest,
+        reservation_pk: int,
+        *args,
+        svc: PaymentService = Provide[PaymentsContainer.payment_service],
+        **kwargs,
+    ):  # noqa: PLR6301
         response = svc.handle_checkout(
             reservation_id=reservation_pk,
             client_id=request.user.pk,
@@ -61,7 +78,12 @@ class Checkout(LoginRequiredMixin, View):
 @check_reservation_ownership
 @login_required(login_url=reverse_lazy('signin'))
 @require_GET
-def payment_success(request: HttpRequest, reservation_pk: int):
+@inject
+def payment_success(
+    request: HttpRequest,
+    reservation_pk: int,
+    svc: PaymentService = Provide[PaymentsContainer.payment_service],
+):
     """The page where the user is redirected after the payment is successful."""
 
     result = svc.render_payment_success(reservation_pk)
@@ -71,14 +93,35 @@ def payment_success(request: HttpRequest, reservation_pk: int):
 @check_reservation_ownership
 @login_required(login_url=reverse_lazy('signin'))
 @require_GET
-def payment_cancel(request: HttpRequest, reservation_pk: int):
+@inject
+def payment_cancel(
+    request: HttpRequest,
+    reservation_pk: int,
+    svc: PaymentService = Provide[PaymentsContainer.payment_service],
+):
     """The page where the user is redirected after the payment is canceled."""
     result = svc.render_payment_cancel(reservation_pk)
     return presenters.payment_cancel_get_presenter(request, result)
 
 
 @csrf_exempt
-def stripe_webhook(request: HttpRequest):
+@inject
+def stripe_webhook(  # noqa: PLR0913, PLR0917
+    request: HttpRequest,
+    task_queuer: TaskQueuer = Provide[PaymentsContainer.task_queuer],
+    payment_repo: AbsPaymentsRepository = Provide[PaymentsContainer.payment_repo],
+    reservation_repo: AbsReservationRepository = Provide[PaymentsContainer.reservation_repo],
+    send_payment_confirmation: Callable[..., Any] = Provide[
+        PaymentsContainer.confirmation_usecase
+    ],
+    activate_reservation_usecase: ActivateReservationUseCase = Provide[
+        PaymentsContainer.activate_reservation_usecase
+    ],
+    schedule_reservation_usecase: ScheduleReservationUseCase = Provide[
+        PaymentsContainer.schedule_reservation_usecase
+    ],
+    svc: PaymentService = Provide[PaymentsContainer.payment_service],
+):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
@@ -88,15 +131,14 @@ def stripe_webhook(request: HttpRequest):
             'stripe_signature_header': request.headers.get('stripe-signature'),
         },
         CheckoutSucceededEvent(
-            _container.task_queuer,
-            _container.payment_repo,
+            task_queuer,
+            payment_repo,
             send_payment_confirmation,
-            _container.activate_reservation_usecase,
+            activate_reservation_usecase,
             release_reservation_task,
-            _container.schedule_reservation_usecase,
+            schedule_reservation_usecase,
         ),
-        CheckoutExpiredEvent(_container.payment_repo, _container.reservation_repo),
-        CheckoutSessionCreatedEvent(),
+        CheckoutExpiredEvent(payment_repo, reservation_repo),
     ).unwrap()  # XXX: unwrap is safe here, since it never returns an error
 
     return HttpResponse(

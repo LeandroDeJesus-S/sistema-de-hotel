@@ -5,23 +5,24 @@ Tests for the ReservationHistory detail view.
 import pytest
 from django.urls import reverse
 
-from reservations.models import Reservation
 from exc import Result
+from reservations.application.services import ReservationService
+
 
 @pytest.mark.django_db
 def test_reservation_history_view_uses_correct_template(
-    mocker, authenticated_client, reservation_model
+    mocker, authenticated_client, reservation_model, reservations_container
 ):
     """Tests if the correct template is rendered."""
     # Arrange
     client, _ = authenticated_client
     url = reverse('reservation_history', args=[reservation_model.pk])
-    mocker.patch(
-        'reservations.views.svc.fetch_reservation_detail', return_value=Result.Ok(reservation_model)
-    )
+    svc_mock = mocker.MagicMock(spec=ReservationService)
+    svc_mock.fetch_reservation_detail.return_value = Result.Ok(reservation_model)
 
     # Act
-    response = client.get(url)
+    with reservations_container.reservation_service.override(svc_mock):
+        response = client.get(url)
 
     # Assert
     assert 'reservation_history.html' in [t.name for t in response.templates]
@@ -29,7 +30,7 @@ def test_reservation_history_view_uses_correct_template(
 
 @pytest.mark.django_db
 def test_reservation_history_view_sends_only_client_reservations_to_context(
-    mocker, authenticated_client, reservation_model
+    mocker, authenticated_client, reservation_model, reservations_container
 ):
     """
     Tests if only the reservations belonging to the current session's client are added to the context.
@@ -41,13 +42,12 @@ def test_reservation_history_view_sends_only_client_reservations_to_context(
 
     url = reverse('reservation_history', args=[reservation_model.pk])
     expected_reservation = reservation_model.pk
-    mocker.patch(
-        'reservations.views.svc.fetch_reservation_detail',
-        return_value=Result.Ok(expected_reservation),
-    )
+    svc_mock = mocker.MagicMock(spec=ReservationService)
+    svc_mock.fetch_reservation_detail.return_value = Result.Ok(expected_reservation)
 
     # Act
-    response = client.get(url)
+    with reservations_container.reservation_service.override(svc_mock):
+        response = client.get(url)
     result_reservation = response.context['reservation']
 
     # Assert

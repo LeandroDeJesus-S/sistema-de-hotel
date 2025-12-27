@@ -11,7 +11,9 @@ from django.urls import reverse
 
 from clients.feedback_messages import Recaptcha
 from exc import Result
+from reservations.application.services import ReservationService
 from reservations.feedback_messages import ReservationMessages, ReserveErrorMessages
+from reservations.application.usecases import InitializeReservationUseCase
 from reservations.models import Reservation
 from reservations.rules import ReserveRules
 from utils.supporttest import get_message
@@ -35,7 +37,7 @@ def test_reserve_view_uses_correct_template(authenticated_client, room_model):
 
 @pytest.mark.django_db
 def test_reserve_with_valid_data_redirects_to_checkout(
-    mocker, authenticated_client, room_model, mock_recaptcha,
+    mocker, authenticated_client, room_model, mock_recaptcha, reservations_container
 ):
     """
     Tests if with valid data it redirects to checkout after reservation is created.
@@ -44,10 +46,8 @@ def test_reserve_with_valid_data_redirects_to_checkout(
     client, user = authenticated_client
     url = reverse('reserve', args=[room_model.pk])
     reservation = Reservation(pk=1, client=user, room=room_model)
-    mock_initialize = mocker.patch(
-        'reservations.views.svc.initialize_reservation',
-        return_value=Result.Ok(reservation),
-    )
+    svc_mock = mocker.MagicMock(spec=ReservationService, room_repo=mocker.MagicMock())
+    svc_mock.create_reservation.return_value = Result.Ok(reservation)
     checkin = datetime.now().date() + timedelta(days=2)
     valid_reserve_data = {
         'checkin': checkin,
@@ -56,12 +56,12 @@ def test_reserve_with_valid_data_redirects_to_checkout(
     }
 
     # Act
-    response = client.post(url, valid_reserve_data)
+    with reservations_container.reservation_service.override(svc_mock):
+        response = client.post(url, valid_reserve_data)
 
     # Assert
     assert response.status_code == 302
     assert response.url == reverse('checkout', args=[reservation.pk])
-    mock_initialize.assert_called_once()
 
 
 @pytest.mark.django_db
@@ -85,6 +85,7 @@ def test_reserve_with_invalid_checkin_date_renders_reserve_with_message(
     mock_recaptcha,
     error_message,
     mocker,
+    reservations_container,
 ):
     """
     Tests if it renders the reserve page again with the correct message for invalid checkin date.
@@ -97,14 +98,13 @@ def test_reserve_with_invalid_checkin_date_renders_reserve_with_message(
     }
     client, _ = authenticated_client
     url = reverse('reserve', args=[room_model.pk])
-
-    mocker.patch(
-        'reservations.views.svc.initialize_reservation',
-        return_value=Result.Err(msg=error_message),
-    )
+    svc_mock = mocker.MagicMock(spec=ReservationService, room_repo=mocker.MagicMock())
+    svc_mock.room_repo.fetch_all_classes.return_value = Result.Ok([])
+    svc_mock.create_reservation.return_value = Result.Err(msg=error_message)
 
     # Act
-    response = client.post(url, invalid_reservation_data)
+    with reservations_container.reservation_service.override(svc_mock):
+        response = client.post(url, invalid_reservation_data)
     message = get_message(response)
 
     # Assert
@@ -142,7 +142,11 @@ def test_reserve_with_existing_reservation_redirects_to_rooms_with_message(
 
 @pytest.mark.django_db
 def test_reserve_unexpected_error_redirects_to_room_with_message(
-    mocker, authenticated_client, room_model, mock_recaptcha,
+    mocker,
+    authenticated_client,
+    room_model,
+    mock_recaptcha,
+    reservations_container,
 ):
     """
     Tests if an unexpected exception occurs when sending form data,
@@ -150,9 +154,9 @@ def test_reserve_unexpected_error_redirects_to_room_with_message(
     """
     # Arrange
     client, _ = authenticated_client
-    mocker.patch('reservations.domain.entities.Reservation.safe_create', return_value=Result.Err(
-        ReservationMessages.RESERVATION_FAIL
-    ))
+    svc_mock = mocker.MagicMock(spec=ReservationService, room_repo=mocker.MagicMock())
+    svc_mock.room_repo.fetch_all_classes.return_value = Result.Ok([])
+    svc_mock.create_reservation.return_value = Result.Err(ReservationMessages.RESERVATION_FAIL)
     url = reverse('reserve', args=[room_model.pk])
     checkin = datetime.now().date() + timedelta(days=2)
     valid_reserve_data = {
@@ -162,7 +166,8 @@ def test_reserve_unexpected_error_redirects_to_room_with_message(
     }
 
     # Act
-    response = client.post(url, valid_reserve_data)
+    with reservations_container.reservation_service.override(svc_mock):
+        response = client.post(url, valid_reserve_data)
     message = get_message(response)
 
     # Assert

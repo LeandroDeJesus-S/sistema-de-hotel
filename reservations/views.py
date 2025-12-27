@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from django.conf import settings
+from dependency_injector.wiring import Provide, inject
 from django.contrib import messages
 from django.http import Http404, HttpRequest
 from django.shortcuts import redirect, render
@@ -11,13 +11,9 @@ from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 
-from HOTEL import get_container
-from payments.infra.repo import PaymentRepository
+from reservations.container import ReservationsContainer
 from reservations.domain.entities import Reservation
-from reservations.infra.repo import ReservationRepository, RoomRepository
 from utils import support
-from utils.adapters.queue import DjangoQTaskQueuer
-from utils.adapters.unit_of_work import UnitOfWork
 
 from .application import services
 from .application.usecases import CancelReservationUseCase
@@ -25,11 +21,12 @@ from .feedback_messages import ReservationMessages
 from .mixins import LoginRequired
 from .models import Room
 
-svc = get_container().reservation_service()
 
-
+@inject
 def setup_reservation_context(
-    request: HttpRequest, svc: services.ReservationService, context: dict[str, Any]
+    request: HttpRequest,
+    context: dict[str, Any],
+    svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
 ):
     """add the reservations to the context
     Args:
@@ -54,7 +51,11 @@ class Rooms(ListView):
     template_name = 'rooms.html'
     context_object_name = 'rooms'
 
-    def get_queryset(self):
+    @inject
+    def get_queryset(
+        self,
+        svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
+    ):
         """retorna todos os quartos com seus benefícios"""
         result = svc.room_repo.fetch_all(with_benefits=True)
         *_, rooms = result.match(
@@ -70,12 +71,15 @@ class Rooms(ListView):
         )
         return rooms
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(
+        self,
+        **kwargs,
+    ):
         """retorna todos os quartos, todos os benefícios e todas as reservas
         ativas ou agendadas do cliente, caso tenha.
         """
         context = super().get_context_data(**kwargs)
-        setup_reservation_context(self.request, svc, context)
+        setup_reservation_context(self.request, context)
         return context
 
 
@@ -91,7 +95,7 @@ class RoomDetail(DetailView):
         caso tenha
         """
         context = super().get_context_data(**kwargs)
-        setup_reservation_context(self.request, svc, context)
+        setup_reservation_context(self.request, context)
         return context
 
 
@@ -99,9 +103,18 @@ class RoomDetail(DetailView):
 class Reserve(LoginRequired, View):
     """gerencia a criação de novas reservas"""
 
-    def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
+    @inject
+    def setup(
+        self,
+        request: HttpRequest,
+        *args: Any,
+        svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
+        logger: logging.Logger = Provide[ReservationsContainer.logger],
+        **kwargs: Any,
+    ) -> None:
         super().setup(request, *args, **kwargs)
-        self.logger = logging.getLogger('djangoLogger')
+        self.logger = logger
+        self.svc = svc
 
         result = svc.room_repo.fetch_all_classes()
         if result.is_err():
@@ -115,7 +128,7 @@ class Reserve(LoginRequired, View):
     def get(self, request: HttpRequest, room_pk: int):
         """renderiza o formulário para nova reserva caso o usuário não
         tenha uma reserva ativa ou agendada"""
-        result = svc.can_client_create_reservation(client_id=request.user.pk)
+        result = self.svc.can_client_create_reservation(client_id=request.user.pk)
 
         def _on_ok(has):
             if has:
@@ -124,7 +137,6 @@ class Reserve(LoginRequired, View):
                 return redirect('rooms')
 
             self.context['room_pk'] = room_pk
-            self.context['recaptcha_site_key'] = settings.G_RECAPTCHA_KEY_SITE
             self.logger.debug(f'rendering {self.template_name}')
             return render(request, self.template_name, self.context)
 
@@ -143,24 +155,25 @@ class Reserve(LoginRequired, View):
         self.logger.debug(f'reservation for room {room_pk} started')
         self.context['room_pk'] = room_pk
 
-        result = svc.create_reservation({
+        result = self.svc.create_reservation({
             'client_id': request.user.pk,
             'room_pk': room_pk,
             'check_in': request.POST.get('checkin', '0001-01-01'),
             'check_out': request.POST.get('checkout', '0001-01-01'),
             'observations': request.POST.get('obs', ''),
         })
-        *_, response = result.match(
+        match_res = result.match(
             on_ok=lambda r: (
-                self.logger.info(f'reservation {r.id} registered. Redirecting to checkout'),  # type: ignore
                 redirect(reverse_lazy('checkout', args=(r.id,))),
+                self.logger.info(f'reservation {r.id} registered. Redirecting to checkout'),  # type: ignore
             ),
             on_err=lambda err: (
+                redirect(reverse_lazy('reserve', args=(room_pk,))),
                 self.logger.error(err.msg, exc_info=err.src_error),  # type: ignore
                 messages.error(request, err.msg),
-                redirect(reverse_lazy('reserve', args=(room_pk,))),
             ),
         )
+        response = match_res[0]
         return response
 
 
@@ -169,10 +182,21 @@ class ReservationsHistory(LoginRequired, ListView):
 
     template_name = 'reservations_history.html'
     context_object_name = 'reservations'
-    logger = logging.getLogger('djangoLogger')
+
+    def setup(
+        self,
+        request,
+        *args,
+        svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
+        logger: logging.Logger = Provide[ReservationsContainer.logger],
+        **kwargs,
+    ):
+        super().setup(request, *args, **kwargs)
+        self.svc = svc
+        self.logger = logger
 
     def get_queryset(self) -> list[Reservation]:
-        result = svc.fetch_client_reservation_history(client_id=self.request.user.pk)
+        result = self.svc.fetch_client_reservation_history(client_id=self.request.user.pk)
 
         def _on_err(err) -> list[Reservation]:
             self.logger.error(err.msg, exc_info=err.src_error)
@@ -188,7 +212,7 @@ class ReservationsHistory(LoginRequired, ListView):
     def get_context_data(self, **kwargs):
         """Add cancellation eligibility information."""
         context = super().get_context_data(**kwargs)
-        context['reservation_items'] = svc.get_reservations_with_cancellation_info(
+        context['reservation_items'] = self.svc.get_reservations_with_cancellation_info(
             context['reservations']
         )
         return context
@@ -199,40 +223,51 @@ class ReservationHistory(LoginRequired, DetailView):
 
     context_object_name = 'reservation'
     template_name = 'reservation_history.html'
-    logger = logging.getLogger('djangoLogger')
 
-    def get_object(self, _=None):
+    @inject
+    def get_object(
+        self,
+        _=None,
+        svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
+        logger: logging.Logger = Provide[ReservationsContainer.logger],
+    ):
         result = svc.fetch_reservation_detail(
             reservation_id=self.kwargs.get('pk'), client_id=self.request.user.pk
         )
         *_, reservation = result.match(
             on_ok=lambda r: (None, r),
             on_err=lambda err: (
-                self.logger.error(err.msg, exc_info=err.src_error),  # Type: ignore
+                logger.error(err.msg, exc_info=err.src_error),  # type: ignore
                 Http404(err.msg),
             ),
         )
         return reservation
 
 
-@method_decorator(support.captcha_required('cancel_reservation'), 'post')
+@method_decorator(support.captcha_required('cancel_reservation', params=('pk',)), 'post')
 class CancelReservationView(LoginRequired, View):
     """Handle reservation cancellation requests."""
 
-    logger = logging.getLogger('djangoLogger')
-
-    def get(self, request, pk):
+    @inject
+    def get(
+        self,
+        request,
+        pk,
+        svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
+        logger: logging.Logger = Provide[ReservationsContainer.logger],
+    ):
         """Show cancellation confirmation page."""
         result = svc.fetch_reservation_detail(reservation_id=pk, client_id=request.user.pk)
 
-        reservation = result.match(
-            on_ok=lambda r: r,
+        reservation_tp = result.match(
+            on_ok=lambda r: (r,),
             on_err=lambda err: (
-                self.logger.error(err.msg, exc_info=err.src_error),
-                messages.error(request, err.msg),
                 None,
+                logger.error(err.msg, exc_info=err.src_error),  # type: ignore
+                messages.error(request, err.msg),
             ),
         )
+        reservation = reservation_tp[0]
 
         if not reservation:
             return redirect('reservations_history')
@@ -247,21 +282,18 @@ class CancelReservationView(LoginRequired, View):
 
         return render(request, 'cancel_reservation.html', context)
 
-    def post(self, request, pk):  # noqa: PLR6301
+    @inject
+    def post(
+        self,
+        request,
+        pk,
+        usecase: CancelReservationUseCase = Provide[
+            ReservationsContainer.cancel_reservation_usecase
+        ],
+    ):
         """Process reservation cancellation."""
         reason = request.POST.get('reason', '').strip()
 
-        # Initialize use case dependencies
-
-        usecase = CancelReservationUseCase(
-            reservation_repo=ReservationRepository(),
-            room_repo=RoomRepository(),
-            payments_repo=PaymentRepository(),
-            unit_of_work=UnitOfWork(),
-            task_queuer=DjangoQTaskQueuer(),
-        )
-
-        # Execute cancellation
         result = usecase(pk, request.user.pk, reason)
 
         if result.is_err():
