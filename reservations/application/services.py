@@ -62,9 +62,10 @@ class ReservationService:
 
     def can_client_create_reservation(self, client_id: int) -> Result[bool]:
         """Check if client can create a new reservation (no active/scheduled ones)."""
-        return self.reservation_repo.has_active_reservation(
+        has = self.reservation_repo.has_active_reservation(
             client_id=client_id, include_scheduled=True
-        )
+        ).unwrap_or(False)
+        return Result.Ok(not has)
 
     def can_cancel_reservation(self, reservation: Reservation) -> bool:
         """Determine if a specific reservation can be cancelled."""

@@ -130,8 +130,8 @@ class Reserve(LoginRequired, View):
         tenha uma reserva ativa ou agendada"""
         result = self.svc.can_client_create_reservation(client_id=request.user.pk)
 
-        def _on_ok(has):
-            if has:
+        def _on_ok(can):
+            if not can:
                 self.logger.info('user already have a reservation active ou scheduled')
                 messages.info(request, ReservationMessages.ALREADY_HAVE_A_RESERVATION)
                 return redirect('rooms')
@@ -215,6 +215,11 @@ class ReservationsHistory(LoginRequired, ListView):
         context['reservation_items'] = self.svc.get_reservations_with_cancellation_info(
             context['reservations']
         )
+        user_id: int = self.request.user.pk
+        context['can_create_reservation'] = self.svc.can_client_create_reservation(
+            user_id
+        ).unwrap_or(False)
+        self.logger.debug(f'{context=}')
         return context
 
 

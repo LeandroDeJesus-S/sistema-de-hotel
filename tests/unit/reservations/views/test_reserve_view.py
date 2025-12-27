@@ -20,12 +20,14 @@ from utils.supporttest import get_message
 
 
 @pytest.mark.django_db
-def test_reserve_view_uses_correct_template(authenticated_client, room_model):
+def test_reserve_view_uses_correct_template(client, room_model, client_model_factory):
     """
     Tests if reserve view is rendering the correct template.
     """
     # Arrange
-    client, _ = authenticated_client
+    customer = client_model_factory()
+    client.force_login(customer)
+
     url = reverse('reserve', args=[room_model.pk])
 
     # Act
