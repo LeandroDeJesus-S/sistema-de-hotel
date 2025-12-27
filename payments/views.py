@@ -12,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 
 from base.ports.queue import TaskQueuer
+from base.ports.unit_of_work import AbsUnitOfWork
 from payments.application.services import PaymentService
 from payments.container import PaymentsContainer
 from payments.domain.ports import AbsPaymentsRepository
@@ -121,6 +122,7 @@ def stripe_webhook(  # noqa: PLR0913, PLR0917
         PaymentsContainer.schedule_reservation_usecase
     ],
     svc: PaymentService = Provide[PaymentsContainer.payment_service],
+    uow: AbsUnitOfWork = Provide[PaymentsContainer.unit_of_work],
 ):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -137,6 +139,7 @@ def stripe_webhook(  # noqa: PLR0913, PLR0917
             activate_reservation_usecase,
             release_reservation_task,
             schedule_reservation_usecase,
+            uow,
         ),
         CheckoutExpiredEvent(payment_repo, reservation_repo),
     ).unwrap()  # XXX: unwrap is safe here, since it never returns an error

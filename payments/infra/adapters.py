@@ -7,6 +7,7 @@ import stripe
 from django.conf import settings
 
 from base.ports.queue import TaskQueuer
+from base.ports.unit_of_work import AbsUnitOfWork
 from exc import Result
 from payments.domain.dtos import CheckoutResultDTO, CheckoutSessionInputDTO
 from payments.domain.entities import PaymentStatus
@@ -193,6 +194,7 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
         activate_reservation_usecase: ActivateReservationUseCase,
         release_reservation_task: Callable[[int], Any],
         schedule_reservation_usecase: ScheduleReservationUseCase,
+        unit_of_work: AbsUnitOfWork,
     ):
         self._task_queue = task_queue
         self._payments_repo = payments_repo
@@ -200,6 +202,7 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
         self._activate_reservation_usecase = activate_reservation_usecase
         self._release_reservation_task = release_reservation_task
         self._schedule_reservation_usecase = schedule_reservation_usecase
+        self._unit_of_work = unit_of_work
 
         self._logger = logging.getLogger('djangoLogger')
 
@@ -221,32 +224,73 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
         if not pi.latest_charge:
             return Result.Err('Payment intent has no charge')
 
-        payment_result = self._payments_repo.get_by_id(payment_id)
-        if payment_result.is_err():
-            return Result.Err(
-                'Failed to retrieve payment by payment', src_error=payment_result.unwrap_err()
+        with self._unit_of_work as uow:
+            payment_result = self._payments_repo.get_by_id(payment_id)
+            if payment_result.is_err():
+                return Result.Err(
+                    'Failed to retrieve payment by payment',
+                    src_error=payment_result.unwrap_err(),
+                )
+
+            payment = payment_result.unwrap()
+            payment.status = PaymentStatus.COMPLETED
+            payment.gateway_charge_id = str(pi.latest_charge)
+            payment.gateway_payment_intent_id = pi.id
+            payment.gateway_customer_id = str(pi.customer)
+            if (err := self._payments_repo.update(payment)) and err.is_err():
+                uow.rollback()
+                return Result.Err(
+                    'Failed to update payment',
+                    src_error=err.unwrap_err(),
+                )
+
+            run_at = datetime.combine(
+                payment.reservation.checkout, time(23, 59), tzinfo=timezone.utc
             )
+            # XXX: It might make sense send the the confirmation email even though something went wrong on schedule  # noqa: E501
+            if payment.reservation.room.available:
+                self._logger.info(f'Reservation {payment.reservation.id} activation started')
+                res = self._activate_reservation_usecase(payment.reservation)
+                if res.is_err():
+                    self._logger.error(
+                        f'Failed to activate reservation {payment.reservation.id}'
+                    )
+                    uow.rollback()
+                    # return Result.Err('Failed to activate reservation', src_error=res.unwrap_err())  # noqa: E501
 
-        payment = payment_result.unwrap()
-        payment.status = PaymentStatus.COMPLETED
-        payment.gateway_charge_id = str(pi.latest_charge)
-        payment.gateway_payment_intent_id = pi.id
-        payment.gateway_customer_id = str(pi.customer)
-        self._payments_repo.update(payment)
+                self._task_queue.queue_task(
+                    'payments.infra.tasks.send_payment_confirmation',
+                    (payment.id,),
+                    name=f'send_payment_confirmation_{payment.id}',
+                )
+                self._logger.info(f'payment confirmation scheduled for {payment.id}')
+                self._task_queue.schedule_task(
+                    func_path='reservations.infra.tasks.release_reservation_task',
+                    run_at=run_at,
+                    args=(payment.reservation.id,),
+                    name=f'release_reservation_{payment.reservation.id}',
+                )
+                self._logger.info(
+                    f'reservation release scheduled for {payment.reservation.id} at {run_at}'
+                )
+                uow.commit()
+                return Result.Ok(None)
 
-        run_at = datetime.combine(
-            payment.reservation.checkout, time(23, 59), tzinfo=timezone.utc
-        )
-        # XXX: It might make sense send the the confirmation email even though something went wrong on schedule  # noqa: E501
-        if payment.reservation.room.available:
-            self._logger.info(f'Reservation {payment.reservation.id} activation started')
-            res = self._activate_reservation_usecase(payment.reservation)
-            if res.is_err():
-                self._logger.error(f'Failed to activate reservation {payment.reservation.id}')
-                # return Result.Err('Failed to activate reservation', src_error=res.unwrap_err())  # noqa: E501
-
+            self._logger.info(f'Reservation {payment.reservation.id} scheduling started')
+            schedule_result = self._schedule_reservation_usecase(payment.reservation)
+            if schedule_result.is_err():
+                self._logger.error(
+                    f'Failed to schedule reservation {payment.reservation.id}',
+                    exc_info=schedule_result.unwrap_err(),
+                )
+                uow.rollback()
+                #
+                # return Result.Err(
+                #     'Failed to schedule reservation',
+                #     src_error=schedule_result.unwrap_err(),
+                # )
             self._task_queue.queue_task(
-                'payments.infra.tasks.send_payment_confirmation',
+                self._send_confirmation_task,
                 (payment.id,),
                 name=f'send_payment_confirmation_{payment.id}',
             )
@@ -260,35 +304,7 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
             self._logger.info(
                 f'reservation release scheduled for {payment.reservation.id} at {run_at}'
             )
-            return Result.Ok(None)
-
-        self._logger.info(f'Reservation {payment.reservation.id} scheduling started')
-        schedule_result = self._schedule_reservation_usecase(payment.reservation)
-        if schedule_result.is_err():
-            self._logger.error(
-                f'Failed to schedule reservation {payment.reservation.id}',
-                exc_info=schedule_result.unwrap_err(),
-            )
-            #
-            # return Result.Err(
-            #     'Failed to schedule reservation',
-            #     src_error=schedule_result.unwrap_err(),
-            # )
-        self._task_queue.queue_task(
-            self._send_confirmation_task,
-            (payment.id,),
-            name=f'send_payment_confirmation_{payment.id}',
-        )
-        self._logger.info(f'payment confirmation scheduled for {payment.id}')
-        self._task_queue.schedule_task(
-            func_path='reservations.infra.tasks.release_reservation_task',
-            run_at=run_at,
-            args=(payment.reservation.id,),
-            name=f'release_reservation_{payment.reservation.id}',
-        )
-        self._logger.info(
-            f'reservation release scheduled for {payment.reservation.id} at {run_at}'
-        )
+            uow.commit()
         return Result.Ok(None)
 
 
