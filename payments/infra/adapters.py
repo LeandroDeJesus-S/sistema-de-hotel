@@ -370,17 +370,3 @@ class PaymentChargeRefundedEvent(WebhookEvent[str]):
             )
 
         return Result.Ok(None)
-
-
-class CheckoutSessionCreatedEvent(WebhookEvent[str]):
-    """Handles the event when a checkout session is created."""
-
-    ident = 'checkout.session.created'
-
-    def __init__(self) -> None:
-        pass
-
-    def handle(self, data: dict[str, Any]) -> Result[None]:  # noqa: PLR6301
-        print('checkout session created')
-        print(data)
-        return Result.Ok(None)

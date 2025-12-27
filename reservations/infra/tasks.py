@@ -197,3 +197,51 @@ def send_cancellation_notification(
         return Result.Err('Failed to send admin notification email', src_error=e)
 
     return Result.Ok(None)
+
+
+@inject
+def send_scheduling_notification(
+    reservation_id: int,
+    reservation_repo: AbsReservationRepository = Provide[
+        ReservationsContainer.reservation_repo
+    ],
+    mailer: AbsEmailSender = Provide[ReservationsContainer.email_sender],
+) -> Result[None]:
+    """
+    Send scheduling notification email to client.
+
+    Args:
+        reservation_id: The ID of the scheduled reservation.
+
+    Returns:
+        A Result indicating success or failure.
+    """
+
+    # Get reservation details
+    reservation_result = reservation_repo.find_by_id(reservation_id)
+    if reservation_result.is_err():
+        return Result.Err(f'Reservation {reservation_id} not found')
+
+    reservation = reservation_result.unwrap()
+
+    # Send email to client
+    client_subject = 'Confirmação de Agendamento de Reserva'
+    client_context = {
+        'reservation': reservation,
+        'client': reservation.client,
+    }
+
+    client_html_message = render_to_string(
+        'emails/scheduling_notification_client.html', client_context
+    )
+    try:
+        mailer.send_single_mail(
+            subject=client_subject,
+            body=client_html_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to_emails=[reservation.client.email],
+        )
+    except Exception as e:
+        return Result.Err('Failed to send client notification email', src_error=e)
+
+    return Result.Ok(None)

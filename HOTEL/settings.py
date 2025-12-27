@@ -174,10 +174,10 @@ SESSION_SAVE_EVERY_REQUEST = False
 SESSION_COOKIE_HTTPONLY = True
 
 # emails
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# USE_TLS = True
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ['EMAIL_HOST']
+EMAIL_PORT = os.environ['EMAIL_PORT']
+USE_TLS = not DEBUG
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 EMAIL_SUBJECT_PREFIX = os.getenv('EMAIL_SUBJECT_PREFIX')
@@ -185,11 +185,11 @@ EMAIL_SUBJECT_PREFIX = os.getenv('EMAIL_SUBJECT_PREFIX')
 
 # Django Q
 Q_CLUSTER = {
-    'name': 'HOTEL',
-    'workers': 2,
-    'timeout': 30,
-    'retry': 60,
-    'orm': 'default',
+    'name': os.getenv('Q_CLUSTER_NAME', 'HOTEL'),
+    'workers': int(os.getenv('Q_CLUSTER_WORKERS', '2')),
+    'timeout': int(os.getenv('Q_CLUSTER_TIMEOUT', '30')),
+    'retry': int(os.getenv('Q_CLUSTER_RETRY', '60')),
+    'orm': os.getenv('Q_CLUSTER_ORM', 'default'),
 }
 
 # stripe api

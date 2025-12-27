@@ -276,6 +276,13 @@ class ScheduleReservationUseCase:
                 activation_time,
             )
 
+            # Send scheduling notification
+            self._task_queuer.queue_task(
+                'reservations.infra.tasks.send_scheduling_notification',
+                (reservation.id,),
+                name=f'send_scheduling_notification_{reservation.id}',
+            )
+
             uow.commit()
             return Result.Ok(reservation_save_result.unwrap())
 

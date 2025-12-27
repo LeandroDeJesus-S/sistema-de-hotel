@@ -15,6 +15,7 @@ from reservations.application.usecases import (
     FetchReservationDetailUseCase,
     InitializeReservationUseCase,
     ReleaseReservationUseCase,
+    ScheduleReservationUseCase,
 )
 from reservations.domain.entities import Reservation, ReservationStatus, Room
 from reservations.domain.repo import AbsReservationRepository, AbsRoomRepository
@@ -287,3 +288,43 @@ class TestFetchReservationDetailUseCase:
         mock_reservation_repo.fetch_for_history_detail.assert_called_once_with(
             client_id, reservation_id
         )
+
+
+class TestScheduleReservationUseCase:
+    def test_schedule_reservation_successfully(self, mock_reservation_repo, mock_uow):
+        # Arrange
+        mock_task_queuer = Mock()
+        use_case = ScheduleReservationUseCase(
+            reservation_repo=mock_reservation_repo,
+            unit_of_work=mock_uow,
+            task_queuer=mock_task_queuer,
+        )
+
+        mock_reservation = MagicMock(spec=Reservation)
+        mock_reservation.id = 123
+        mock_reservation.checkin = date.today()
+        mock_reservation.status = ReservationStatusEnum.INITIALIZED
+
+        mock_reservation_repo.save.return_value = Result.Ok(mock_reservation)
+
+        # Act
+        result = use_case(mock_reservation)
+
+        # Assert
+        assert result.is_ok()
+        assert mock_reservation.status == ReservationStatusEnum.SCHEDULED
+
+        # Verify activation task was scheduled
+        mock_task_queuer.schedule_task.assert_called_once()
+        args, kwargs = mock_task_queuer.schedule_task.call_args
+        assert kwargs['func_path'] == 'reservations.infra.tasks.activate_reservation_task'
+        assert kwargs['args'] == (123,)
+
+        # Verify email notification was queued
+        mock_task_queuer.queue_task.assert_called_once()
+        args, kwargs = mock_task_queuer.queue_task.call_args
+        assert args[0] == 'reservations.infra.tasks.send_scheduling_notification'
+        assert args[1] == (123,)
+
+        # Verify transaction commit
+        mock_uow.__enter__.return_value.commit.assert_called_once()
