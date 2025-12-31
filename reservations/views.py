@@ -4,8 +4,6 @@ from typing import Any
 from dependency_injector.wiring import Provide, inject
 from django.contrib import messages
 from django.http import Http404, HttpRequest
-from django.shortcuts import redirect, render
-from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.generic.detail import DetailView
@@ -17,7 +15,7 @@ from utils import support
 
 from .application import services
 from .application.usecases import CancelReservationUseCase
-from .feedback_messages import ReservationMessages
+from .infra import presenters
 from .mixins import LoginRequired
 from .models import Room
 
@@ -45,8 +43,6 @@ def setup_reservation_context(
 class Rooms(ListView):
     """lista todos os quartos da base de dados"""
 
-    logger = logging.getLogger('djangoLogger')
-
     model = Room
     template_name = 'rooms.html'
     context_object_name = 'rooms'
@@ -55,19 +51,23 @@ class Rooms(ListView):
     def get_queryset(
         self,
         svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
+        logger: logging.Logger = Provide[ReservationsContainer.logger],
     ):
         """retorna todos os quartos com seus benefícios"""
         result = svc.room_repo.fetch_all(with_benefits=True)
-        *_, rooms = result.match(
-            on_ok=lambda rs: (
-                self.logger.debug('successfully loaded rooms'),  # type: ignore
-                rs,
-            ),
-            on_err=lambda err: (
-                self.logger.error(err.msg, exc_info=err.src_error),  # type: ignore
-                messages.error(self.request, 'Could not load rooms.'),
-                [],
-            ),
+
+        def _on_ok(rs):
+            logger.debug('successfully loaded rooms')
+            return rs
+
+        def _on_err(err):
+            logger.error(err.msg, exc_info=err.src_error)
+            messages.error(self.request, 'Could not load rooms.')
+            return []
+
+        rooms = result.match(
+            on_ok=_on_ok,
+            on_err=_on_err,
         )
         return rooms
 
@@ -130,26 +130,12 @@ class Reserve(LoginRequired, View):
         tenha uma reserva ativa ou agendada"""
         result = self.svc.can_client_create_reservation(client_id=request.user.pk)
 
-        def _on_ok(can):
-            if not can:
-                self.logger.info('user already have a reservation active ou scheduled')
-                messages.info(request, ReservationMessages.ALREADY_HAVE_A_RESERVATION)
-                return redirect('rooms')
+        self.context['room_pk'] = room_pk
+        self.logger.debug(f'rendering {self.template_name}')
 
-            self.context['room_pk'] = room_pk
-            self.logger.debug(f'rendering {self.template_name}')
-            return render(request, self.template_name, self.context)
-
-        def _on_err(err):
-            self.logger.error(err.msg, exc_info=err.src_error)
-            messages.error(request, err.msg)
-            return redirect('rooms')
-
-        response = result.match(
-            on_ok=_on_ok,
-            on_err=_on_err,
-        )
-        return response
+        return presenters.reserve_get_presenter(
+            request, result, self.template_name, self.context
+        ).unwrap()
 
     def post(self, request: HttpRequest, room_pk: int):
         self.logger.debug(f'reservation for room {room_pk} started')
@@ -162,19 +148,8 @@ class Reserve(LoginRequired, View):
             'check_out': request.POST.get('checkout', '0001-01-01'),
             'observations': request.POST.get('obs', ''),
         })
-        match_res = result.match(
-            on_ok=lambda r: (
-                redirect(reverse_lazy('checkout', args=(r.id,))),
-                self.logger.info(f'reservation {r.id} registered. Redirecting to checkout'),  # type: ignore
-            ),
-            on_err=lambda err: (
-                redirect(reverse_lazy('reserve', args=(room_pk,))),
-                self.logger.error(err.msg, exc_info=err.src_error),  # type: ignore
-                messages.error(request, err.msg),
-            ),
-        )
-        response = match_res[0]
-        return response
+
+        return presenters.reserve_post_presenter(request, result, (room_pk,)).unwrap()
 
 
 class ReservationsHistory(LoginRequired, ListView):
@@ -264,28 +239,18 @@ class CancelReservationView(LoginRequired, View):
         """Show cancellation confirmation page."""
         result = svc.fetch_reservation_detail(reservation_id=pk, client_id=request.user.pk)
 
-        reservation_tp = result.match(
-            on_ok=lambda r: (r,),
-            on_err=lambda err: (
-                None,
-                logger.error(err.msg, exc_info=err.src_error),  # type: ignore
-                messages.error(request, err.msg),
-            ),
-        )
-        reservation = reservation_tp[0]
+        if result.is_err():
+            err = result.unwrap_err()
+            self.logger.error(err.msg, exc_info=err.src_error)
 
-        if not reservation:
-            return redirect('reservations_history')
+        reservation = result.unwrap_or(None)
+        can_cancel = False
+        if reservation:
+            can_cancel = svc.can_cancel_reservation(reservation)
 
-        # Check if reservation can be cancelled
-        can_cancel = svc.can_cancel_reservation(reservation)
-
-        context = {
-            'reservation': reservation,
-            'can_cancel': can_cancel,
-        }
-
-        return render(request, 'cancel_reservation.html', context)
+        return presenters.cancel_reservation_get_presenter(
+            request, result, can_cancel
+        ).unwrap()
 
     @inject
     def post(
@@ -298,12 +263,6 @@ class CancelReservationView(LoginRequired, View):
     ):
         """Process reservation cancellation."""
         reason = request.POST.get('reason', '').strip()
-
         result = usecase(pk, request.user.pk, reason)
 
-        if result.is_err():
-            messages.error(request, result.unwrap_err().msg)
-        else:
-            messages.success(request, 'Reserva cancelada com sucesso.')
-
-        return redirect('reservations_history')
+        return presenters.cancel_reservation_post_presenter(request, result).unwrap()

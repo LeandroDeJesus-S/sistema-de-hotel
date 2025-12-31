@@ -52,7 +52,9 @@ class SignUp(View):
 
     def post(self, request: HttpRequest):
         result = self.svc.signup_user(request.POST, request)
-        return presenters.signup_post_presenter(request, result, self.template_name, {})
+        return presenters.signup_post_presenter(
+            request, result, self.template_name, {}
+        ).unwrap()
 
 
 @method_decorator(support.captcha_required('signin'), name='post')
@@ -96,7 +98,7 @@ class SignIn(View):
         result = self.svc.signin_user(credentials, request)
         redirect_target = result.unwrap() if result.is_ok() else 'error'
         self.logger.info(f'User logged in successfully. Redirecting to {redirect_target}')
-        return presenters.signin_post_presenter(request, result, self.template, {})
+        return presenters.signin_post_presenter(request, result, self.template, {}).unwrap()
 
 
 def axes_locked_out(request, *args, **kwargs):
@@ -170,7 +172,9 @@ class PerfilChangePassword(LoginRequired, View):
         if result.is_err():
             self.logger.error(result.unwrap_err().msg)
 
-        return presenters.password_change_post_presenter(request, result, redirect_url)
+        return presenters.password_change_post_presenter(
+            request, result, redirect_url
+        ).unwrap()
 
 
 @method_decorator(support.captcha_required('delete_perfil', params=('pk',)), name='post')

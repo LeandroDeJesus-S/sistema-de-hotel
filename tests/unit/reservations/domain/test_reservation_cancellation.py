@@ -61,6 +61,7 @@ class TestCancelReservationUseCase:
             payments_repo=mock_payments_repo,
             unit_of_work=mock_unit_of_work,
             task_queuer=mock_task_queuer,
+            logger=Mock(),
         )
 
         # Execute
@@ -112,6 +113,7 @@ class TestCancelReservationUseCase:
             payments_repo=mock_payments_repo,
             unit_of_work=mock_unit_of_work,
             task_queuer=mock_task_queuer,
+            logger=Mock(),
         )
 
         # Execute
@@ -157,6 +159,7 @@ class TestCancelReservationUseCase:
             payments_repo=mock_payments_repo,
             unit_of_work=mock_unit_of_work,
             task_queuer=mock_task_queuer,
+            logger=Mock(),
         )
 
         # Execute

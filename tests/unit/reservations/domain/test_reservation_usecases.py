@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import logging
 from decimal import Decimal
 from unittest.mock import MagicMock, Mock
 
@@ -64,7 +65,11 @@ def mock_room():
 class TestInitializeReservationUseCase:
     def test_init(self, mock_reservation_repo, mock_room_repo, mock_client_repo, mock_uow):
         uc = InitializeReservationUseCase(
-            mock_reservation_repo, mock_room_repo, mock_client_repo, mock_uow
+            mock_reservation_repo,
+            mock_room_repo,
+            mock_client_repo,
+            mock_uow,
+            logging.getLogger(),
         )
         assert uc.reservation_repo == mock_reservation_repo
         assert uc.room_repo == mock_room_repo
@@ -93,7 +98,11 @@ class TestInitializeReservationUseCase:
         mock_reservation_repo.save.return_value = Result.Ok(Mock(spec=Reservation))
 
         uc = InitializeReservationUseCase(
-            mock_reservation_repo, mock_room_repo, mock_client_repo, mock_uow
+            mock_reservation_repo,
+            mock_room_repo,
+            mock_client_repo,
+            mock_uow,
+            logging.getLogger(),
         )
 
         # Act
@@ -125,7 +134,11 @@ class TestInitializeReservationUseCase:
         mock_reservation_repo.has_overlapping_reservation.return_value = Result.Ok(True)
 
         uc = InitializeReservationUseCase(
-            mock_reservation_repo, mock_room_repo, mock_client_repo, mock_uow
+            mock_reservation_repo,
+            mock_room_repo,
+            mock_client_repo,
+            mock_uow,
+            logging.getLogger(),
         )
 
         # Act
@@ -149,9 +162,7 @@ class TestFetchClientActiveReservations:
             Mock(spec=Reservation, status=ReservationStatusEnum.ACTIVE),
             Mock(spec=Reservation, status=ReservationStatusEnum.SCHEDULED),
         ]
-        mock_reservation_repo.fetch_active_reservations.return_value = Result.Ok(
-            reservations
-        )
+        mock_reservation_repo.fetch_active_reservations.return_value = Result.Ok(reservations)
         uc = FetchClientActiveReservations(mock_reservation_repo)
 
         # Act
@@ -185,6 +196,7 @@ class TestReleaseRoomUseCase:
             reservations_repo=mock_reservations_repo,
             payments_repo=mock_payments_repo,
             unit_of_work=mock_uow,
+            logger=logging.getLogger(),
         )
 
         # when
@@ -212,6 +224,7 @@ class TestReleaseRoomUseCase:
             reservations_repo=mock_reservations_repo,
             payments_repo=mock_payments_repo,
             unit_of_work=mock_uow,
+            logger=logging.getLogger(),
         )
 
         # when
@@ -219,7 +232,7 @@ class TestReleaseRoomUseCase:
 
         # then
         assert result.is_err()
-        assert "Failed to save reservation" in result.unwrap_err().msg
+        assert 'Failed to save reservation' in result.unwrap_err().msg
         mock_uow.__enter__.return_value.rollback.assert_called_once()
 
     def test_return_error_if_saving_room_fails(self, mock_uow: MagicMock):
@@ -229,7 +242,7 @@ class TestReleaseRoomUseCase:
         mock_reservation.room = MagicMock()
         mock_room_repo = MagicMock(spec=AbsRoomRepository)
         mock_reservations_repo = MagicMock(spec=AbsReservationRepository)
-        mock_reservations_repo.save.return_value = Result.Err(msg="Database error")
+        mock_reservations_repo.save.return_value = Result.Err(msg='Database error')
         mock_payments_repo = MagicMock(spec=AbsPaymentsRepository)
 
         mock_reservation.status = ReservationStatus.ACTIVE
@@ -240,6 +253,7 @@ class TestReleaseRoomUseCase:
             reservations_repo=mock_reservations_repo,
             payments_repo=mock_payments_repo,
             unit_of_work=mock_uow,
+            logger=logging.getLogger(),
         )
 
         # when
@@ -247,7 +261,7 @@ class TestReleaseRoomUseCase:
 
         # then
         assert result.is_err()
-        assert "Failed to save reservation for releasing" in result.unwrap_err().msg
+        assert 'Failed to save reservation for releasing' in result.unwrap_err().msg
         mock_uow.__enter__.return_value.rollback.assert_called_once()
 
 
@@ -274,9 +288,7 @@ class TestFetchReservationDetailUseCase:
         reservation_id = 1
         client_id = 1
         reservation = Mock(spec=Reservation)
-        mock_reservation_repo.fetch_for_history_detail.return_value = Result.Ok(
-            reservation
-        )
+        mock_reservation_repo.fetch_for_history_detail.return_value = Result.Ok(reservation)
         uc = FetchReservationDetailUseCase(mock_reservation_repo)
 
         # Act
@@ -298,6 +310,7 @@ class TestScheduleReservationUseCase:
             reservation_repo=mock_reservation_repo,
             unit_of_work=mock_uow,
             task_queuer=mock_task_queuer,
+            logger=logging.getLogger(),
         )
 
         mock_reservation = MagicMock(spec=Reservation)

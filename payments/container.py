@@ -26,19 +26,21 @@ class PaymentsContainer(containers.DeclarativeContainer):
     config = providers.Configuration()
 
     # Infrastructure Layer (Singletons - shared across app)
-    client_repo = providers.Singleton(ClientRepository)
+    logger = providers.Object(logging.getLogger('djangoLogger'))
+    client_repo = providers.Singleton(ClientRepository, logger=logger)
     reservation_repo = providers.Singleton(ReservationRepository)
     room_repo = providers.Singleton(RoomRepository)
     payment_repo = providers.Singleton(PaymentRepository)
     unit_of_work = providers.Singleton(UnitOfWork)
     payment_gateway = providers.Singleton(
-        StripeCheckoutSession, stripe_api_key=config.STRIPE_API_KEY_SECRET
+        StripeCheckoutSession,
+        stripe_api_key=config.STRIPE_API_KEY_SECRET,
+        logger=logger,
     )
-    webhook_handler = providers.Singleton(StripePaymentWebhookHandler)
+    webhook_handler = providers.Singleton(StripePaymentWebhookHandler, logger=logger)
     task_queuer = providers.Singleton(DjangoQTaskQueuer)
     email_sender = providers.Singleton(DjangoEmailSender)
     pdf_generator = providers.Singleton(ReportLabPDFReceiptGenerator)
-    logger = providers.Object(logging.getLogger('djangoLogger'))
 
     confirmation_usecase = providers.Factory(
         SendPaymentConfirmationUseCase,

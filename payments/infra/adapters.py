@@ -28,9 +28,9 @@ from reservations.domain.value_objects import ReservationStatusEnum
 class StripeCheckoutSession(AbsSessionBasedPayment):
     """Creates a payment flow using Stripe's CheckoutSession"""
 
-    def __init__(self, stripe_api_key: str):
+    def __init__(self, stripe_api_key: str, logger: logging.Logger):
         self._stripe_api_key = stripe_api_key
-        self._logger = logging.getLogger('djangoLogger')
+        self._logger = logger
 
     def create_checkout_session(
         self, dto: CheckoutSessionInputDTO
@@ -132,9 +132,9 @@ class WebhookPayloadError(Exception):
 class StripePaymentWebhookHandler(PaymentWebhookHandler[str]):
     """Class responsible for handling payment webhooks from stripe."""
 
-    def __init__(self) -> None:
+    def __init__(self, logger: logging.Logger) -> None:
         self.events: dict[str, WebhookEvent[str]] = {}
-        self.logger = logging.getLogger('djangoLogger')
+        self.logger = logger
 
     def with_events(self, *events: WebhookEvent[str]) -> Result[None]:
         """Registers a list of events to be handled."""
@@ -195,6 +195,7 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
         release_reservation_task: Callable[[int], Any],
         schedule_reservation_usecase: ScheduleReservationUseCase,
         unit_of_work: AbsUnitOfWork,
+        logger: logging.Logger,
     ):
         self._task_queue = task_queue
         self._payments_repo = payments_repo
@@ -204,7 +205,7 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
         self._schedule_reservation_usecase = schedule_reservation_usecase
         self._unit_of_work = unit_of_work
 
-        self._logger = logging.getLogger('djangoLogger')
+        self._logger = logger
 
     def handle(self, data: dict[str, Any]) -> Result[None]:  # noqa: PLR0911
         """

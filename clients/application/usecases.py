@@ -14,6 +14,7 @@ class CreateUserUseCase:
         self,
         repo: ports.AbsClientRepository,
         pw_mng: ports.AbsPasswordManager,
+        logger: logging.Logger,
     ) -> None:
         """
         Initializes the use case with its dependencies.
@@ -21,9 +22,11 @@ class CreateUserUseCase:
         Args:
             repo: The repository for persisting the new client.
             pw_mng: The port for hashing passwords.
+            logger: The logger instance.
         """
         self._repo = repo
         self._pw_mng = pw_mng
+        self._logger = logger
 
     def __call__(self, user: entities.Client) -> Result[entities.Client]:
         """
@@ -57,7 +60,7 @@ class CreateUserUseCase:
         add_result = self._repo.add(user)
 
         if add_result.is_err():
-            logging.getLogger('djangoLogger').error(add_result.unwrap_err(), exc_info=True)
+            self._logger.error(add_result.unwrap_err(), exc_info=True)
             return Result.Err(
                 msg=add_result.unwrap_err().msg,
                 src_error=add_result.unwrap_err(),

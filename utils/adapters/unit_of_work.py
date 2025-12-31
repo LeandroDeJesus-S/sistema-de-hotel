@@ -1,4 +1,3 @@
-import logging
 from typing import Any
 
 from django.db import transaction
@@ -10,21 +9,14 @@ class UnitOfWork(AbsUnitOfWork):
     def __init__(
         self,
         using: Any | None = None,
-        savepoint: bool = True,
-        durable: bool = False,
     ):
         self._using = using
-        self._savepoint = savepoint
-        self._durable = durable
-        self._logger = logging.getLogger('djangoLogger')
 
     def __enter__(self):
-        self._logger.debug('Enter UOW')
         transaction.set_autocommit(False)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._logger.debug('Exit UOW')
         transaction.set_autocommit(True)
 
     def commit(self):

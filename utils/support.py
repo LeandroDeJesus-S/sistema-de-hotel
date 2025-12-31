@@ -1,4 +1,3 @@
-import logging
 from datetime import date, datetime, time, timedelta
 from functools import wraps
 from typing import Type, TypeVar
@@ -64,7 +63,6 @@ def verify_captcha(captcha_resp) -> bool:
         return False
 
     json_resp = response.json()
-    logging.getLogger('djangoLogger').debug(f'captcha response: {json_resp}')
     success = json_resp.get('success', False)
     score = json_resp.get('score', 0)
     good_score = score >= MIN_SCORE

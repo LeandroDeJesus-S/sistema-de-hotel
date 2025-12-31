@@ -26,11 +26,13 @@ class InitializeReservationUseCase:
         room_repo: AbsRoomRepository,
         client_repo: AbsClientRepository,
         unit_of_work: AbsUnitOfWork,
+        logger: logging.Logger,
     ):
         self.reservation_repo = reservation_repo
         self.room_repo = room_repo
         self.client_repo = client_repo
         self.unit_of_work = unit_of_work
+        self.logger = logger
 
     def __call__(self, command: CreateReservationInput) -> Result[Reservation]:
         """Fetches the room, check if its available then checks for overlapping reservations
@@ -107,7 +109,7 @@ class InitializeReservationUseCase:
         return Result.Ok(reservation)
 
     def _save_reservation(self, reservation_entity: Reservation) -> Result[Reservation]:
-        logging.getLogger('djangoLogger').info('Saving reservation')
+        self.logger.info('Saving reservation')
         with self.unit_of_work as uow:
             saved_reservation_result = self.reservation_repo.save(reservation_entity)
             if saved_reservation_result.is_err() or not saved_reservation_result.unwrap():
@@ -158,11 +160,12 @@ class ActivateReservationUseCase:
         reservation_repo: AbsReservationRepository,
         room_repo: AbsRoomRepository,
         unit_of_work: AbsUnitOfWork,
+        logger: logging.Logger,
     ) -> None:
         self._reservation_repo = reservation_repo
         self._room_repo = room_repo
         self._unit_of_work = unit_of_work
-        self._logger = logging.getLogger('djangoLogger')
+        self._logger = logger
 
     def __call__(self, reservation: Reservation) -> Result[Reservation]:
         """
@@ -223,11 +226,12 @@ class ScheduleReservationUseCase:
         reservation_repo: AbsReservationRepository,
         unit_of_work: AbsUnitOfWork,
         task_queuer: TaskQueuer,
+        logger: logging.Logger,
     ) -> None:
         self._reservation_repo = reservation_repo
         self._unit_of_work = unit_of_work
         self._task_queuer = task_queuer
-        self._logger = logging.getLogger('djangoLogger')
+        self._logger = logger
 
     def __call__(self, reservation: Reservation) -> Result[Reservation]:
         """
@@ -294,12 +298,13 @@ class ReleaseReservationUseCase:
         reservations_repo: AbsReservationRepository,
         payments_repo: AbsPaymentsRepository,
         unit_of_work: AbsUnitOfWork,
+        logger: logging.Logger,
     ) -> None:
         self._room_repo = room_repo
         self._reservation_repo = reservations_repo
         self._payment_repo = payments_repo
         self._unit_of_work = unit_of_work
-        self._logger = logging.getLogger('djangoLogger')
+        self._logger = logger
 
     def __call__(self, reservation: Reservation) -> Result[bool]:
         with self._unit_of_work as uow:
@@ -345,20 +350,21 @@ class CancelReservationUseCase:
     updating reservation status, and triggering refund logic.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         reservation_repo: AbsReservationRepository,
         room_repo: AbsRoomRepository,
         payments_repo: AbsPaymentsRepository,
         unit_of_work: AbsUnitOfWork,
         task_queuer: TaskQueuer,
+        logger: logging.Logger,
     ) -> None:
         self._reservation_repo = reservation_repo
         self._room_repo = room_repo
         self._payments_repo = payments_repo
         self._unit_of_work = unit_of_work
         self._task_queuer = task_queuer
-        self._logger = logging.getLogger('djangoLogger')
+        self._logger = logger
 
     def __call__(
         self, reservation_id: int, client_id: int, reason: str = ''

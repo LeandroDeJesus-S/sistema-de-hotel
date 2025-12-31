@@ -2,7 +2,6 @@
 This module provides concrete implementations of the reservation-related ports.
 """
 
-import logging
 from datetime import date
 
 from django.core.exceptions import ValidationError
@@ -33,8 +32,6 @@ from utils.support import (
 
 from ..domain.value_objects import ReservationStatusEnum
 
-logger = logging.getLogger('djangoLogger')
-
 
 class RoomRepository(AbsRoomRepository):
     """
@@ -64,7 +61,6 @@ class RoomRepository(AbsRoomRepository):
             if with_benefits:
                 rooms_qs = rooms_qs.prefetch_related('benefits')
 
-            logger.debug(f'rooms_qs: {rooms_qs}')
             rooms = rooms_qs.order_by('-daily_price')
             room_entities = []
             for r in rooms:
@@ -136,7 +132,6 @@ class RoomRepository(AbsRoomRepository):
         except ValidationError as e:
             return Result.Err(msg='Invalid room', src_error=e)
         except Exception as e:
-            logger.error(f'DB error on room save: {e}', exc_info=True)
             return Result.Err(msg='Could not save room', src_error=e)
 
         return model_to_entity(model_instance, self._room_entity_class)
@@ -166,7 +161,6 @@ class ReservationRepository(AbsReservationRepository):
         except ValidationError as e:
             return Result.Err(msg='Invalid reservation', src_error=e)
         except Exception as e:
-            logger.error(f'DB error on reservation save: {e}', exc_info=True)
             return Result.Err(msg='Could not save reservation', src_error=e)
 
         return model_to_entity(model_instance, self._entityclass)

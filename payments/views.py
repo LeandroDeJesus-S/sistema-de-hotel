@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Callable
 
 from dependency_injector.wiring import Provide, inject
@@ -123,6 +124,7 @@ def stripe_webhook(  # noqa: PLR0913, PLR0917
     ],
     svc: PaymentService = Provide[PaymentsContainer.payment_service],
     uow: AbsUnitOfWork = Provide[PaymentsContainer.unit_of_work],
+    logger: logging.Logger = Provide[PaymentsContainer.logger],
 ):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -140,6 +142,7 @@ def stripe_webhook(  # noqa: PLR0913, PLR0917
             release_reservation_task,
             schedule_reservation_usecase,
             uow,
+            logger,
         ),
         CheckoutExpiredEvent(payment_repo, reservation_repo),
     ).unwrap()  # XXX: unwrap is safe here, since it never returns an error

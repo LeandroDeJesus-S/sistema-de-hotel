@@ -9,7 +9,7 @@ from django.db.models import Q
 
 @pytest.fixture
 def client_repository():
-    return ClientRepository()
+    return ClientRepository(logger=MagicMock())
 
 @pytest.fixture
 def client_entity_fixture():

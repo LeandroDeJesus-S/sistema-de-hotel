@@ -1,3 +1,5 @@
+import logging
+
 from clients.application.dtos import ChangePasswordInput, SignInInput, SignUpInput
 from clients.application.usecases import (
     # AuthenticateUserUseCase,
@@ -23,12 +25,14 @@ class ClientService:
         password_manager: AbsPasswordManager,
         session_manager: AbsSessionManager,
         captcha_service: AbsCaptchaVerifier,
+        logger: logging.Logger,
     ):
-        self.create_user = CreateUserUseCase(repo, password_manager)
+        self.create_user = CreateUserUseCase(repo, password_manager, logger)
         self.change_pw = ChangePasswordUseCase(repo, password_manager, session_manager)
         self.captcha = VerifyCaptchaUseCase(captcha_service)
         self.session_manager = session_manager
         self._repo = repo
+        self.logger = logger
 
     def signup_user(self, form_data: dict, request) -> Result[str]:
         """

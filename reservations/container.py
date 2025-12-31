@@ -27,7 +27,7 @@ class ReservationsContainer(containers.DeclarativeContainer):
     logger = providers.Object(logging.getLogger('djangoLogger'))
 
     # Infrastructure services
-    client_repo = providers.Singleton(ClientRepository)
+    client_repo = providers.Singleton(ClientRepository, logger=logger)
     reservation_repo = providers.Singleton(ReservationRepository)
     room_repo = providers.Singleton(RoomRepository)
     payment_repo = providers.Singleton(PaymentRepository)
@@ -41,18 +41,21 @@ class ReservationsContainer(containers.DeclarativeContainer):
         reservations_repo=reservation_repo,
         payments_repo=payment_repo,
         unit_of_work=unit_of_work,
+        logger=logger,
     )
     schedule_reservation_usecase = providers.Singleton(
         ScheduleReservationUseCase,
         reservation_repo=reservation_repo,
         unit_of_work=unit_of_work,
         task_queuer=task_queuer,
+        logger=logger,
     )
     activate_reservation_usecase = providers.Singleton(
         ActivateReservationUseCase,
         reservation_repo=reservation_repo,
         room_repo=room_repo,
         unit_of_work=unit_of_work,
+        logger=logger,
     )
 
     # Application services
@@ -62,6 +65,7 @@ class ReservationsContainer(containers.DeclarativeContainer):
         room_repo=room_repo,
         client_repo=client_repo,
         uow=unit_of_work,
+        logger=logger,
     )
     cancel_reservation_usecase = providers.Singleton(
         CancelReservationUseCase,
@@ -70,4 +74,5 @@ class ReservationsContainer(containers.DeclarativeContainer):
         payments_repo=payment_repo,
         unit_of_work=unit_of_work,
         task_queuer=task_queuer,
+        logger=logger,
     )

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, time, timedelta
 from typing import Any, Dict
 
@@ -26,13 +27,15 @@ class ReservationService:
         room_repo: AbsRoomRepository,
         client_repo: AbsClientRepository,
         uow: AbsUnitOfWork,
+        logger: logging.Logger,
     ):
         self.reservation_repo = reservation_repo
         self.room_repo = room_repo
         self.client_repo = client_repo
+        self.logger = logger
 
         self._initialize_reservation = InitializeReservationUseCase(
-            reservation_repo, room_repo, client_repo, uow
+            reservation_repo, room_repo, client_repo, uow, logger=self.logger
         )
         self._fetch_client_active_reservations = FetchClientActiveReservations(
             reservation_repo
@@ -45,26 +48,41 @@ class ReservationService:
     def create_reservation(self, data: Dict[str, Any]) -> Result[Reservation]:
         command = CreateReservationInput.safe_validate(data)
         if command.is_err():
-            return Result.Err(msg='invalid data', src_error=command.unwrap_err())
+            err = command.unwrap_err()
+            self.logger.error(f'invalid reservation data: {err.msg}', exc_info=err.src_error)
+            return Result.Err(msg='invalid data', src_error=err)
 
         cmd = command.unwrap()
         pending = self.reservation_repo.fetch_pending(
             cmd.client_id, cmd.room_pk, cmd.check_in, cmd.check_out
         ).unwrap_or(None)
         if pending:
+            self.logger.info(f'found pending reservation {pending.id}')
             return Result.Ok(pending)
 
         result = self._initialize_reservation(command.unwrap())
         if result.is_err():
+            err = result.unwrap_err()
+            self.logger.error(
+                f'failed to initialize reservation: {err.msg}', exc_info=err.src_error
+            )
             return Result.Err(result.unwrap_err().msg, result.unwrap_err())
 
-        return Result.Ok(result.unwrap())
+        res = result.unwrap()
+        self.logger.info(f'reservation {res.id} registered')
+        return Result.Ok(res)
 
     def can_client_create_reservation(self, client_id: int) -> Result[bool]:
         """Check if client can create a new reservation (no active/scheduled ones)."""
         has = self.reservation_repo.has_active_reservation(
             client_id=client_id, include_scheduled=True
         ).unwrap_or(False)
+
+        if has:
+            self.logger.info(
+                f'client {client_id} already has a reservation active or scheduled'
+            )
+
         return Result.Ok(not has)
 
     def can_cancel_reservation(self, reservation: Reservation) -> bool:

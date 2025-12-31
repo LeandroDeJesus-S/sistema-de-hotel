@@ -21,7 +21,7 @@ class ClientsContainer(containers.DeclarativeContainer):
     logger = providers.Object(logging.getLogger('djangoLogger'))
 
     # Infrastructure services
-    client_repo = providers.Singleton(ClientRepository)
+    client_repo = providers.Singleton(ClientRepository, logger=logger)
     password_manager = providers.Singleton(DjangoPasswordManager)
     session_manager = providers.Singleton(DjangoSessionManager)
     captcha_service = providers.Singleton(
@@ -35,4 +35,5 @@ class ClientsContainer(containers.DeclarativeContainer):
         password_manager=password_manager,
         session_manager=session_manager,
         captcha_service=captcha_service,
+        logger=logger,
     )

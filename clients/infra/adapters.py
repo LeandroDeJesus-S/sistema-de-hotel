@@ -1,4 +1,3 @@
-import logging
 from http import HTTPStatus
 from typing import Any
 
@@ -11,8 +10,6 @@ from django.contrib.auth.hashers import check_password, make_password
 
 from clients.domain.entities import Client
 from exc import Result
-
-logger = logging.getLogger('djangoLogger')
 
 
 class DjangoPasswordManager:
@@ -98,7 +95,6 @@ class DjangoSessionManager:
         self._usermodel = get_user_model()
 
     def authenticate(self, request: Any, username: str, password: str) -> Result[Client]:
-        logger.debug(f'authenticating user with backend: {self._backend}')
         try:
             user = django_authenticate(
                 request,
@@ -107,7 +103,6 @@ class DjangoSessionManager:
                 backend=self._backend,
             )
             if user is None:
-                logger.debug(f'used credentials: {username} {password}')
                 return Result.Err('Invalid credentials')
 
             u = Client.model_validate(user.__dict__)

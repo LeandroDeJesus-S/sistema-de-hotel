@@ -1,4 +1,3 @@
-import logging
 from typing import Any, Type, TypeVar
 
 from pydantic import BaseModel as PydanticBaseModel
@@ -7,7 +6,6 @@ from pydantic import PrivateAttr, ValidationError
 from exc import Result
 
 T = TypeVar('T', bound='BaseEntity')
-logger = logging.getLogger('djangoLogger')
 
 
 class BaseEntity(PydanticBaseModel):
@@ -36,12 +34,9 @@ class BaseEntity(PydanticBaseModel):
             A Result tuple with the model instance or an Error.
         """
         try:
-            # logger.debug(f'validating {data}')
             instance = cls.model_validate(data, from_attributes=True)
-            # logger.debug(f'validated {instance}')
             return Result.Ok(instance)
         except ValidationError as e:
-            logger.debug(e, exc_info=True)
             errors = e.errors()
             custom_messages = getattr(cls, '_messages', PrivateAttr(default={}))
             if hasattr(custom_messages, 'get_default'):

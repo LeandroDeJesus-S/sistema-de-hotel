@@ -11,4 +11,4 @@ class ClientsConfig(AppConfig):
 
         clients_container = ClientsContainer()
         clients_container.config.from_dict(settings.__dict__)
-        clients_container.wire(modules=['.views'])
+        clients_container.wire(modules=['.views', '.decorators'])

@@ -11,7 +11,7 @@ def signup_post_presenter(
     result: Result[str],
     template_name: str,
     context: dict,
-) -> HttpResponse:
+) -> Result[HttpResponse]:
     """Presenter for signup post requests.
 
     Args:
@@ -21,14 +21,14 @@ def signup_post_presenter(
         context: Context to pass to template
 
     Returns:
-        HttpResponse with redirect or rendered template
+        Result containing HttpResponse with redirect or rendered template
     """
     if result.is_err():
         messages.error(request, result.unwrap_err().msg)
-        return render(request, template_name, context)
+        return Result.Ok(render(request, template_name, context))
 
     redirect_url = result.unwrap()
-    return redirect(redirect_url)
+    return Result.Ok(redirect(redirect_url))
 
 
 def signin_post_presenter(
@@ -36,7 +36,7 @@ def signin_post_presenter(
     result: Result[str],
     template_name: str,
     context: dict,
-) -> HttpResponse:
+) -> Result[HttpResponse]:
     """Presenter for signin post requests.
 
     Args:
@@ -46,21 +46,21 @@ def signin_post_presenter(
         context: Context to pass to template
 
     Returns:
-        HttpResponse with redirect or rendered template
+        Result containing HttpResponse with redirect or rendered template
     """
     if result.is_err():
         messages.error(request, result.unwrap_err().msg)
-        return render(request, template_name, context)
+        return Result.Ok(render(request, template_name, context))
 
     redirect_url = result.unwrap()
-    return redirect(redirect_url)
+    return Result.Ok(redirect(redirect_url))
 
 
 def password_change_post_presenter(
     request: HttpRequest,
     result: Result[None],
     redirect_url: str,
-) -> HttpResponse:
+) -> Result[HttpResponse]:
     """Presenter for password change post requests.
 
     Args:
@@ -69,11 +69,11 @@ def password_change_post_presenter(
         redirect_url: URL to redirect to in both success and error cases
 
     Returns:
-        HttpResponse with redirect
+        Result containing HttpResponse with redirect
     """
     if result.is_err():
         messages.error(request, result.unwrap_err().msg)
     else:
         messages.success(request, ChangePassword.SUCCESS)
 
-    return redirect(redirect_url)
+    return Result.Ok(redirect(redirect_url))

@@ -18,16 +18,15 @@ from utils.support import (
     update_changed_fields,
 )
 
-logger = logging.getLogger('djangoLogger')
-
 
 class ClientRepository(AbsClientRepository):
     """
     A concrete repository for Client entities that uses Django's ORM for data persistence.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, logger: logging.Logger) -> None:
         self._model = DjangoClient
+        self.logger = logger
 
     def add(self, client: ClientEntity) -> Result[ClientEntity]:
         """
@@ -123,7 +122,7 @@ class ClientRepository(AbsClientRepository):
 
             return Result.Ok(exists)
         except Exception as e:
-            logger.error(e, exc_info=True)
+            self.logger.error(e, exc_info=True)
             return Result.Err(msg='Could not check for duplicate client', src_error=e)
 
     @staticmethod
