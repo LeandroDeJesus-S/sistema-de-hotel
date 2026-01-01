@@ -3,12 +3,18 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any
 
+from dependency_injector.wiring import Provide, inject
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse
 
+from clients.container import ClientsContainer
 
+
+@inject
 def _check_perfil_ownership(
-    request: HttpRequest, received_pk: int, logger: logging.Logger
+    request: HttpRequest,
+    received_pk: int,
+    logger: logging.Logger = Provide[ClientsContainer.logger],
 ) -> None:
     """função que verifica se o perfil recebido é o mesmo
     perfil que enviou o request."""
@@ -27,8 +33,7 @@ def profile_ownership_required(profile_pk_arg: str = 'pk'):
             *args: Any,
             **kwargs: Any,
         ) -> HttpResponse:
-            logger = logging.getLogger('djangoLogger')
-            _check_perfil_ownership(request, kwargs.get(profile_pk_arg, 0), logger)
+            _check_perfil_ownership(request, kwargs.get(profile_pk_arg, 0))
             return view_func(request, *args, **kwargs)
 
         return _wrapped_view  # type: ignore

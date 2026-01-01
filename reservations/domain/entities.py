@@ -58,6 +58,9 @@ class Benefit(BaseEntity):
     short_desc: BenefitShortDesc
     id: int | None = None
 
+    def __str__(self) -> str:
+        return self.name
+
 
 class RoomClass(BaseEntity):
     """Represents a room class from the hotel.
@@ -74,6 +77,9 @@ class RoomClass(BaseEntity):
     }
     name: RoomClassName
     id: int | None = None
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class Room(BaseEntity):
@@ -132,6 +138,9 @@ class Room(BaseEntity):
     room_class: RoomClass
     hotel: Hotel
     id: int | None = None
+
+    def __str__(self) -> str:
+        return f'{self.number} - {self.room_class.name}'
 
 
 class Reservation(BaseEntity):
@@ -196,3 +205,6 @@ class Reservation(BaseEntity):
             raise ValueError(ReserveErrorMessages.INVALID_STAYED_DAYS)
 
         return self
+
+    def __str__(self) -> str:
+        return f'{self.checkin} - {self.checkout}'

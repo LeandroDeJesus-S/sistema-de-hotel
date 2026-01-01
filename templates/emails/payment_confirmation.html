@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Comprovante de Pagamento - Reserva {{ payment.reservation.id }}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #28a745;">Comprovante de Pagamento</h1>
+
+        <p>Olá <strong>{{ payment.reservation.client.first_name }}</strong>,</p>
+
+        <p>Seu pagamento para a reserva foi confirmado com sucesso.</p>
+
+        <div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;">
+            <h3>Detalhes da Reserva:</h3>
+            <ul style="list-style: none; padding: 0;">
+                <li><strong>Quarto:</strong> {{ payment.reservation.room }}</li>
+                <li><strong>Check-in:</strong> {{ payment.reservation.checkin|date:"d/m/Y" }}</li>
+                <li><strong>Check-out:</strong> {{ payment.reservation.checkout|date:"d/m/Y" }}</li>
+                <li><strong>Valor Total:</strong> {{ payment.reservation.amount }}</li>
+                <li><strong>Data do Pagamento:</strong> {{ payment.created_at|date:"d/m/Y H:i" }}</li>
+            </ul>
+        </div>
+
+        <div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; margin: 20px 0; border-radius: 5px;">
+            <h3 style="color: #155724;">Detalhes do Pagamento</h3>
+            <ul style="list-style: none; padding: 0; color: #155724;">
+                <li><strong>ID do Pagamento:</strong> {{ payment.id }}</li>
+                <li><strong>Valor Pago:</strong> R$ {{ payment.amount }}</li>
+                <li><strong>Status:</strong> {{ payment.status.name }}</li>
+            </ul>
+            <p style="color: #155724;">O comprovante em PDF está anexado a este email.</p>
+        </div>
+
+        <p>Se você tiver alguma dúvida, entre em contato conosco.</p>
+
+        <p>Atenciosamente,<br>
+        Equipe do Hotel {{payment.reservation.room.hotel.name}}</p>
+    </div>
+</body>
+</html>

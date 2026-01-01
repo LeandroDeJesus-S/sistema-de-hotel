@@ -63,6 +63,8 @@ class ReservationsContainer(containers.DeclarativeContainer):
         ReservationService,
         reservation_repo=reservation_repo,
         room_repo=room_repo,
+        payments_repo=payment_repo,
+        task_queuer=task_queuer,
         client_repo=client_repo,
         uow=unit_of_work,
         logger=logger,

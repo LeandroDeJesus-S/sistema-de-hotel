@@ -1,79 +1,87 @@
+from http import HTTPStatus
+from typing import Union
+
 from django.contrib import messages
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 
-from clients.feedback_messages import ChangePassword
+from base.dtos import RedirectResultDTO, TemplateRenderResultDTO
 from exc import Result
 
 
 def signup_post_presenter(
     request: HttpRequest,
-    result: Result[str],
-    template_name: str,
-    context: dict,
+    result: Union[Result[TemplateRenderResultDTO], Result[RedirectResultDTO]],
 ) -> Result[HttpResponse]:
     """Presenter for signup post requests.
 
     Args:
         request: The HTTP request
-        result: Result containing redirect URL on success, error message on failure
-        template_name: Template to render on error
-        context: Context to pass to template
+        result: Result containing DTO
 
     Returns:
         Result containing HttpResponse with redirect or rendered template
     """
-    if result.is_err():
-        messages.error(request, result.unwrap_err().msg)
-        return Result.Ok(render(request, template_name, context))
-
-    redirect_url = result.unwrap()
-    return Result.Ok(redirect(redirect_url))
+    res = result.unwrap()
+    for msg in res.messages:
+        getattr(messages, msg.typ)(request, msg.msg)
+    if isinstance(res, TemplateRenderResultDTO):
+        return Result.Ok(render(request, res.template_name, res.context))
+    return Result.Ok(
+        redirect(
+            reverse(res.url, args=res.args),
+            permanent=res.code == HTTPStatus.PERMANENT_REDIRECT,
+        )
+    )
 
 
 def signin_post_presenter(
     request: HttpRequest,
-    result: Result[str],
-    template_name: str,
-    context: dict,
+    result: Union[Result[TemplateRenderResultDTO], Result[RedirectResultDTO]],
 ) -> Result[HttpResponse]:
     """Presenter for signin post requests.
 
     Args:
         request: The HTTP request
-        result: Result containing redirect URL on success, error message on failure
-        template_name: Template to render on error
-        context: Context to pass to template
+        result: Result containing DTO
 
     Returns:
         Result containing HttpResponse with redirect or rendered template
     """
-    if result.is_err():
-        messages.error(request, result.unwrap_err().msg)
-        return Result.Ok(render(request, template_name, context))
-
-    redirect_url = result.unwrap()
-    return Result.Ok(redirect(redirect_url))
+    res = result.unwrap()
+    for msg in res.messages:
+        getattr(messages, msg.typ)(request, msg.msg)
+    if isinstance(res, TemplateRenderResultDTO):
+        return Result.Ok(render(request, res.template_name, res.context))
+    return Result.Ok(
+        redirect(
+            reverse(res.url, args=res.args),
+            permanent=res.code == HTTPStatus.PERMANENT_REDIRECT,
+        )
+    )
 
 
 def password_change_post_presenter(
     request: HttpRequest,
-    result: Result[None],
-    redirect_url: str,
+    result: Result[RedirectResultDTO],
 ) -> Result[HttpResponse]:
     """Presenter for password change post requests.
 
     Args:
         request: The HTTP request
-        result: Result with None on success, error message on failure
-        redirect_url: URL to redirect to in both success and error cases
+        result: Result with RedirectResultDTO
 
     Returns:
         Result containing HttpResponse with redirect
     """
-    if result.is_err():
-        messages.error(request, result.unwrap_err().msg)
-    else:
-        messages.success(request, ChangePassword.SUCCESS)
+    res = result.unwrap()
+    for msg in res.messages:
+        getattr(messages, msg.typ)(request, msg.msg)
 
-    return Result.Ok(redirect(redirect_url))
+    return Result.Ok(
+        redirect(
+            reverse(res.url, args=res.args),
+            permanent=res.code == HTTPStatus.PERMANENT_REDIRECT,
+        )
+    )

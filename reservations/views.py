@@ -11,6 +11,7 @@ from django.views.generic.list import ListView
 
 from reservations.container import ReservationsContainer
 from reservations.domain.entities import Reservation
+from reservations.domain.repo import AbsRoomRepository
 from utils import support
 
 from .application import services
@@ -109,6 +110,7 @@ class Reserve(LoginRequired, View):
         request: HttpRequest,
         *args: Any,
         svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
+        room_repo: AbsRoomRepository = Provide[ReservationsContainer.room_repo],
         logger: logging.Logger = Provide[ReservationsContainer.logger],
         **kwargs: Any,
     ) -> None:
@@ -116,7 +118,7 @@ class Reserve(LoginRequired, View):
         self.logger = logger
         self.svc = svc
 
-        result = svc.room_repo.fetch_all_classes()
+        result = room_repo.fetch_all_classes()
         if result.is_err():
             err = result.unwrap_err()
             self.logger.error(err.msg, exc_info=err.src_error)
@@ -129,13 +131,7 @@ class Reserve(LoginRequired, View):
         """renderiza o formulário para nova reserva caso o usuário não
         tenha uma reserva ativa ou agendada"""
         result = self.svc.can_client_create_reservation(client_id=request.user.pk)
-
-        self.context['room_pk'] = room_pk
-        self.logger.debug(f'rendering {self.template_name}')
-
-        return presenters.reserve_get_presenter(
-            request, result, self.template_name, self.context
-        ).unwrap()
+        return presenters.reserve_get_presenter(request, result, room_pk).unwrap()
 
     def post(self, request: HttpRequest, room_pk: int):
         self.logger.debug(f'reservation for room {room_pk} started')
@@ -149,7 +145,7 @@ class Reserve(LoginRequired, View):
             'observations': request.POST.get('obs', ''),
         })
 
-        return presenters.reserve_post_presenter(request, result, (room_pk,)).unwrap()
+        return presenters.reserve_post_presenter(request, result).unwrap()
 
 
 class ReservationsHistory(LoginRequired, ListView):
@@ -239,18 +235,7 @@ class CancelReservationView(LoginRequired, View):
         """Show cancellation confirmation page."""
         result = svc.fetch_reservation_detail(reservation_id=pk, client_id=request.user.pk)
 
-        if result.is_err():
-            err = result.unwrap_err()
-            self.logger.error(err.msg, exc_info=err.src_error)
-
-        reservation = result.unwrap_or(None)
-        can_cancel = False
-        if reservation:
-            can_cancel = svc.can_cancel_reservation(reservation)
-
-        return presenters.cancel_reservation_get_presenter(
-            request, result, can_cancel
-        ).unwrap()
+        return presenters.cancel_reservation_get_presenter(request, result).unwrap()
 
     @inject
     def post(

@@ -18,3 +18,6 @@ class Hotel(BaseEntity):
     presentation_text: str
     logo: str | None = None
     icon: str | None = None
+
+    def __str__(self) -> str:
+        return self.name

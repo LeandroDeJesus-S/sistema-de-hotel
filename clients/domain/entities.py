@@ -72,3 +72,6 @@ class Client(BaseEntity):
     cpf: CPF
     password: Password
     id: int | None = None
+
+    def __str__(self) -> str:
+        return self.username

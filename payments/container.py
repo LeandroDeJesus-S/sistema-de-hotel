@@ -52,12 +52,14 @@ class PaymentsContainer(containers.DeclarativeContainer):
         reservation_repo=reservation_repo,
         room_repo=room_repo,
         unit_of_work=unit_of_work,
+        logger=logger,
     )
     schedule_reservation_usecase = providers.Singleton(
         ScheduleReservationUseCase,
         reservation_repo=reservation_repo,
         unit_of_work=unit_of_work,
         task_queuer=task_queuer,
+        logger=logger,
     )
     release_reservation_usecase = providers.Singleton(
         ReleaseReservationUseCase,
@@ -65,6 +67,7 @@ class PaymentsContainer(containers.DeclarativeContainer):
         reservation_repo=reservation_repo,
         payment_repo=payment_repo,
         unit_of_work=unit_of_work,
+        logger=logger,
     )
     payment_service = providers.Factory(
         PaymentService,

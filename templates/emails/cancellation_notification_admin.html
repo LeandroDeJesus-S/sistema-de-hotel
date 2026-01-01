@@ -13,9 +13,9 @@
         <div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;">
             <h3>Detalhes do Cliente:</h3>
             <ul style="list-style: none; padding: 0;">
-                <li><strong>Nome:</strong> {{ client.get_full_name }}</li>
+                <li><strong>Nome:</strong> {{ client.first_name }} {{ client.last_name }}</li>
                 <li><strong>Email:</strong> {{ client.email }}</li>
-                <li><strong>Telefone:</strong> {{ client.formatted_phone }}</li>
+                <li><strong>Telefone:</strong> {{ client.phone }}</li>
             </ul>
         </div>
 
@@ -23,7 +23,7 @@
             <h3>Detalhes da Reserva Cancelada:</h3>
             <ul style="list-style: none; padding: 0;">
                 <li><strong>ID da Reserva:</strong> {{ reservation.id }}</li>
-                <li><strong>Quarto:</strong> {{ reservation.room }}</li>
+                <li><strong>Quarto:</strong> {{ reservation.room.number }} - {{ reservation.room.room_class.name }}</li>
                 <li><strong>Check-in:</strong> {{ reservation.checkin|date:"d/m/Y" }}</li>
                 <li><strong>Check-out:</strong> {{ reservation.checkout|date:"d/m/Y" }}</li>
                 <li><strong>Valor Total:</strong> {{ reservation.formatted_price }}</li>

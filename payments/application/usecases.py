@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from base.ports.pdf import AbsPDFGenerator
@@ -174,14 +175,13 @@ class SendPaymentConfirmationUseCase:
                 src_error=pdf_bytes.unwrap_err(),
             )
 
+        html_body = render_to_string('emails/payment_confirmation.html', {'payment': payment})
         sent = self._mailer.send_single_mail(
-            subject='Comprovante de pagamento  da reserva',
-            body=(
-                'Seu comprovante de pagamento para a reserva do '
-                f'quarto Nº{payment.reservation.room.number}'
-            ),
+            subject='Comprovante de pagamento da reserva',
+            body=html_body,
             from_email=None,
             to_emails=[payment.reservation.client.email],
+            is_html=True,
             attachments=(
                 (
                     'Comprovante de pagamento.pdf',

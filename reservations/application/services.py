@@ -1,18 +1,23 @@
 import logging
 from datetime import datetime, time, timedelta
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 from django.conf import settings
 from django.utils import timezone
 
+from base.dtos import MessageDTO, RedirectResultDTO, TemplateRenderResultDTO
+from base.ports.queue import TaskQueuer
 from clients.domain.ports import AbsClientRepository
 from exc import Result
+from payments.domain.ports import AbsPaymentsRepository
 from reservations.application.dtos import CreateReservationInput
 from reservations.domain.entities import Reservation
+from reservations.feedback_messages import ReservationMessages
 from utils.adapters.unit_of_work import AbsUnitOfWork
 
 from ..domain.repo import AbsReservationRepository, AbsRoomRepository
 from .usecases import (
+    CancelReservationUseCase,
     FetchClientActiveReservations,
     FetchClientReservationHistoryUseCase,
     FetchReservationDetailUseCase,
@@ -21,12 +26,14 @@ from .usecases import (
 
 
 class ReservationService:
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         reservation_repo: AbsReservationRepository,
         room_repo: AbsRoomRepository,
         client_repo: AbsClientRepository,
+        payments_repo: AbsPaymentsRepository,
         uow: AbsUnitOfWork,
+        task_queuer: TaskQueuer,
         logger: logging.Logger,
     ):
         self.reservation_repo = reservation_repo
@@ -44,13 +51,23 @@ class ReservationService:
             reservation_repo
         )
         self._fetch_reservation_detail = FetchReservationDetailUseCase(reservation_repo)
+        self._cancel_reservation = CancelReservationUseCase(
+            reservation_repo, room_repo, payments_repo, uow, task_queuer, logger
+        )
 
-    def create_reservation(self, data: Dict[str, Any]) -> Result[Reservation]:
+    def create_reservation(
+        self, data: Dict[str, Any]
+    ) -> Union[Result[TemplateRenderResultDTO], Result[RedirectResultDTO]]:
         command = CreateReservationInput.safe_validate(data)
         if command.is_err():
             err = command.unwrap_err()
             self.logger.error(f'invalid reservation data: {err.msg}', exc_info=err.src_error)
-            return Result.Err(msg='invalid data', src_error=err)
+            return Result.Ok(
+                RedirectResultDTO(
+                    url='rooms',
+                    messages=[MessageDTO(typ='error', msg=err.msg)],
+                )
+            )
 
         cmd = command.unwrap()
         pending = self.reservation_repo.fetch_pending(
@@ -58,7 +75,7 @@ class ReservationService:
         ).unwrap_or(None)
         if pending:
             self.logger.info(f'found pending reservation {pending.id}')
-            return Result.Ok(pending)
+            return Result.Ok(RedirectResultDTO(url='checkout', args=(pending.id,)))
 
         result = self._initialize_reservation(command.unwrap())
         if result.is_err():
@@ -66,13 +83,21 @@ class ReservationService:
             self.logger.error(
                 f'failed to initialize reservation: {err.msg}', exc_info=err.src_error
             )
-            return Result.Err(result.unwrap_err().msg, result.unwrap_err())
+            return Result.Ok(
+                RedirectResultDTO(
+                    url='reserve',
+                    args=(cmd.room_pk,),
+                    messages=[MessageDTO(typ='error', msg=err.msg)],
+                )
+            )
 
         res = result.unwrap()
         self.logger.info(f'reservation {res.id} registered')
-        return Result.Ok(res)
+        return Result.Ok(RedirectResultDTO(url='checkout', args=(res.id,)))
 
-    def can_client_create_reservation(self, client_id: int) -> Result[bool]:
+    def can_client_create_reservation(
+        self, client_id: int
+    ) -> Union[Result[TemplateRenderResultDTO], Result[RedirectResultDTO]]:
         """Check if client can create a new reservation (no active/scheduled ones)."""
         has = self.reservation_repo.has_active_reservation(
             client_id=client_id, include_scheduled=True
@@ -82,8 +107,18 @@ class ReservationService:
             self.logger.info(
                 f'client {client_id} already has a reservation active or scheduled'
             )
+            return Result.Ok(
+                RedirectResultDTO(
+                    url='rooms',
+                    messages=[
+                        MessageDTO(
+                            typ='info', msg=str(ReservationMessages.ALREADY_HAVE_A_RESERVATION)
+                        )
+                    ],
+                )
+            )
 
-        return Result.Ok(not has)
+        return Result.Ok(TemplateRenderResultDTO(template_name='reserve.html', context={}))
 
     def can_cancel_reservation(self, reservation: Reservation) -> bool:
         """Determine if a specific reservation can be cancelled."""
@@ -110,10 +145,24 @@ class ReservationService:
 
     def fetch_reservation_detail(
         self, client_id: int, reservation_id: int
-    ) -> Result[Reservation]:
+    ) -> Union[Result[TemplateRenderResultDTO], Result[RedirectResultDTO]]:
         """Fetch a reservation detail by its ID."""
-        return self._fetch_reservation_detail(
+        result = self._fetch_reservation_detail(
             client_id=client_id, reservation_id=reservation_id
+        )
+        if result.is_err():
+            return Result.Ok(
+                RedirectResultDTO(
+                    url='reservations_history',
+                    messages=[MessageDTO(typ='error', msg=str(result.unwrap_err().msg))],
+                )
+            )
+        res = result.unwrap()
+        return Result.Ok(
+            TemplateRenderResultDTO(
+                template_name='cancel_reservation.html',
+                context={'reservation': res, 'can_cancel': self.can_cancel_reservation(res)},
+            )
         )
 
     def fetch_client_active_reservations(
@@ -125,3 +174,22 @@ class ReservationService:
     def fetch_client_reservation_history(self, client_id: int) -> Result[list[Reservation]]:
         """Fetch all reservations for a client."""
         return self._fetch_client_reservation_history(client_id)
+
+    def cancel_reservation(
+        self, reservation_id: int, client_id: int
+    ) -> Result[TemplateRenderResultDTO | RedirectResultDTO]:
+        res = self._cancel_reservation(reservation_id, client_id)
+        if res.is_err():
+            return Result.Ok(
+                RedirectResultDTO(
+                    url='reservations_history',
+                    messages=[MessageDTO(typ='error', msg=str(res.unwrap_err().msg))],
+                )
+            )
+        self.logger.info(f'reservation {res.unwrap().id} cancelled')
+        return Result.Ok(
+            RedirectResultDTO(
+                url='reservations_history',
+                messages=[MessageDTO(typ='success', msg='Reserva cancelada com sucesso.')],
+            )
+        )

@@ -1,5 +1,7 @@
 import logging
+from typing import Union
 
+from base.dtos import MessageDTO, RedirectResultDTO, TemplateRenderResultDTO
 from clients.application.dtos import ChangePasswordInput, SignInInput, SignUpInput
 from clients.application.usecases import (
     # AuthenticateUserUseCase,
@@ -14,7 +16,7 @@ from clients.domain.ports import (
     AbsPasswordManager,
     AbsSessionManager,
 )
-from clients.feedback_messages import SignUp
+from clients.feedback_messages import ChangePassword, SignUp
 from exc import Result
 
 
@@ -34,7 +36,9 @@ class ClientService:
         self._repo = repo
         self.logger = logger
 
-    def signup_user(self, form_data: dict, request) -> Result[str]:
+    def signup_user(
+        self, form_data: dict, request
+    ) -> Union[Result[TemplateRenderResultDTO], Result[RedirectResultDTO]]:
         """
         Handle complete user signup process: validation, creation, and login.
 
@@ -43,7 +47,7 @@ class ClientService:
             request: Django HttpRequest object
 
         Returns:
-            Result with redirect URL on success, or error message on failure
+            Result with TemplateRenderResultDTO on error, RedirectResultDTO on success
         """
         # Extract and validate input data
         input_data = {
@@ -59,12 +63,26 @@ class ClientService:
 
         # Validate required fields
         if not all(input_data.values()):
-            return Result.Err(msg=SignUp.MISSING_FIELDS)
+            return Result.Ok(
+                TemplateRenderResultDTO(
+                    template_name='signup.html',
+                    context={},
+                    messages=[MessageDTO(typ='error', msg=str(SignUp.MISSING_FIELDS))],
+                )
+            )
 
         # Validate input data with DTO
         signup_input_result = SignUpInput.safe_validate(input_data)
         if signup_input_result.is_err():
-            return Result.Err(msg=signup_input_result.unwrap_err().msg)
+            return Result.Ok(
+                TemplateRenderResultDTO(
+                    template_name='signup.html',
+                    context={},
+                    messages=[
+                        MessageDTO(typ='error', msg=str(signup_input_result.unwrap_err().msg))
+                    ],
+                )
+            )
 
         validated_input = signup_input_result.unwrap()
 
@@ -80,21 +98,45 @@ class ClientService:
             cpf=validated_input.cpf,
         )
         if client_entity_result.is_err():
-            return Result.Err(msg=client_entity_result.unwrap_err().msg)
+            return Result.Ok(
+                TemplateRenderResultDTO(
+                    template_name='signup.html',
+                    context={},
+                    messages=[
+                        MessageDTO(typ='error', msg=str(client_entity_result.unwrap_err().msg))
+                    ],
+                )
+            )
 
         # Create user
         created_user_result = self.create_user(client_entity_result.unwrap())
         if created_user_result.is_err():
-            return Result.Err(msg=created_user_result.unwrap_err().msg)
+            return Result.Ok(
+                TemplateRenderResultDTO(
+                    template_name='signup.html',
+                    context={},
+                    messages=[
+                        MessageDTO(typ='error', msg=str(created_user_result.unwrap_err().msg))
+                    ],
+                )
+            )
 
         # Log user in
         login_result = self.session_manager.login(request, created_user_result.unwrap())
         if login_result.is_err():
-            return Result.Err(msg=login_result.unwrap_err().msg)
+            return Result.Ok(
+                TemplateRenderResultDTO(
+                    template_name='signup.html',
+                    context={},
+                    messages=[MessageDTO(typ='error', msg=str(login_result.unwrap_err().msg))],
+                )
+            )
 
-        return Result.Ok('rooms')
+        return Result.Ok(RedirectResultDTO(url='rooms'))
 
-    def signin_user(self, credentials: dict, request) -> Result[str]:
+    def signin_user(
+        self, credentials: dict, request
+    ) -> Union[Result[TemplateRenderResultDTO], Result[RedirectResultDTO]]:
         """
         Handle complete signin process: authentication, login, and redirect.
 
@@ -103,12 +145,20 @@ class ClientService:
             request: Django HttpRequest object
 
         Returns:
-            Result with redirect URL on success, or error message on failure
+            Result with TemplateRenderResultDTO on error, RedirectResultDTO on success
         """
         # Validate input data with DTO
         signin_input_result = SignInInput.safe_validate(credentials)
         if signin_input_result.is_err():
-            return Result.Err(msg=signin_input_result.unwrap_err().msg)
+            return Result.Ok(
+                TemplateRenderResultDTO(
+                    template_name='signin.html',
+                    context={},
+                    messages=[
+                        MessageDTO(typ='error', msg=str(signin_input_result.unwrap_err().msg))
+                    ],
+                )
+            )
 
         validated_credentials = signin_input_result.unwrap()
 
@@ -119,18 +169,32 @@ class ClientService:
             password=validated_credentials.password,
         )
         if user_result.is_err():
-            return Result.Err(msg=user_result.unwrap_err().msg)
+            return Result.Ok(
+                TemplateRenderResultDTO(
+                    template_name='signin.html',
+                    context={},
+                    messages=[MessageDTO(typ='error', msg=str(user_result.unwrap_err().msg))],
+                )
+            )
 
         # Log user in
         login_result = self.session_manager.login(request, user_result.unwrap())
         if login_result.is_err():
-            return Result.Err(msg=login_result.unwrap_err().msg)
+            return Result.Ok(
+                TemplateRenderResultDTO(
+                    template_name='signin.html',
+                    context={},
+                    messages=[MessageDTO(typ='error', msg=str(login_result.unwrap_err().msg))],
+                )
+            )
 
         # Get next URL
         next_url = request.session.get('next_url', 'rooms')
-        return Result.Ok(next_url)
+        return Result.Ok(RedirectResultDTO(url=next_url))
 
-    def process_password_change(self, form_data: dict, user_id: int) -> Result[None]:
+    def process_password_change(
+        self, form_data: dict, user_id: int
+    ) -> Result[RedirectResultDTO]:
         """
         Process password change request with validation.
 
@@ -139,7 +203,7 @@ class ClientService:
             user_id: ID of the user changing password
 
         Returns:
-            Result with None on success, or error message on failure
+            Result with RedirectResultDTO on success or failure
         """
         data = {
             'user_id': user_id,
@@ -149,10 +213,30 @@ class ClientService:
 
         inp_result = ChangePasswordInput.safe_validate(data)
         if inp_result.is_err():
-            return Result.Err(msg=inp_result.unwrap_err().msg)
+            return Result.Ok(
+                RedirectResultDTO(
+                    url='perfil',
+                    messages=[MessageDTO(typ='error', msg=str(inp_result.unwrap_err().msg))],
+                    args=(user_id,),
+                )
+            )
 
         change_pw_result = self.change_pw(inp_result.unwrap())
         if change_pw_result.is_err():
-            return Result.Err(msg=change_pw_result.unwrap_err().msg)
+            return Result.Ok(
+                RedirectResultDTO(
+                    url='perfil',
+                    messages=[
+                        MessageDTO(typ='error', msg=str(change_pw_result.unwrap_err().msg))
+                    ],
+                    args=(user_id,),
+                )
+            )
 
-        return Result.Ok(None)
+        return Result.Ok(
+            RedirectResultDTO(
+                url='perfil',
+                messages=[MessageDTO(typ='success', msg=str(ChangePassword.SUCCESS))],
+                args=(user_id,),
+            )
+        )

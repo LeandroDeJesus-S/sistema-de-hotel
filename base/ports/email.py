@@ -23,13 +23,14 @@ class AbsEmailSender(Protocol):
         """
         ...
 
-    def send_single_mail(
+    def send_single_mail(  # noqa: PLR0913,PLR0917
         self,
         subject: str,
         body: str,
         from_email: str | None,
         to_emails: list[str],
         attachments: tuple[tuple[str, Any, str], ...] | None = None,
+        is_html: bool = False,
     ) -> Result[bool]:
         """Sends a single email.
 
@@ -40,6 +41,8 @@ class AbsEmailSender(Protocol):
             to_emails: A list of recipient email addresses.
             attachments: A tuple of attachments. Each attachment is a tuple of
               (filename, content, mimetype).
+            is_html: Whether the body content is HTML. If True, sets the email
+              content type to HTML.
 
         Returns:
             True if the email was sent successfully, False otherwise.

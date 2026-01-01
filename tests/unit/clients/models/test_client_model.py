@@ -2,7 +2,7 @@
 Tests for the Client model.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from ddf import G
@@ -252,7 +252,7 @@ def test_age_property(valid_client_data_factory):
     # Arrange
     valid_client_data = valid_client_data_factory()
     client = Client(**valid_client_data)
-    expected_age = datetime.now().year - valid_client_data['birthdate'].year
+    expected_age = int(datetime.now(timezone.utc).year - valid_client_data['birthdate'].year)
 
     # Act
     result = client.age

@@ -52,9 +52,7 @@ class SignUp(View):
 
     def post(self, request: HttpRequest):
         result = self.svc.signup_user(request.POST, request)
-        return presenters.signup_post_presenter(
-            request, result, self.template_name, {}
-        ).unwrap()
+        return presenters.signup_post_presenter(request, result).unwrap()
 
 
 @method_decorator(support.captcha_required('signin'), name='post')
@@ -98,7 +96,7 @@ class SignIn(View):
         result = self.svc.signin_user(credentials, request)
         redirect_target = result.unwrap() if result.is_ok() else 'error'
         self.logger.info(f'User logged in successfully. Redirecting to {redirect_target}')
-        return presenters.signin_post_presenter(request, result, self.template, {}).unwrap()
+        return presenters.signin_post_presenter(request, result).unwrap()
 
 
 def axes_locked_out(request, *args, **kwargs):
@@ -165,16 +163,12 @@ class PerfilChangePassword(LoginRequired, View):
         return render(self.request, self.template)
 
     def post(self, request, *args, **kwargs):
-        redirect_url = reverse('perfil', args=(self.request.user.pk,))
-
         result = self.svc.process_password_change(request.POST, self.request.user.pk)
 
         if result.is_err():
             self.logger.error(result.unwrap_err().msg)
 
-        return presenters.password_change_post_presenter(
-            request, result, redirect_url
-        ).unwrap()
+        return presenters.password_change_post_presenter(request, result).unwrap()
 
 
 @method_decorator(support.captcha_required('delete_perfil', params=('pk',)), name='post')

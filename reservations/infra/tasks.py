@@ -171,6 +171,7 @@ def send_cancellation_notification(
             body=client_html_message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to_emails=[reservation.client.email],
+            is_html=True,
         )
     except Exception as e:
         return Result.Err('Failed to send client notification email', src_error=e)
@@ -192,6 +193,7 @@ def send_cancellation_notification(
             admin_html_message,
             settings.DEFAULT_FROM_EMAIL,
             [admin_email for admin_email in settings.ADMINS],
+            is_html=True,
         )
     except Exception as e:
         return Result.Err('Failed to send admin notification email', src_error=e)

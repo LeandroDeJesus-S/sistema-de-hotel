@@ -9,9 +9,11 @@ import pytest
 from ddf import G
 from django.urls import reverse
 
+from base.dtos import MessageDTO, RedirectResultDTO
 from clients.feedback_messages import Recaptcha
 from exc import Result
 from reservations.application.services import ReservationService
+from reservations.domain.repo import AbsRoomRepository
 from reservations.feedback_messages import ReservationMessages, ReserveErrorMessages
 from reservations.application.usecases import InitializeReservationUseCase
 from reservations.models import Reservation
@@ -48,8 +50,10 @@ def test_reserve_with_valid_data_redirects_to_checkout(
     client, user = authenticated_client
     url = reverse('reserve', args=[room_model.pk])
     reservation = Reservation(pk=1, client=user, room=room_model)
-    svc_mock = mocker.MagicMock(spec=ReservationService, room_repo=mocker.MagicMock())
-    svc_mock.create_reservation.return_value = Result.Ok(reservation)
+    svc_mock = mocker.MagicMock()
+    svc_mock.create_reservation.return_value = Result.Ok(
+        RedirectResultDTO(url='checkout', args=(reservation.pk,))
+    )
     checkin = datetime.now().date() + timedelta(days=2)
     valid_reserve_data = {
         'checkin': checkin,
@@ -100,12 +104,20 @@ def test_reserve_with_invalid_checkin_date_renders_reserve_with_message(
     }
     client, _ = authenticated_client
     url = reverse('reserve', args=[room_model.pk])
-    svc_mock = mocker.MagicMock(spec=ReservationService, room_repo=mocker.MagicMock())
-    svc_mock.room_repo.fetch_all_classes.return_value = Result.Ok([])
-    svc_mock.create_reservation.return_value = Result.Err(msg=error_message)
+    svc_mock = mocker.MagicMock(spec=ReservationService)
+    svc_mock.create_reservation.return_value = Result.Ok(
+        RedirectResultDTO(
+            url='reserve',
+            args=(room_model.pk,),
+            messages=[MessageDTO(typ='error', msg=str(error_message))],
+        )
+    )
+    room_repo_mock = mocker.MagicMock(spec=AbsRoomRepository)
+    room_repo_mock.fetch_all_classes.return_value = Result.Ok([])
 
     # Act
-    with reservations_container.reservation_service.override(svc_mock):
+    with (reservations_container.reservation_service.override(svc_mock),
+        reservations_container.room_repo.override(room_repo_mock)):
         response = client.post(url, invalid_reservation_data)
     message = get_message(response)
 
@@ -156,9 +168,14 @@ def test_reserve_unexpected_error_redirects_to_room_with_message(
     """
     # Arrange
     client, _ = authenticated_client
-    svc_mock = mocker.MagicMock(spec=ReservationService, room_repo=mocker.MagicMock())
-    svc_mock.room_repo.fetch_all_classes.return_value = Result.Ok([])
-    svc_mock.create_reservation.return_value = Result.Err(ReservationMessages.RESERVATION_FAIL)
+    svc_mock = mocker.MagicMock()
+    svc_mock.create_reservation.return_value = Result.Ok(
+        RedirectResultDTO(
+            url='reserve',
+            args=(room_model.pk,),
+            messages=[MessageDTO(typ='error', msg=str(ReservationMessages.RESERVATION_FAIL))],
+        )
+    )
     url = reverse('reserve', args=[room_model.pk])
     checkin = datetime.now().date() + timedelta(days=2)
     valid_reserve_data = {

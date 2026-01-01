@@ -1,15 +1,18 @@
 import logging
 
+from dependency_injector.wiring import Provide
 from django.conf import settings
 from django.core.mail import send_mass_mail
 from django.utils.timezone import now
 
 from clients.models import Client
 from payments.models import Payment
+from reservations.container import ReservationsContainer
 from reservations.models import Reservation, Room
 
 
-def check_reservation_dates():
+# TODO move to reservations.infra.tasks properly
+def check_reservation_dates(logger: logging.Logger = Provide[ReservationsContainer.logger]):
     """filtra por reservas ativas e verifica se a data de checkout é menor
     ou igual a data atual, caso seja, desativa a reserva e passa o status para
     finalizada, envia email avisando ao cliente e os admins
@@ -24,7 +27,7 @@ def check_reservation_dates():
             room.available = True
             room.save()
 
-            print(
+            logger.info(
                 f'{reservation} encerrada. Quarto {reservation.room} '
                 'liberado para novas reservas.'
             )
@@ -47,9 +50,10 @@ def check_reservation_dates():
             send_mass_mail((message1, message2), fail_silently=False)
 
 
-def release_room(reservation_pk):
+def release_room(
+    reservation_pk, logger: logging.Logger = Provide[ReservationsContainer.logger]
+):
     """libera o quarto caso a reserva não tenha um pagamento finalizado"""
-    logger = logging.getLogger('djangoLogger')
     try:
         reservation = Reservation.objects.get(pk=reservation_pk)
         payment = Payment.objects.filter(reservation=reservation).first()
