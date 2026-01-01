@@ -7,11 +7,13 @@ class BenefitRules:
     SHORT_DESC_MAX_LEN = 100
     ICON_MAX_LEN = 255
     NAME_PATTERN = r'^[\w\- ]+$'
+    BENEFIT_ICON_UPLOAD_PATH = 'benefits/icon'
 
 
 class RoomRules:
     IMAGE_SIZE = 560, 420
     IMAGE_AVAILABLE_FORMATS = ['jpg', 'png']
+    IMAGE_UPLOAD_FORMAT = '%Y-%m'
     MAX_ADULTS = 5
     MIN_ADULTS = 1
     MAX_CHILDREN = 3
@@ -28,6 +30,9 @@ class RoomRules:
     SHORT_DESC_MAX_LEN = 255
     LONG_DESC_MAX_LEN = 1000
 
+    DAILY_PRICE_MAX_DIGITS = 10
+    DAILY_PRICE_DECIMAL_PLACES = 2
+
 
 class RoomClassRules:
     PATTERN = r'^\w[\w ]*$'
@@ -42,6 +47,9 @@ class ReserveRules:
 
     OBSERVATIONS_MAX_LEN = 100
     OBSERVATIONS_PATTERN = r'[\w\s]*'
+
+    AMOUNT_MAX_DIGITS = 10
+    AMOUNT_DECIMAL_PLACES = 2
 
     @classmethod
     def checkin_anticipation_offset(cls):

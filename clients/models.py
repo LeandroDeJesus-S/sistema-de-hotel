@@ -10,7 +10,7 @@ from django.core.validators import (
 )
 from django.db import models
 from django.utils.timezone import now
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy as gtl
 
 from clients.infra.validators import PasswordValidator
 
@@ -32,7 +32,7 @@ class Client(AbstractUser):
     ]
 
     username = models.CharField(
-        _('username'),
+        gtl('username'),
         max_length=ClientRules.USERNAME_MAX_SIZE,
         unique=True,
         validators=[
@@ -60,9 +60,13 @@ class Client(AbstractUser):
             'unique': ClientErrorMessages.DUPLICATED_USERNAME,
             'invalid': ClientErrorMessages.INVALID_USERNAME_CHARS,
         },
+        help_text=gtl(
+            'Nome de usuário único para login, deve ter entre %(min)s e %(max)s caracteres'
+        )
+        % {'min': ClientRules.USERNAME_MIN_SIZE, 'max': ClientRules.USERNAME_MAX_SIZE},
     )
     first_name = models.CharField(
-        _('Nome'),
+        gtl('Nome'),
         max_length=ClientRules.MAX_FIRSTNAME_CHARS,
         blank=False,
         null=False,
@@ -80,9 +84,13 @@ class Client(AbstractUser):
                 ClientErrorMessages.INVALID_FIRSTNAME_MIN_LENGTH,
             ),
         ],
+        help_text=gtl(
+            'Nome próprio do cliente, apenas letras e espaços (máximo %(max)s caracteres)'
+        )
+        % {'max': ClientRules.MAX_FIRSTNAME_CHARS},
     )
     last_name = models.CharField(
-        _('Sobrenome'),
+        gtl('Sobrenome'),
         max_length=ClientRules.MAX_SURNAME_CHARS,
         blank=False,
         null=False,
@@ -100,18 +108,23 @@ class Client(AbstractUser):
                 ClientErrorMessages.INVALID_SURNAME_MAX_LENGTH,
             ),
         ],
+        help_text=gtl(
+            'Sobrenome do cliente, apenas letras e espaços (máximo %(max)s caracteres)'
+        )
+        % {'max': ClientRules.MAX_SURNAME_CHARS},
     )
     birthdate = models.DateField(
-        _('Data de nascimento'),
+        gtl('Data de nascimento'),
         blank=False,
         null=False,
         validators=[
             BirthDateValidator(raise_exc=True).validate,
         ],
+        help_text=gtl('Data de nascimento no formato DD/MM/AAAA'),
     )
     email = models.EmailField(
-        _('E-mail'),
-        max_length=255,
+        gtl('E-mail'),
+        max_length=ClientRules.EMAIL_MAX_LEN,
         unique=True,
         null=False,
         blank=False,
@@ -124,10 +137,12 @@ class Client(AbstractUser):
             'unique': ContactErrorMessages.DUPLICATED_EMAIL,
             'invalid': ContactErrorMessages.INVALID_EMAIL,
         },
+        help_text=gtl('Endereço de e-mail único do cliente (máximo %(max)s caracteres)')
+        % {'max': ClientRules.EMAIL_MAX_LEN},
     )
     phone = models.CharField(
-        _('Telefone'),
-        max_length=16,
+        gtl('Telefone'),
+        max_length=ClientRules.PHONE_MAX_LEN,
         null=False,
         blank=False,
         unique=True,
@@ -140,10 +155,14 @@ class Client(AbstractUser):
             'unique': ContactErrorMessages.DUPLICATED_PHONE,
             'invalid': ContactErrorMessages.INVALID_PHONE,
         },
+        help_text=gtl(
+            'Número de telefone no formato (XX) XXXXX-XXXX (máximo %(max)s caracteres)'
+        )
+        % {'max': ClientRules.PHONE_MAX_LEN},
     )
     cpf = models.CharField(
-        _('CPF'),
-        max_length=11,
+        gtl('CPF'),
+        max_length=ClientRules.CPF_MAX_LEN,
         unique=True,
         blank=False,
         null=False,
@@ -151,7 +170,8 @@ class Client(AbstractUser):
             CpfValidator(message=ClientErrorMessages.INVALID_CPF),
         ],
         error_messages={'unique': ClientErrorMessages.DUPLICATED_CPF},
-        help_text=_('Seu CPF sem pontuação'),
+        help_text=gtl('Seu CPF sem pontuação (máximo %(max)s caracteres)')
+        % {'max': ClientRules.CPF_MAX_LEN},
     )
 
     def __str__(self) -> str:
@@ -225,5 +245,5 @@ class Client(AbstractUser):
         return masked
 
     class Meta:
-        verbose_name = _('Cliente')
-        verbose_name_plural = _('Clientes')
+        verbose_name = gtl('Cliente')
+        verbose_name_plural = gtl('Clientes')

@@ -3,7 +3,7 @@ Tests for the Service model.
 """
 import pytest
 from PIL import Image
-from services.rules import ServicesRules
+from services.rules import ServiceRules
 from services.models import Service
 import os
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -34,7 +34,7 @@ def test_image_is_resized_after_saving(hotel_instance):
     service.refresh_from_db()
 
     # Assert
-    assert (service.logo.width, service.logo.height) == ServicesRules.IMG_SIZE
+    assert (service.logo.width, service.logo.height) == ServiceRules.IMG_SIZE
 
 
 @pytest.mark.django_db

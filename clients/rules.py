@@ -24,3 +24,6 @@ class ClientRules:
 
     USERNAME_MAX_SIZE = 150
     USERNAME_MIN_SIZE = 2
+    EMAIL_MAX_LEN = 255
+    PHONE_MAX_LEN = 16
+    CPF_MAX_LEN = 11

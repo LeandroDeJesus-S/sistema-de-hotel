@@ -11,6 +11,7 @@ from django.core.validators import (
 )
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as gtl
 
 from clients.models import Client
 from home.models import Hotel
@@ -25,40 +26,47 @@ from utils import support
 from utils.adapters.image_validators import validate_benefit_icon
 from utils.models.middleware import ResizeImageMiddleware, model_middleware
 
-from .rules import BenefitRules, ReserveRules, RoomRules
+from .rules import BenefitRules, ReserveRules, RoomClassRules, RoomRules
 
 
 class Benefit(models.Model):
     """benefícios ao qual um quarto possui"""
 
     name = models.CharField(
-        'Nome',
-        max_length=45,
+        gtl('Nome'),
+        max_length=BenefitRules.NAME_MAX_LEN,
         blank=False,
         null=False,
         unique=True,
         validators=[
             RegexValidator(BenefitRules.NAME_PATTERN, BenefitErrorMessages.INVALID_PATTERN)
         ],
+        help_text=gtl('Nome único do benefício oferecido pelo quarto'),
     )
     short_desc = models.CharField(
-        'Descrição curta',
-        max_length=100,
+        gtl('Descrição curta'),
+        max_length=BenefitRules.SHORT_DESC_MAX_LEN,
         blank=False,
         null=False,
         unique=True,
+        help_text=gtl('Descrição breve do benefício (até 100 caracteres)'),
     )
     icon = models.ImageField(
-        'Ícone',
+        gtl('Ícone'),
         blank=True,
         null=True,
         unique=False,
-        help_text='ícone com tamanho 64x64',
-        upload_to='benefits/icon',
+        help_text=gtl('ícone com tamanho %(w)sx%(h)s')
+        % {'w': BenefitRules.ICON_SIZE[0], 'h': BenefitRules.ICON_SIZE[1]},
+        upload_to=BenefitRules.BENEFIT_ICON_UPLOAD_PATH,
         validators=[validate_benefit_icon],
     )
     displayable_on_homepage = models.BooleanField(
-        'Visível na página inicial', default=False, null=False, blank=False
+        gtl('Visível na página inicial'),
+        default=False,
+        null=False,
+        blank=False,
+        help_text=gtl('Se marcado, o benefício será exibido na página inicial'),
     )
 
     class Meta:
@@ -73,12 +81,13 @@ class Class(models.Model):
     """representa as classes para os quartos"""
 
     name = models.CharField(
-        'Classe',
-        max_length=15,
+        gtl('Classe'),
+        max_length=RoomClassRules.MAX_LEN,
         blank=False,
         null=False,
         unique=True,
         validators=[RegexValidator(r'^\w[\w ]*$', ClasseErrorMessages.INVALID_NAME)],
+        help_text=gtl('Nome da classe do quarto (ex: Standard, Deluxe)'),
     )
 
     def __str__(self) -> str:
@@ -105,21 +114,24 @@ class Room(models.Model):
         on_delete=models.DO_NOTHING,
         related_name='class_quartos',
         related_query_name='class_room',
+        help_text=gtl('Classe à qual o quarto pertence'),
     )
     number = models.CharField(
-        'Número',
+        gtl('Número'),
         blank=False,
         null=False,
         unique=True,
-        max_length=4,
+        max_length=RoomRules.NUMBER_MAX_LEN,
         validators=[
             RegexValidator(
                 r'^\d{3}[A-Z]?$',
             )
         ],
+        help_text=gtl('Número único do quarto (ex: 101, 102A, máximo %(max)s caracteres)')
+        % {'max': RoomRules.NUMBER_MAX_LEN},
     )
     adults_capacity = models.PositiveSmallIntegerField(
-        'Capacidade de adultos',
+        gtl('Capacidade de adultos'),
         blank=False,
         null=False,
         default=1,
@@ -127,9 +139,13 @@ class Room(models.Model):
             MaxValueValidator(RoomRules.MAX_ADULTS, RoomErrorMessages.ADULTS_EXCEEDED),
             MinValueValidator(RoomRules.MIN_ADULTS, RoomErrorMessages.ADULTS_INSUFFICIENT),
         ],
+        help_text=gtl(
+            'Número máximo de adultos que o quarto comporta (entre %(min)s e %(max)s)'
+        )
+        % {'min': RoomRules.MIN_ADULTS, 'max': RoomRules.MAX_ADULTS},
     )
     children_capacity = models.PositiveSmallIntegerField(
-        'Capacidade crianças',
+        gtl('Capacidade crianças'),
         blank=False,
         null=False,
         default=1,
@@ -137,57 +153,82 @@ class Room(models.Model):
             MaxValueValidator(RoomRules.MAX_CHILDREN, RoomErrorMessages.CHILD_EXCEEDED),
             MinValueValidator(RoomRules.MIN_CHILDREN, RoomErrorMessages.CHILD_INSUFFICIENT),
         ],
+        help_text=gtl(
+            'Número máximo de crianças que o quarto comporta (entre %(min)s e %(max)s)'
+        )
+        % {'min': RoomRules.MIN_CHILDREN, 'max': RoomRules.MAX_CHILDREN},
     )
     size = models.FloatField(
-        'Tamanho m²',
+        gtl('Tamanho m²'),
         blank=False,
         null=False,
         validators=[
             MinValueValidator(RoomRules.MIN_SIZE, RoomErrorMessages.SIZE_INSUFFICIENT),
             MaxValueValidator(RoomRules.MAX_SIZE, RoomErrorMessages.SIZE_EXCEEDED),
         ],
+        help_text=gtl('Tamanho do quarto em metros quadrados (entre %(min)s e %(max)s)')
+        % {'min': RoomRules.MIN_SIZE, 'max': RoomRules.MAX_SIZE},
     )
     daily_price = models.DecimalField(
-        'Diária',
-        max_digits=10,
-        decimal_places=2,
+        gtl('Diária'),
+        max_digits=RoomRules.DAILY_PRICE_MAX_DIGITS,
+        decimal_places=RoomRules.DAILY_PRICE_DECIMAL_PLACES,
         blank=False,
         null=False,
         validators=[
             MinValueValidator(RoomRules.MIN_DAILY_PRICE, RoomErrorMessages.PRICE_INSUFFICIENT),
             MaxValueValidator(RoomRules.MAX_DAILY_PRICE, RoomErrorMessages.PRICE_EXCEEDED),
         ],
+        help_text=gtl('Preço da diária em reais (entre %(min)s e %(max)s)')
+        % {'min': RoomRules.MIN_DAILY_PRICE, 'max': RoomRules.MAX_DAILY_PRICE},
     )
     benefits = models.ManyToManyField(
         Benefit,
         related_name='room_benefits',
         related_query_name='room_benefit',
         verbose_name='Benefícios',
+        help_text=gtl('Benefícios oferecidos por este quarto'),
     )
-    available = models.BooleanField('Disponível', blank=False, null=False, default=True)
+    available = models.BooleanField(
+        gtl('Disponível'),
+        blank=False,
+        null=False,
+        default=True,
+        help_text=gtl('Se marcado, o quarto está disponível para reservas'),
+    )
     image = models.ImageField(
-        'Imagem',
-        upload_to='%Y-%m',
+        gtl('Imagem'),
+        upload_to=RoomRules.IMAGE_UPLOAD_FORMAT,
         validators=[
             FileExtensionValidator(['jpg', 'png'], 'Somete jpg ou png'),
             validate_image_file_extension,
         ],
         blank=True,
         null=True,
+        help_text=gtl('Imagem principal do quarto (formatos aceitos: JPG, PNG)'),
     )
     short_desc = models.CharField(
-        'Descrição curta',
-        max_length=255,
+        gtl('Descrição curta'),
+        max_length=RoomRules.SHORT_DESC_MAX_LEN,
         blank=False,
         null=False,
         unique=True,
+        help_text=gtl('Descrição curta do quarto (até %(max)s caracteres)')
+        % {'max': RoomRules.SHORT_DESC_MAX_LEN},
     )
-    long_desc = models.TextField('Descrição longa', max_length=1000, null=True, blank=True)
+    long_desc = models.TextField(
+        gtl('Descrição longa'),
+        max_length=RoomRules.LONG_DESC_MAX_LEN,
+        null=True,
+        blank=True,
+        help_text=gtl('Descrição detalhada do quarto (até 1000 caracteres)'),
+    )
     hotel = models.ForeignKey(
         Hotel,
         on_delete=models.CASCADE,
         related_name='hotel_rooms',
         related_query_name='hotel_room',
+        help_text=gtl('Hotel ao qual o quarto pertence'),
     )
 
     class Meta:
@@ -249,14 +290,16 @@ class Reservation(models.Model):
         ]
 
     checkin = models.DateField(
-        'Check-in',
+        gtl('Check-in'),
         blank=False,
         null=False,
+        help_text=gtl('Data de check-in no formato DD/MM/AAAA'),
     )
     checkout = models.DateField(
-        'Check-out',
+        gtl('Check-out'),
         blank=False,
         null=False,
+        help_text=gtl('Data de check-out no formato DD/MM/AAAA'),
     )
     client = models.ForeignKey(
         Client,
@@ -264,6 +307,7 @@ class Reservation(models.Model):
         related_name='reservation_clients',
         related_query_name='reservation_client',
         null=True,
+        help_text=gtl('Cliente que fez a reserva'),
     )
     room = models.ForeignKey(
         Room,
@@ -272,24 +316,28 @@ class Reservation(models.Model):
         related_query_name='reservation_room',
         null=True,
         blank=True,
+        help_text=gtl('Quarto reservado'),
     )
     observations = models.TextField(
-        'Observações',
-        max_length=100,
+        gtl('Observações'),
+        max_length=ReserveRules.OBSERVATIONS_MAX_LEN,
         blank=True,
         validators=[
             RegexValidator(r'[\w\s]*'),
         ],
+        help_text=gtl('Observações adicionais sobre a reserva (máximo %(max)s caracteres)')
+        % {'max': ReserveRules.OBSERVATIONS_MAX_LEN},
     )
     amount = models.DecimalField(
-        'Valor total da reserva',
-        max_digits=10,
-        decimal_places=2,
+        gtl('Valor total da reserva'),
+        max_digits=ReserveRules.AMOUNT_MAX_DIGITS,
+        decimal_places=ReserveRules.AMOUNT_DECIMAL_PLACES,
         blank=True,
         null=True,
         validators=[
             MinValueValidator(RoomRules.MIN_DAILY_PRICE),
         ],
+        help_text=gtl('Valor total calculado da reserva em reais'),
     )
 
     class Status(models.TextChoices):
@@ -301,18 +349,32 @@ class Reservation(models.Model):
         SCHEDULED = ReservationStatusEnum.SCHEDULED.value, 'agendada'
 
     status = models.CharField(
-        'Status',
+        gtl('Status'),
         max_length=1,
         null=False,
         blank=False,
         choices=Status.choices,
         default=Status.INITIALIZED,
+        help_text=gtl('Status atual da reserva'),
     )
     created_at = models.DateTimeField(
-        'Criada em', null=False, blank=False, default=timezone.now
+        gtl('Criada em'),
+        null=False,
+        blank=False,
+        default=timezone.now,
+        help_text=gtl('Data e hora da criação da reserva'),
     )
-    cancelled_at = models.DateTimeField('Cancelada em', null=True, blank=True)
-    cancellation_reason = models.TextField('Motivo do cancelamento', blank=True)
+    cancelled_at = models.DateTimeField(
+        gtl('Cancelada em'),
+        null=True,
+        blank=True,
+        help_text=gtl('Data e hora do cancelamento, se aplicável'),
+    )
+    cancellation_reason = models.TextField(
+        gtl('Motivo do cancelamento'),
+        blank=True,
+        help_text=gtl('Motivo do cancelamento da reserva'),
+    )
 
     def __str__(self) -> str:
         return f'<{self.__class__.__name__}: {self.pk}>'
