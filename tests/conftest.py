@@ -46,7 +46,7 @@ def valid_client_data_factory(faker):
             'last_name': last_name,
             'birthdate': faker.date_of_birth(minimum_age=18, maximum_age=80),
             'email': faker.email(),
-            'phone': faker.phone_number(),
+            'phone': faker.phone_number().replace(' ', '').replace('(', '').replace(')', '').replace('-', ''),
             'cpf': faker.cpf().replace('.', '').replace('-', ''),
         }
 
@@ -142,9 +142,10 @@ def room_model_instance(db, room_class_model_instance, benefit_model_instance, h
     Fixture to create a Room instance with associated class, benefit, and hotel.
     Set a daily_price that ensures reservation amount is valid.
     """
+    import string
     room = G(
         Room,
-        number=faker.bothify('###?'),
+        number=faker.bothify('###') + faker.random_element(string.ascii_uppercase),
         room_class=room_class_model_instance,
         hotel=hotel_model_instance,
         daily_price=Decimal('200.00'),
