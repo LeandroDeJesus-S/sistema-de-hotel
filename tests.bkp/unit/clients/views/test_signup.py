@@ -1,0 +1,343 @@
+from http import HTTPStatus
+
+import pytest
+from django.urls import reverse
+
+from clients.feedback_messages import (
+    ClientErrorMessages,
+    Recaptcha,
+    SignUp,
+)
+from clients.rules import ClientRules
+from utils.supporttest import get_message
+
+
+@pytest.mark.django_db
+def test_signup_template(client):
+    """
+    Test if it is rendering the correct template.
+    """
+    # Arrange
+    url = reverse('signup')
+
+    # Act
+    response = client.get(url)
+
+    # Assert
+    assert 'signup.html' in [t.name for t in response.templates]
+
+
+@pytest.mark.parametrize(
+    'field',
+    [
+        'username',
+        'password',
+        'nome',
+        'sobrenome',
+        'telefone',
+        'nascimento',
+        'email',
+        'cpf',
+    ],
+)
+@pytest.mark.django_db
+def test_signup_missing_field_renders_signup_with_message(
+    client,
+    valid_signup_data,
+    field,
+    mock_recaptcha,
+):
+    """
+    Test if when sending some missing information, the correct message is sent.
+    """
+    # Arrange
+    url = reverse('signup')
+    data = valid_signup_data.copy()
+    del data[field]
+
+    # Act
+    response = client.post(url, data)
+    message = get_message(response)
+
+    # Assert
+    assert message == SignUp.MISSING_FIELDS
+
+
+@pytest.mark.parametrize(
+    'field',
+    [
+        'username',
+        'password',
+        'nome',
+        'sobrenome',
+        'telefone',
+        'nascimento',
+        'email',
+        'cpf',
+    ],
+)
+@pytest.mark.django_db
+def test_signup_missing_field_renders_correct_template(
+    client,
+    valid_signup_data,
+    field,
+    mock_recaptcha,
+):
+    """
+    Test if when sending some missing information, the correct template is rendered.
+    """
+    # Arrange
+    url = reverse('signup')
+    data = valid_signup_data.copy()
+    data[field] = ''
+
+    # Act
+    response = client.post(url, data)
+
+    # Assert
+    assert 'signup.html' in [t.name for t in response.templates]
+
+
+@pytest.mark.parametrize(
+    'field',
+    [
+        'username',
+        'telefone',
+        'email',
+        'cpf',
+    ],
+)
+@pytest.mark.django_db
+def test_signup_duplicated_unique_field_renders_signup_with_message(
+    client,
+    valid_signup_data,
+    existing_user_data,
+    field,
+    mock_recaptcha,
+):
+    """
+    Test if fields that must be unique are validated correctly,
+    rendering signup again with the correct message.
+    """
+    # Arrange
+    url = reverse('signup')
+    data = valid_signup_data.copy()
+    data[field] = existing_user_data[field]
+    expected_msg = 'Não foi possível criar a conta. Verifique seus dados e tente novamente.'
+
+    # Act
+    response = client.post(url, data)
+    message = get_message(response)
+
+    # Assert
+    assert message == expected_msg
+
+
+@pytest.mark.parametrize(
+    'field',
+    [
+        'username',
+        'telefone',
+        'email',
+        'cpf',
+    ],
+)
+@pytest.mark.django_db
+def test_signup_duplicated_unique_field_renders_correct_template(
+    client,
+    valid_signup_data,
+    existing_user_data,
+    field,
+    mock_recaptcha,
+):
+    """
+    Test if fields that must be unique are validated correctly,
+    rendering signup again with the correct template.
+    """
+    # Arrange
+    url = reverse('signup')
+    data = valid_signup_data.copy()
+    data[field] = existing_user_data[field]
+    expected_msg = ClientErrorMessages.SIGNUP_ERROR
+
+    # Act
+    response = client.post(url, data)
+    message = get_message(response)
+
+    # Assert
+    assert 'signup.html' in [t.name for t in response.templates]
+    assert message == expected_msg
+
+
+@pytest.mark.parametrize(
+    ('case_value', 'case_message'),
+    [
+        (
+            '1' * (ClientRules.USERNAME_MIN_SIZE - 1),
+            ClientErrorMessages.INVALID_USERNAME_LEN,
+        ),
+        (
+            '1' * (ClientRules.USERNAME_MAX_SIZE + 1),
+            ClientErrorMessages.INVALID_USERNAME_LEN,
+        ),
+        ('dah#1234', ClientErrorMessages.INVALID_USERNAME_CHARS),
+        ('dah$1234', ClientErrorMessages.INVALID_USERNAME_CHARS),
+    ],
+)
+@pytest.mark.django_db
+def test_signup_invalid_username_renders_signup_with_message(
+    client,
+    valid_signup_data,
+    case_value,
+    case_message,
+    mock_recaptcha,
+):
+    """
+    Test if using an invalid username renders the signup page
+    again with the corresponding valid message.
+    """
+    # Arrange
+    url = reverse('signup')
+    data = valid_signup_data.copy()
+    data['username'] = case_value
+
+    # Act
+    response = client.post(url, data)
+    message = get_message(response)
+
+    # Assert
+    assert str(case_message) in message
+
+
+@pytest.mark.parametrize(
+    ('case_value', 'case_message'),
+    [
+        (
+            '1' * (ClientRules.USERNAME_MIN_SIZE - 1),
+            ClientErrorMessages.INVALID_USERNAME_LEN
+            % {
+                'min_len': ClientRules.USERNAME_MIN_SIZE,
+                'max_len': ClientRules.USERNAME_MAX_SIZE,
+            },
+        ),
+        (
+            '1' * (ClientRules.USERNAME_MAX_SIZE + 1),
+            ClientErrorMessages.INVALID_USERNAME_LEN
+            % {
+                'min_len': ClientRules.USERNAME_MIN_SIZE,
+                'max_len': ClientRules.USERNAME_MAX_SIZE,
+            },
+        ),
+        ('dah#1234', ClientErrorMessages.INVALID_USERNAME_CHARS),
+        ('dah$1234', ClientErrorMessages.INVALID_USERNAME_CHARS),
+    ],
+)
+@pytest.mark.django_db
+def test_signup_invalid_username_renders_correct_template(
+    client,
+    valid_signup_data,
+    case_value,
+    case_message,
+    mock_recaptcha,
+):
+    """
+    Test if using an invalid username renders the signup page
+    again with the corresponding valid template.
+    """
+    # Arrange
+    url = reverse('signup')
+    data = valid_signup_data.copy()
+    data['username'] = case_value
+
+    # Act
+    response = client.post(url, data)
+
+    # Assert
+    assert 'signup.html' in [t.name for t in response.templates]
+
+
+@pytest.mark.django_db
+def test_signup_valid_data_authenticates_user(
+    client, valid_signup_data, settings, mock_recaptcha
+):
+    """
+    Test if the client is logged in correctly when all data provided is valid.
+    """
+    # Arrange
+    url = reverse('signup')
+
+    # Act
+    response = client.post(url, valid_signup_data)
+
+    # Assert
+    assert response.wsgi_request.user.is_authenticated
+
+
+def test_signup_authenticated_user_is_redirected(authenticated_client):
+    """
+    Test if a client who is already logged in and tries to access
+    the signup page is redirected to the rooms page.
+    """
+    # Arrange
+    client, _ = authenticated_client
+    url = reverse('signup')
+
+    # Act
+    response = client.get(url)
+
+    # Assert
+    assert response.status_code == HTTPStatus.FOUND
+
+
+def test_signup_authenticated_user_is_redirected_to_rooms(authenticated_client):
+    """
+    Test if a client who is already logged in and tries to access
+    the signup page is redirected to the rooms page.
+    """
+    # Arrange
+    client, _ = authenticated_client
+    url = reverse('signup')
+
+    # Act
+    response = client.get(url)
+
+    # Assert
+    assert response.url == reverse('rooms')
+
+
+@pytest.mark.django_db
+def test_signup_invalid_captcha_redirects_to_signup_with_message(
+    mocker,
+    client,
+    valid_signup_data,
+):
+    """
+    Test if the captcha is invalid, redirect back to the registration
+    page with the correct message.
+    """
+    # Arrange
+    mocker.patch('clients.views.support.verify_captcha', return_value=False)
+    url = reverse('signup')
+
+    # Act
+    response = client.post(url, valid_signup_data)
+    message = get_message(response)
+
+    # Assert
+    assert message == Recaptcha.INVALID_MESSAGE
+
+
+@pytest.mark.django_db
+def test_signup_invalid_captcha_redirects_to_signup(mocker, client, valid_signup_data):
+    """
+    Test if the captcha is invalid, redirect back to the registration page.
+    """
+    # Arrange
+    mocker.patch('clients.views.support.verify_captcha', return_value=False)
+    url = reverse('signup')
+
+    # Act
+    response = client.post(url, valid_signup_data)
+
+    # Assert
+    assert response.url == url

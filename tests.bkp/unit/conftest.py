@@ -1,10 +1,10 @@
-import logging
 import re
 from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
 from ddf import G
+from django.core.management import call_command
 
 from clients.models import Client
 from home.models import Contact, Hotel
@@ -54,8 +54,7 @@ def valid_client_data_factory(faker):
 
 
 @pytest.fixture
-def client_model_instance_factory(db, valid_client_data_factory, monkeypatch):
-    """Returns a function that creates a valid client instance."""
+def client_model_factory(db, valid_client_data_factory, monkeypatch):
     def f():
         valid_client_data = valid_client_data_factory()
         u = G(Client, **valid_client_data)
@@ -68,7 +67,7 @@ def client_model_instance_factory(db, valid_client_data_factory, monkeypatch):
 
 
 @pytest.fixture(scope='function')
-def client_model_instance(db, valid_client_data_factory, monkeypatch):
+def client_model(db, valid_client_data_factory, monkeypatch):
     """
     Provides a valid client instance.
     """
@@ -81,12 +80,12 @@ def client_model_instance(db, valid_client_data_factory, monkeypatch):
 
 
 @pytest.fixture(scope='function')
-def authenticated_client(client, client_model_instance):
+def authenticated_client(client, client_model):
     """
-    Logs in a client and returns a tuple with the http client and user.
+    Logs in a client and returns the client and user.
     """
-    client.force_login(client_model_instance)
-    return client, client_model_instance
+    client.force_login(client_model)
+    return client, client_model
 
 
 @pytest.fixture
@@ -100,7 +99,7 @@ def mock_recaptcha(responses):
 
 
 @pytest.fixture
-def hotel_model_instance(db):
+def hotel_model(db):
     """
     Fixture to create a Hotel instance.
     """
@@ -108,15 +107,15 @@ def hotel_model_instance(db):
 
 
 @pytest.fixture
-def contact_model_instance(db, hotel_model_instance):
+def contact_model(db, hotel_model):
     """
     Fixture to create a Contact instance.
     """
-    return G(Contact, hotel=hotel_model_instance)
+    return G(Contact, hotel=hotel_model)
 
 
 @pytest.fixture
-def benefit_model_instance(db):
+def benefit_model(db):
     """
     Fixture to create a Benefit instance for a room.
     """
@@ -128,7 +127,7 @@ def benefit_model_instance(db):
 
 
 @pytest.fixture
-def room_class_model_instance(db):
+def room_class_model(db):
     """
     Fixture to create a Class instance for a room.
     """
@@ -137,7 +136,7 @@ def room_class_model_instance(db):
 
 
 @pytest.fixture
-def room_model_instance(db, room_class_model_instance, benefit_model_instance, hotel_model_instance, faker):
+def room_model(db, room_class_model, benefit_model, hotel_model, faker):
     """
     Fixture to create a Room instance with associated class, benefit, and hotel.
     Set a daily_price that ensures reservation amount is valid.
@@ -145,8 +144,8 @@ def room_model_instance(db, room_class_model_instance, benefit_model_instance, h
     room = G(
         Room,
         number=faker.bothify('###?'),
-        room_class=room_class_model_instance,
-        hotel=hotel_model_instance,
+        room_class=room_class_model,
+        hotel=hotel_model,
         daily_price=Decimal('200.00'),
         size=faker.pyint(min_value=RoomRules.MIN_SIZE + 1, max_value=RoomRules.MAX_SIZE - 1),
         short_desc=faker.sentence(nb_words=5),
@@ -157,12 +156,12 @@ def room_model_instance(db, room_class_model_instance, benefit_model_instance, h
             min_value=RoomRules.MIN_CHILDREN, max_value=RoomRules.MAX_CHILDREN
         ),
     )
-    room.benefits.add(benefit_model_instance)
+    room.benefits.add(benefit_model)
     return room
 
 
 @pytest.fixture
-def reservation_model_instance(db, client_model_instance, room_model_instance):
+def reservation_model(db, client_model, room_model):
     """
     Fixture to create a Reservation instance.
     """
@@ -170,8 +169,8 @@ def reservation_model_instance(db, client_model_instance, room_model_instance):
     checkout = checkin + timedelta(days=15)  # Example: 5 days reservation
     reservation = G(
         Reservation,
-        client=client_model_instance,
-        room=room_model_instance,
+        client=client_model,
+        room=room_model,
         checkin=checkin,
         checkout=checkout,
         status='I',
@@ -183,7 +182,7 @@ def reservation_model_instance(db, client_model_instance, room_model_instance):
 
 
 @pytest.fixture
-def reservation_model_instance_factory(db, client_model_instance, room_model_instance):
+def reservation_model_factory(db, client_model, room_model):
     """
     Fixture to create Reservation instances via a factory.
     """
@@ -193,8 +192,8 @@ def reservation_model_instance_factory(db, client_model_instance, room_model_ins
         checkout = checkin + timedelta(days=15)  # Example: 5 days reservation
         reservation = G(
             Reservation,
-            client=client if client else client_model_instance,
-            room=room if room else room_model_instance,
+            client=client if client else client_model,
+            room=room if room else room_model,
             checkin=checkin,
             checkout=checkout,
             status=status,
@@ -208,26 +207,40 @@ def reservation_model_instance_factory(db, client_model_instance, room_model_ins
 
 
 @pytest.fixture
-def payment_model_instance(db, reservation_model_instance):
+def payment_model(db, reservation_model, contact_model):
     """
     Fixture to create a Payment instance.
     """
     return G(
         Payment,
-        reservation=reservation_model_instance,
+        reservation=reservation_model,
         status=Payment.Status.PENDING,
-        amount=reservation_model_instance.amount,
-        client=reservation_model_instance.client,
+        amount=reservation_model.amount,
+        client=reservation_model.client,
         payment_gateway=Payment.Gateway.STRIPE,
     )
 
 
 @pytest.fixture
-def service_model_instance(db, hotel_model_instance):
+def service_model(db, hotel_model):
     """
     Fixture to create a Service instance.
     """
-    return G(Service, hotel=hotel_model_instance)
+    return G(Service, hotel=hotel_model)
+
+
+@pytest.fixture
+def db_setup(db):
+    """
+    Loads the necessary fixtures for the unit tests.
+    """
+    call_command('loaddata', 'tests/fixtures/hotel_fixture.json')
+    call_command('loaddata', 'tests/fixtures/servico_fixture.json')
+    call_command('loaddata', 'tests/fixtures/beneficio_fixture.json')
+    call_command('loaddata', 'tests/fixtures/classe_fixture.json')
+    call_command('loaddata', 'tests/fixtures/quarto_fixture.json')
+    call_command('loaddata', 'tests/fixtures/cliente_fixture.json')
+    call_command('loaddata', 'tests/fixtures/reserva_fixture.json')
 
 
 @pytest.fixture
@@ -255,8 +268,4 @@ def clients_container(settings):
     clients_container = ClientsContainer()
     clients_container.config.from_dict(settings.__dict__)
     clients_container.wire(modules=['clients.views'])
-
-
-@pytest.fixture
-def logger_mock(mocker):
-    return mocker.Mock(spec=logging.Logger)
+    return clients_container

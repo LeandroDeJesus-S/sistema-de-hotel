@@ -11,7 +11,7 @@ from ..feedback_messages import ClientErrorMessages
 Username = Annotated[
     str,
     StringConstraints(
-        pattern=r'^[a-zA-Z0-9_@.+]+',
+        pattern=r'^[a-zA-Z0-9_@.+]+$',
         min_length=ClientRules.USERNAME_MIN_SIZE,
         max_length=ClientRules.USERNAME_MAX_SIZE,
         strip_whitespace=True,

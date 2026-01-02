@@ -69,6 +69,7 @@ pytest-mock = "^3.14.1"
 faker = "^37.6.0"
 django-dynamic-fixture = "^4.0.1"
 pre-commit = "^4.3.0"
+pytest-cov = "^7.0.0"
 
 [tool.ruff]
 line-length = 95
@@ -80,6 +81,7 @@ extend-exclude = [
     "templates/*",
     "readme",
     "tests/",
+    "tests.bkp/*",
     "*_test.py",
     "manage.py"
 ]
@@ -105,8 +107,8 @@ run = 'python manage.py runserver'
 Q = 'python manage.py qcluster'
 typecheck = 'mypy . --ignore-missing-imports'
 
-pre_test = 'task format && task typecheck && task pcommit'
-test = 'pytest tests/'
+pre_test = 'task format && task typecheck'
+test = 'pytest --cov=. --cov-report=html:skip-covered --cov-report=xml tests/'
 post_test = 'task scan'
 
 scan = 'bandit -c pyproject.toml -r .'
@@ -117,13 +119,15 @@ pcommit = 'pre-commit run --all-files'
 
 [tool.mypy]
 exclude = [
-	"migrations/*",
-	"__init__*",
-	"__pyc*",
-    "media/",
-    "templates/*",
-    "readme",
-    "tests/",
+	".*/migrations/.*",
+	".*__init__.*",
+	".*__pyc.*",
+    "media/.*",
+    "templates/.*",
+    "readme.*",
+    "tests/.*",
+    "tests.bkp/.*",
+	".*_test.py",
     "manage.py"
 ]
 ignore_missing_imports = true
