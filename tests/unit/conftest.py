@@ -6,9 +6,14 @@ from decimal import Decimal
 import pytest
 from ddf import G
 
+from base.ports.email import AbsEmailSender
+from base.ports.pdf import AbsPDFGenerator
+from base.ports.unit_of_work import AbsUnitOfWork
+from clients.domain.ports import AbsClientRepository
 from clients.models import Client
 from home.models import Contact, Hotel
 from payments.models import Payment
+from reservations.domain.repo import AbsReservationRepository, AbsRoomRepository
 from reservations.models import Benefit, Class, Reservation, Room
 from reservations.rules import RoomRules
 from services.models import Service
@@ -56,6 +61,7 @@ def valid_client_data_factory(faker):
 @pytest.fixture
 def client_model_instance_factory(db, valid_client_data_factory, monkeypatch):
     """Returns a function that creates a valid client instance."""
+
     def f():
         valid_client_data = valid_client_data_factory()
         u = G(Client, **valid_client_data)
@@ -137,7 +143,9 @@ def room_class_model_instance(db):
 
 
 @pytest.fixture
-def room_model_instance(db, room_class_model_instance, benefit_model_instance, hotel_model_instance, faker):
+def room_model_instance(
+    db, room_class_model_instance, benefit_model_instance, hotel_model_instance, faker
+):
     """
     Fixture to create a Room instance with associated class, benefit, and hotel.
     Set a daily_price that ensures reservation amount is valid.
@@ -243,6 +251,7 @@ def reservations_container(settings):
 @pytest.fixture
 def payments_container(settings):
     from payments.container import PaymentsContainer  # noqa: PLC0415
+
     payments_container = PaymentsContainer()
     payments_container.config.from_dict(settings.__dict__)
     payments_container.wire(modules=['payments.views', 'payments.infra.tasks'])
@@ -252,9 +261,47 @@ def payments_container(settings):
 @pytest.fixture
 def clients_container(settings):
     from clients.container import ClientsContainer  # noqa: PLC0415
+
     clients_container = ClientsContainer()
     clients_container.config.from_dict(settings.__dict__)
     clients_container.wire(modules=['clients.views'])
+
+
+@pytest.fixture
+def mock_client_repository(mocker):
+    """Mock fixture for AbsClientRepository port (shared across apps)."""
+    return mocker.Mock(spec=AbsClientRepository)
+
+
+@pytest.fixture
+def mock_reservation_repository(mocker):
+    """Mock fixture for AbsReservationRepository port (shared across apps)."""
+    return mocker.Mock(spec=AbsReservationRepository)
+
+
+@pytest.fixture
+def mock_room_repository(mocker):
+    """Mock fixture for AbsRoomRepository port (shared across apps)."""
+    return mocker.Mock(spec=AbsRoomRepository)
+
+
+@pytest.fixture
+def mock_email_sender(mocker):
+    """Mock fixture for AbsEmailSender port."""
+    return mocker.Mock(spec=AbsEmailSender)
+
+
+@pytest.fixture
+def mock_pdf_generator(mocker):
+    """Mock fixture for AbsPDFGenerator port."""
+    return mocker.Mock(spec=AbsPDFGenerator)
+
+
+@pytest.fixture
+def mock_unit_of_work(mocker):
+    """Mock fixture for AbsUnitOfWork port."""
+    mock = mocker.MagicMock(spec=AbsUnitOfWork)
+    return mock
 
 
 @pytest.fixture
