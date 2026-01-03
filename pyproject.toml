@@ -108,7 +108,7 @@ Q = 'python manage.py qcluster'
 typecheck = 'mypy . --ignore-missing-imports'
 
 pre_test = 'task format && task typecheck'
-test = 'pytest --cov=. --cov-report=html:skip-covered --cov-report=xml tests/'
+test = 'pytest --cov=. --cov-report=html --cov-report=xml tests/'
 post_test = 'task scan'
 
 scan = 'bandit -c pyproject.toml -r .'
