@@ -5,6 +5,7 @@ from decimal import Decimal
 
 import pytest
 from ddf import G
+from faker import Faker
 
 from base.ports.email import AbsEmailSender
 from base.ports.pdf import AbsPDFGenerator
@@ -28,9 +29,9 @@ def auth_backend(settings):
     ]
 
 
-@pytest.fixture(scope='session', autouse=True)
-def faker_session_locale():
-    return ['pt_BR']
+@pytest.fixture(scope='session', autouse=False)
+def faker():
+    return Faker(locale='pt_BR')
 
 
 @pytest.fixture(scope='function')
@@ -51,7 +52,7 @@ def valid_client_data_factory(faker):
             'last_name': last_name,
             'birthdate': faker.date_of_birth(minimum_age=18, maximum_age=80),
             'email': faker.email(),
-            'phone': faker.phone_number(),
+            'phone': faker.phone_number().replace(' ', '').replace('(', '').replace(')', '').replace('-', ''),
             'cpf': faker.cpf().replace('.', '').replace('-', ''),
         }
 

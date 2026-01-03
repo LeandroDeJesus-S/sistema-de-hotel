@@ -24,7 +24,7 @@ class TestUsername:
     def test_valid_username(self):
         """Should accept valid usernames."""
         # Arrange
-        valid_usernames = ["validUser", "user.name", "user@name", "user_name", "user+name"]
+        valid_usernames = ["validUser", "user.name", "user@name", "user_name", "user-name"]
 
         for username in valid_usernames:
             # Act
