@@ -206,12 +206,7 @@ def entity_to_model(entity: BaseEntity, model_cls: Type[M]) -> Result[M]:
     try:
         model_data = {}
         for field_name, value in entity.model_dump(exclude_none=True).items():
-            if (
-                isinstance(value, list)
-                and value
-                and isinstance(value[0], dict)
-                and 'id' in value[0]
-            ):
+            if isinstance(value, list):
                 continue
 
             if isinstance(value, dict) and 'id' in value and value['id'] is not None:

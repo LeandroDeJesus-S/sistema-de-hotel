@@ -151,9 +151,10 @@ def room_model_instance(
     Fixture to create a Room instance with associated class, benefit, and hotel.
     Set a daily_price that ensures reservation amount is valid.
     """
+    import string
     room = G(
         Room,
-        number=faker.bothify('###?'),
+        number=faker.bothify('###') + faker.random_element(string.ascii_uppercase),
         room_class=room_class_model_instance,
         hotel=hotel_model_instance,
         daily_price=Decimal('200.00'),
