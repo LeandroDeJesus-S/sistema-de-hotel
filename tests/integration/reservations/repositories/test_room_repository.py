@@ -1,9 +1,7 @@
 import pytest
 from reservations.infra.repo import RoomRepository
-from reservations.domain.entities import Room, Benefit, RoomClass
-from reservations.models import Room as RoomModel, Benefit as BenefitModel, Class as ClassModel
-from home.models import Hotel
-from ddf import G
+from reservations.domain.entities import Room, RoomClass
+from reservations.models import Room as RoomModel
 from decimal import Decimal
 
 @pytest.mark.django_db

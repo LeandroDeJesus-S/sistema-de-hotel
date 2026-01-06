@@ -127,3 +127,186 @@ class TestCancelReservationUseCase:
         mock_task_queuer.queue_task.assert_any_call(
             'payments.infra.tasks.process_refund', ANY, name=ANY
         )
+
+    def test_cancel_active_reservation_success(self, use_case, mock_reservation_repo, mock_room_repo, mock_payments_repo, client_entity, room_entity, mock_task_queuer):
+        """Should successfully cancel an ACTIVE reservation and restore room availability."""
+        client_entity.id = 1
+        res = Reservation.safe_create(
+            id=1,
+            checkin=date.today() + timedelta(days=10),
+            checkout=date.today() + timedelta(days=12),
+            client=client_entity,
+            room=room_entity,
+            observations="",
+            amount=Decimal("200.00"),
+            status=ReservationStatusEnum.ACTIVE
+        ).unwrap()
+        res.room.available = False # Should be false initially
+
+        mock_reservation_repo.find_by_id.return_value = Result.Ok(res)
+        mock_reservation_repo.save.return_value = Result.Ok(res)
+        mock_room_repo.save.return_value = Result.Ok(res.room)
+        mock_payments_repo.get_by_reservation_id.return_value = Result.Err("No payment")
+
+        result = use_case(reservation_id=1, client_id=1)
+
+        assert result.is_ok()
+        assert res.status == ReservationStatusEnum.CANCELLED
+        assert res.room.available is True
+        mock_room_repo.save.assert_called_with(res.room)
+
+    def test_cancel_active_room_save_failure(self, use_case, mock_reservation_repo, mock_room_repo, client_entity, room_entity, mock_unit_of_work):
+        """Should fail if restoring room availability fails."""
+        client_entity.id = 1
+        res = Reservation.safe_create(
+            id=1,
+            checkin=date.today() + timedelta(days=10),
+            checkout=date.today() + timedelta(days=12),
+            client=client_entity,
+            room=room_entity,
+            observations="",
+            amount=Decimal("200.00"),
+            status=ReservationStatusEnum.ACTIVE
+        ).unwrap()
+
+        mock_reservation_repo.find_by_id.return_value = Result.Ok(res)
+        mock_room_repo.save.return_value = Result.Err("DB Error")
+
+        result = use_case(reservation_id=1, client_id=1)
+
+        assert result.is_err()
+        assert result.unwrap_err().msg == "Failed to restore room availability"
+        mock_unit_of_work.rollback.assert_called()
+
+    def test_cancel_reservation_save_failure(self, use_case, mock_reservation_repo, client_entity, room_entity, mock_unit_of_work):
+        """Should fail if saving cancelled reservation fails."""
+        client_entity.id = 1
+        res = Reservation.safe_create(
+            id=1,
+            checkin=date.today() + timedelta(days=10),
+            checkout=date.today() + timedelta(days=12),
+            client=client_entity,
+            room=room_entity,
+            observations="",
+            amount=Decimal("200.00"),
+            status=ReservationStatusEnum.SCHEDULED
+        ).unwrap()
+
+        mock_reservation_repo.find_by_id.return_value = Result.Ok(res)
+        mock_reservation_repo.save.return_value = Result.Err("DB Error")
+
+        result = use_case(reservation_id=1, client_id=1)
+
+        assert result.is_err()
+        assert result.unwrap_err().msg == "Failed to cancel reservation"
+        mock_unit_of_work.rollback.assert_called()
+
+    def test_cancel_no_payment(self, use_case, mock_reservation_repo, mock_payments_repo, client_entity, room_entity):
+        """Should succeed even if no payment is found (refund skipped)."""
+        client_entity.id = 1
+        res = Reservation.safe_create(
+            id=1,
+            checkin=date.today() + timedelta(days=10),
+            checkout=date.today() + timedelta(days=12),
+            client=client_entity,
+            room=room_entity,
+            observations="",
+            amount=Decimal("200.00"),
+            status=ReservationStatusEnum.SCHEDULED
+        ).unwrap()
+
+        mock_reservation_repo.find_by_id.return_value = Result.Ok(res)
+        mock_reservation_repo.save.return_value = Result.Ok(res)
+        mock_payments_repo.get_by_reservation_id.return_value = Result.Err("Not found")
+
+        result = use_case(reservation_id=1, client_id=1)
+
+        assert result.is_ok()
+
+    def test_cancel_payment_not_completed(self, use_case, mock_reservation_repo, mock_payments_repo, client_entity, room_entity, mock_task_queuer):
+        """Should succeed but skip refund if payment is not completed."""
+        client_entity.id = 1
+        res = Reservation.safe_create(
+            id=1,
+            checkin=date.today() + timedelta(days=10),
+            checkout=date.today() + timedelta(days=12),
+            client=client_entity,
+            room=room_entity,
+            observations="",
+            amount=Decimal("200.00"),
+            status=ReservationStatusEnum.SCHEDULED
+        ).unwrap()
+
+        mock_reservation_repo.find_by_id.return_value = Result.Ok(res)
+        mock_reservation_repo.save.return_value = Result.Ok(res)
+
+        mock_payment = Mock()
+        mock_payment.status = 'pending'
+        mock_payments_repo.get_by_reservation_id.return_value = Result.Ok(mock_payment)
+
+        result = use_case(reservation_id=1, client_id=1)
+
+        assert result.is_ok()
+        # Ensure refund task NOT called
+        calls = [call.args[0] for call in mock_task_queuer.queue_task.call_args_list]
+        assert 'payments.infra.tasks.process_refund' not in calls
+
+    def test_cancel_no_id_refund_skipped(self, use_case, mock_reservation_repo, mock_logger, client_entity, room_entity):
+        """Should skip refund and log warning if reservation has no ID."""
+        # Arrange
+        client_entity.id = 1
+        res = Reservation.safe_create(
+            id=None,  # No ID
+            checkin=date.today() + timedelta(days=10),
+            checkout=date.today() + timedelta(days=12),
+            client=client_entity,
+            room=room_entity,
+            observations="",
+            amount=Decimal("200.00"),
+            status=ReservationStatusEnum.SCHEDULED
+        ).unwrap()
+
+        mock_reservation_repo.find_by_id.return_value = Result.Ok(res)
+        mock_reservation_repo.save.return_value = Result.Ok(res)
+
+        # Act
+        result = use_case(reservation_id=1, client_id=1)
+
+        # Assert
+        assert result.is_ok()
+        mock_logger.warning.assert_called_with('Reservation has no ID, cannot process refund')
+
+    def test_calculate_refund_amount(self, use_case, client_entity, room_entity):
+        """Should calculate full refund if > 24h and partial if < 24h."""
+        # Arrange
+        payment = Mock()
+        payment.amount = Decimal("100.00")
+
+        # 1. Full refund (> 24h)
+        res_full = Reservation.safe_create(
+            checkin=date.today() + timedelta(days=2),
+            checkout=date.today() + timedelta(days=4),
+            client=client_entity,
+            room=room_entity,
+            observations="",
+            amount=Decimal("100.00"),
+            status=ReservationStatusEnum.SCHEDULED
+        ).unwrap()
+
+        refund_full = use_case._calculate_refund_amount(res_full, payment)
+        assert refund_full == 10000  # 100.00 * 100
+
+        # 2. Partial refund (< 24h)
+        # Using today's date ensures it's within 24h of "now"
+        res_partial = Reservation.safe_create(
+            checkin=date.today(),
+            checkout=date.today() + timedelta(days=2),
+            client=client_entity,
+            room=room_entity,
+            observations="",
+            amount=Decimal("100.00"),
+            status=ReservationStatusEnum.SCHEDULED
+        ).unwrap()
+
+        refund_partial = use_case._calculate_refund_amount(res_partial, payment)
+        assert refund_partial == 5000  # 100.00 * 100 * 0.5
