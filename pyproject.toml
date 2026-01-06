@@ -151,6 +151,35 @@ testpaths = [
     "tests",
 ]
 
+[tool.coverage.run]
+omit = [
+    "*/ports?(\\.py)?",
+    "*/ports/*",
+    "tests/*",
+    "manage.py",
+    "HOTEL/settings.py",
+    "HOTEL/wsgi.py",
+    "*/migrations/*",
+    "*__init__*",
+    "*__pyc*",
+    "media/",
+    "templates/*",
+    "readme",
+    "tests.bkp/*",
+    "*_test.py",
+    "*/container.py",
+    "*/domain/repo.py",
+    "*_messages.py",
+    "*/urls.py",
+]
+[tool.coverage.report]
+# Regexes for lines to exclude from consideration
+exclude_also = [
+    "def __repr__",
+    "def __str__",
+    "@(abc\\.)?abstractmethod",
+]
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
