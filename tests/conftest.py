@@ -9,11 +9,13 @@ from faker import Faker
 
 from base.ports.email import AbsEmailSender
 from base.ports.pdf import AbsPDFGenerator
+from base.ports.queue import TaskQueuer
 from base.ports.unit_of_work import AbsUnitOfWork
 from clients.domain.ports import AbsClientRepository
 from clients.models import Client
 from clients.rules import ClientRules
 from home.models import Contact, Hotel
+from payments.domain.ports import AbsPaymentsRepository
 from payments.models import Payment
 from reservations.domain.repo import AbsReservationRepository, AbsRoomRepository
 from reservations.models import Benefit, Class, Reservation, Room
@@ -292,6 +294,18 @@ def mock_room_repository(mocker):
 
 
 @pytest.fixture
+def mock_payments_repository(mocker):
+    """Mock fixture for AbsPaymentsRepository port."""
+    return mocker.Mock(spec=AbsPaymentsRepository)
+
+
+@pytest.fixture
+def mock_task_queuer(mocker):
+    """Mock fixture for TaskQueuer port."""
+    return mocker.Mock(spec=TaskQueuer)
+
+
+@pytest.fixture
 def mock_email_sender(mocker):
     """Mock fixture for AbsEmailSender port."""
     return mocker.Mock(spec=AbsEmailSender)
@@ -307,6 +321,8 @@ def mock_pdf_generator(mocker):
 def mock_unit_of_work(mocker):
     """Mock fixture for AbsUnitOfWork port."""
     mock = mocker.MagicMock(spec=AbsUnitOfWork)
+    mock.__enter__.return_value = mock
+    mock.__exit__.return_value = None
     return mock
 
 

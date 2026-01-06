@@ -124,6 +124,18 @@ class TestDjangoSessionManager:
         assert result.is_err()
         assert "Failed to validate user" in result.unwrap_err().msg
 
+    def test_authenticate_model_validate_error(self, manager, rf, client_model_instance, mocker):
+        """Should return error if domain entity validation fails after authentication."""
+        request = rf.post('/login')
+        # Ensure authentication succeeds
+        mocker.patch("clients.infra.adapters.django_authenticate", return_value=client_model_instance)
+        # Mock model_validate to fail
+        mocker.patch("clients.domain.entities.Client.model_validate", side_effect=Exception("Validation error"))
+
+        result = manager.authenticate(request, client_model_instance.username, client_model_instance.raw_password)
+        assert result.is_err()
+        assert "Failed to validate user" in result.unwrap_err().msg
+
     def test_login_success(self, manager, rf, client_model_instance):
         request = self._setup_request(rf, '/login')
         # Create domain entity

@@ -47,6 +47,7 @@ class Client(BaseEntity):
         },
         'birthdate': {
             'value_error': ClientErrorMessages.INVALID_BIRTHDATE,
+            'date_past': ClientErrorMessages.INVALID_BIRTHDATE,
         },
         'email': {
             'missing': ClientErrorMessages.NOT_PROVIDED_EMAIL,

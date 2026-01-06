@@ -32,7 +32,9 @@ class DjangoValidatorAdapter:
         return hash(self._validator.__class__.__name__)
 
     def __eq__(self, value: object) -> bool:
-        return self._validator.__class__.__name__ == value.__class__.__name__
+        if not isinstance(value, DjangoValidatorAdapter):
+            return False
+        return self._validator.__class__.__name__ == value._validator.__class__.__name__
 
 
 class UsernameValidator(AbsValidator):
@@ -84,7 +86,9 @@ class PhoneNumberValidator(AbsValidator):
             is_possible_number = phonenumbers.is_possible_number(parsed_phone)
             is_valid_number = phonenumbers.is_valid_number(parsed_phone)
             valid = (
-                (is_valid_number and is_possible_number) if self.weak else is_possible_number
+                (is_valid_number and is_possible_number)
+                if not self.weak
+                else is_possible_number
             )
 
             if not valid:
