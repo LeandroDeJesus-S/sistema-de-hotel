@@ -103,6 +103,50 @@ class TestClientService:
         assert dto.template_name == 'signup.html'
         assert any(msg.msg == str(SignUp.MISSING_FIELDS) for msg in dto.messages)
 
+    def test_signup_user_dto_validation_error(
+        self,
+        mock_client_repository,
+        mock_password_manager,
+        mock_session_manager,
+        mock_captcha_verifier,
+        logger_mock,
+        mocker,
+    ):
+        """Should return error when SignUpInput DTO validation fails."""
+        # Arrange
+        form_data = {
+            'username': 'validUser',
+            'password': 'StrongPassword123!',
+            'nome': 'John',
+            'sobrenome': 'Doe',
+            'telefone': '1234567890',
+            'email': 'john@doe.com',
+            'nascimento': '1990-01-01',
+            'cpf': '12345678900',
+        }
+        request = Mock()
+        mocker.patch(
+            'clients.application.services.SignUpInput.safe_validate',
+            return_value=Result.Err('DTO Validation Error'),
+        )
+
+        service = ClientService(
+            mock_client_repository,
+            mock_password_manager,
+            mock_session_manager,
+            mock_captcha_verifier,
+            logger_mock,
+        )
+
+        # Act
+        result = service.signup_user(form_data, request)
+
+        # Assert
+        assert result.is_ok()
+        dto = result.unwrap()
+        assert isinstance(dto, TemplateRenderResultDTO)
+        assert any(msg.msg == 'DTO Validation Error' for msg in dto.messages)
+
     def test_signup_user_validation_error(self,
         mock_client_repository,
         mock_password_manager,
