@@ -12,6 +12,7 @@ from base.ports.pdf import AbsPDFGenerator
 from base.ports.unit_of_work import AbsUnitOfWork
 from clients.domain.ports import AbsClientRepository
 from clients.models import Client
+from clients.rules import ClientRules
 from home.models import Contact, Hotel
 from payments.models import Payment
 from reservations.domain.repo import AbsReservationRepository, AbsRoomRepository
@@ -42,7 +43,9 @@ def valid_client_data_factory(faker):
 
     def f():
         first_name = re.sub(r'[^a-zA-Z]', '', faker.first_name().split(' ')[0])
-        last_name = re.sub(r'[^a-zA-Z]', '', faker.last_name().split(' ')[0])
+        last_name = re.sub(r'[^a-zA-Z ]', '', faker.last_name())
+        if len(last_name) < ClientRules.MIN_SURNAME_CHARS:
+            last_name = last_name.ljust(ClientRules.MIN_SURNAME_CHARS, 'a')
         return {
             'username': faker.user_name(),
             'password': faker.password(
