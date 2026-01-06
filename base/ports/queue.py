@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from datetime import datetime
 from typing import Any, Callable, Protocol
 
@@ -7,6 +8,7 @@ class TaskQueuer(Protocol):
     An interface for a task queue scheduler.
     """
 
+    @abstractmethod
     def schedule_task(
         self,
         func_path: str | Callable[[Any], Any],
@@ -30,6 +32,7 @@ class TaskQueuer(Protocol):
         """
         ...
 
+    @abstractmethod
     def queue_task(
         self, func_path: str | Callable[[Any], Any], args: tuple, name: str | None = None
     ) -> Any:

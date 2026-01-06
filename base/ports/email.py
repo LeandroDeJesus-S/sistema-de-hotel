@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import Any, Protocol
 
 from exc import Result
@@ -6,6 +7,7 @@ from exc import Result
 class AbsEmailSender(Protocol):
     """An abstract interface for sending emails."""
 
+    @abstractmethod
     def send_mass_mail(
         self, datatuple: list[tuple[str, str, str | None, list[str]]]
     ) -> Result[int]:
@@ -23,6 +25,7 @@ class AbsEmailSender(Protocol):
         """
         ...
 
+    @abstractmethod
     def send_single_mail(  # noqa: PLR0913,PLR0917
         self,
         subject: str,

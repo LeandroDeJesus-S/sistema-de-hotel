@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import Protocol
 
 from django.db import models
@@ -6,11 +7,17 @@ from utils import support
 
 
 class BeforeMiddleware(Protocol):
-    def before_save(self, instance: models.Model, is_create: bool): ...
+    @abstractmethod
+    def before_save(self, instance: models.Model, is_create: bool):
+        """Called before the model's save method is executed."""
+        ...
 
 
 class AfterMiddleware(Protocol):
-    def after_save(self, instance: models.Model, is_create: bool): ...
+    @abstractmethod
+    def after_save(self, instance: models.Model, is_create: bool):
+        """Called after the model's save method is executed."""
+        ...
 
 
 class Middleware(BeforeMiddleware, AfterMiddleware): ...

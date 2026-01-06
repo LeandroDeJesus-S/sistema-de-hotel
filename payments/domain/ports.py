@@ -8,11 +8,20 @@ from .entities import Payment
 
 
 class AbsSessionBasedPayment(Protocol):
+    @abstractmethod
     def create_checkout_session(
         self,
         dto: CheckoutSessionInputDTO,
-    ) -> Result[CheckoutResultDTO]: ...
-    def retrieve_checkout_session(self, session_id: str) -> Result[CheckoutResultDTO]: ...
+    ) -> Result[CheckoutResultDTO]:
+        """Creates a checkout session for a payment."""
+        ...
+
+    @abstractmethod
+    def retrieve_checkout_session(self, session_id: str) -> Result[CheckoutResultDTO]:
+        """Retrieves a checkout session from the gateway."""
+        ...
+
+    @abstractmethod
     def process_refund(
         self,
         payment_intent_id: str,
@@ -22,6 +31,7 @@ class AbsSessionBasedPayment(Protocol):
         ] = 'requested_by_customer',
     ) -> Result[dict]:
         """Process a refund of a payment through the gateway."""
+        ...
 
 
 class AbsPaymentsRepository(ABC):
@@ -118,8 +128,10 @@ class WebhookEvent(Protocol, Generic[WebhookIdent]):
 
     ident: WebhookIdent
 
+    @abstractmethod
     def handle(self, data: dict[str, Any]) -> Result[None]:
         """performs the necessary actions to handle the webhook event."""
+        ...
 
 
 class PaymentWebhookHandler(Protocol, Generic[WebhookIdent]):
@@ -127,11 +139,15 @@ class PaymentWebhookHandler(Protocol, Generic[WebhookIdent]):
 
     events: dict[WebhookIdent, WebhookEvent[WebhookIdent]]
 
+    @abstractmethod
     def with_events(self, *event: WebhookEvent[WebhookIdent]) -> Result[None]:
         """Registers a list of events to be handled."""
+        ...
 
+    @abstractmethod
     def handle_webhook(self, data: dict[str, Any]) -> Result[None]:
         """Handles a webhook event dispatching by its identifier."""
+        ...
 
 
 class WebhookSignatureError(Exception):
