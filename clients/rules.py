@@ -19,11 +19,10 @@ class ClientRules:
 
     EMAIL_MASK_RANGE = 2, -2
     PHONE_MASK_RANGE = 4, -4  # ends must be negative
-    PHONE_NUMBER_MAX_SIZE = 16
+    PHONE_NUMBER_MAX_SIZE = 25
     PHONE_NUMBER_MIN_SIZE = 10
 
     USERNAME_MAX_SIZE = 150
     USERNAME_MIN_SIZE = 2
     EMAIL_MAX_LEN = 255
-    PHONE_MAX_LEN = 16
     CPF_MAX_LEN = 11

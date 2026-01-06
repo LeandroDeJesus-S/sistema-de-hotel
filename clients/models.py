@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.validators import UnicodeUsernameValidator
@@ -142,12 +143,12 @@ class Client(AbstractUser):
     )
     phone = models.CharField(
         gtl('Telefone'),
-        max_length=ClientRules.PHONE_MAX_LEN,
+        max_length=ClientRules.PHONE_NUMBER_MAX_SIZE,
         null=False,
         blank=False,
         unique=True,
         validators=[
-            PhoneNumberValidator(raise_exc=True).validate,
+            PhoneNumberValidator(raise_exc=True, weak=settings.DEBUG).validate,
         ],
         error_messages={
             'blank': ClientErrorMessages.NOT_PROVIDED_PHONE,
@@ -158,7 +159,7 @@ class Client(AbstractUser):
         help_text=gtl(
             'Número de telefone no formato (XX) XXXXX-XXXX (máximo %(max)s caracteres)'
         )
-        % {'max': ClientRules.PHONE_MAX_LEN},
+        % {'max': ClientRules.PHONE_NUMBER_MAX_SIZE},
     )
     cpf = models.CharField(
         gtl('CPF'),

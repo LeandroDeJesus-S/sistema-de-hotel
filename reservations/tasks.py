@@ -64,7 +64,6 @@ def release_room(
             room = Room.objects.get(pk=reservation.room.pk)
             room.available = True
             room.save()
-            print(f'quarto {room} da reserva {reservation} está disponível novamente.')
 
     except Reservation.DoesNotExist:
         pass

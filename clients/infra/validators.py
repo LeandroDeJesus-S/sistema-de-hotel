@@ -74,13 +74,20 @@ class UsernameValidator(AbsValidator):
 class PhoneNumberValidator(AbsValidator):
     """Performs a phone number validation using phonenumbers library"""
 
-    def __init__(self, raise_exc: bool = False) -> None:
+    def __init__(self, raise_exc: bool = False, weak: bool = False) -> None:
         self.raise_exc = raise_exc
+        self.weak = weak
 
     def validate(self, value: str) -> Result[str]:  # noqa: PLR6301
         try:
             parsed_phone = phonenumbers.parse(value, 'BR')
-            if not phonenumbers.is_valid_number(parsed_phone):
+            is_possible_number = phonenumbers.is_possible_number(parsed_phone)
+            is_valid_number = phonenumbers.is_valid_number(parsed_phone)
+            valid = (
+                (is_valid_number and is_possible_number) if self.weak else is_possible_number
+            )
+
+            if not valid:
                 if self.raise_exc:
                     raise ValidationError(ContactErrorMessages.INVALID_PHONE)
                 return Result.Err(ContactErrorMessages.INVALID_PHONE)

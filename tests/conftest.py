@@ -46,6 +46,7 @@ def valid_client_data_factory(faker):
         last_name = re.sub(r'[^a-zA-Z ]', '', faker.last_name())
         if len(last_name) < ClientRules.MIN_SURNAME_CHARS:
             last_name = last_name.ljust(ClientRules.MIN_SURNAME_CHARS, 'a')
+
         return {
             'username': faker.user_name(),
             'password': faker.password(
@@ -55,7 +56,7 @@ def valid_client_data_factory(faker):
             'last_name': last_name,
             'birthdate': faker.date_of_birth(minimum_age=18, maximum_age=80),
             'email': faker.email(),
-            'phone': faker.phone_number().replace(' ', '').replace('(', '').replace(')', '').replace('-', ''),
+            'phone': faker.numerify('(%%) 9####-####'),
             'cpf': faker.cpf().replace('.', '').replace('-', ''),
         }
 

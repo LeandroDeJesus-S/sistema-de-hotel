@@ -61,7 +61,3 @@ class Payment(BaseEntity):
     refunded_amount: float | None = None
     refunded_at: datetime | None = None
     refund_reason: str = ''
-
-    def is_completed(self) -> bool:
-        """Checks if the payment was successfully completed."""
-        return self.status == PaymentStatus.COMPLETED
