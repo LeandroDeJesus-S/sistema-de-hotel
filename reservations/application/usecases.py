@@ -40,7 +40,6 @@ class InitializeReservationUseCase:
         return (
             self._find_client(command)
             .then(self._find_room)
-            # .then(self._check_availability)
             .then(self._check_overlap)
             .then(self._create_reservation_entity)
             .then(self._save_reservation)
@@ -58,11 +57,6 @@ class InitializeReservationUseCase:
         if room_result.is_err() or not room_result.unwrap():
             return Result.Err(msg='room not found', src_error=room_result.unwrap_err())
         data['room'] = room_result.unwrap()
-        return Result.Ok(data)
-
-    def _check_availability(self, data: Dict) -> Result[Dict]:  # noqa: PLR6301
-        if not data['room'].available:
-            return Result.Err(msg='room not available')
         return Result.Ok(data)
 
     def _check_overlap(self, data: Dict) -> Result[Dict]:

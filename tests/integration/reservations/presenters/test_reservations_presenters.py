@@ -67,11 +67,12 @@ class TestReserveGetPresenter:
 @pytest.mark.django_db
 class TestReservePostPresenter:
     def test_should_render_template(self, request_with_messages):
-        """Should render the template."""
+        """Should render the template and handle messages."""
         # Arrange
         dto = TemplateRenderResultDTO(
             template_name='reserve.html',
-            context={'data': 123, 'room_pk': 1}
+            context={'data': 123, 'room_pk': 1},
+            messages=[MessageDTO(typ='success', msg='Success Message')]
         )
         result = Result.Ok(dto)
 
@@ -84,10 +85,19 @@ class TestReservePostPresenter:
         assert response.status_code == 200
         assert isinstance(response, HttpResponse)
 
+        # Verify messages
+        messages = list(request_with_messages._messages)
+        assert len(messages) == 1
+        assert messages[0].message == 'Success Message'
+        assert messages[0].level_tag == 'alert-success'
+
     def test_should_redirect(self, request_with_messages):
-        """Should redirect to the specified URL."""
+        """Should redirect to the specified URL and handle messages."""
         # Arrange
-        dto = RedirectResultDTO(url='home')
+        dto = RedirectResultDTO(
+            url='home',
+            messages=[MessageDTO(typ='error', msg='Error Message')]
+        )
         result = Result.Ok(dto)
 
         # Act
@@ -99,13 +109,23 @@ class TestReservePostPresenter:
         assert isinstance(response, HttpResponseRedirect)
         assert response.url == reverse('home')
 
+        # Verify messages
+        messages = list(request_with_messages._messages)
+        assert len(messages) == 1
+        assert messages[0].message == 'Error Message'
+        assert messages[0].level_tag == 'alert-danger'
+
 
 @pytest.mark.django_db
 class TestCancelReservationGetPresenter:
     def test_should_render_template(self, request_with_messages):
-        """Should render the template."""
+        """Should render the template and handle messages."""
         # Arrange
-        dto = TemplateRenderResultDTO(template_name='cancel_reservation.html', context={})
+        dto = TemplateRenderResultDTO(
+            template_name='cancel_reservation.html',
+            context={},
+            messages=[MessageDTO(typ='warning', msg='Warning Message')]
+        )
         result = Result.Ok(dto)
 
         # Act
@@ -117,10 +137,19 @@ class TestCancelReservationGetPresenter:
         assert response.status_code == 200
         assert isinstance(response, HttpResponse)
 
+        # Verify messages
+        messages = list(request_with_messages._messages)
+        assert len(messages) == 1
+        assert messages[0].message == 'Warning Message'
+        assert messages[0].level_tag == 'alert-warning'
+
     def test_should_redirect(self, request_with_messages):
-        """Should redirect to the specified URL."""
+        """Should redirect to the specified URL and handle messages."""
         # Arrange
-        dto = RedirectResultDTO(url='home')
+        dto = RedirectResultDTO(
+            url='home',
+            messages=[MessageDTO(typ='info', msg='Info Message')]
+        )
         result = Result.Ok(dto)
 
         # Act
@@ -131,14 +160,23 @@ class TestCancelReservationGetPresenter:
         response = response_result.unwrap()
         assert isinstance(response, HttpResponseRedirect)
         assert response.url == reverse('home')
+
+        # Verify messages
+        messages = list(request_with_messages._messages)
+        assert len(messages) == 1
+        assert messages[0].message == 'Info Message'
 
 
 @pytest.mark.django_db
 class TestCancelReservationPostPresenter:
     def test_should_render_template(self, request_with_messages):
-        """Should render the template."""
+        """Should render the template and handle messages."""
         # Arrange
-        dto = TemplateRenderResultDTO(template_name='cancel_reservation.html', context={})
+        dto = TemplateRenderResultDTO(
+            template_name='cancel_reservation.html',
+            context={},
+            messages=[MessageDTO(typ='success', msg='Success')]
+        )
         result = Result.Ok(dto)
 
         # Act
@@ -150,10 +188,18 @@ class TestCancelReservationPostPresenter:
         assert response.status_code == 200
         assert isinstance(response, HttpResponse)
 
+        # Verify messages
+        messages = list(request_with_messages._messages)
+        assert len(messages) == 1
+        assert messages[0].message == 'Success'
+
     def test_should_redirect(self, request_with_messages):
-        """Should redirect to the specified URL."""
+        """Should redirect to the specified URL and handle messages."""
         # Arrange
-        dto = RedirectResultDTO(url='home')
+        dto = RedirectResultDTO(
+            url='home',
+            messages=[MessageDTO(typ='error', msg='Failed')]
+        )
         result = Result.Ok(dto)
 
         # Act
@@ -164,3 +210,8 @@ class TestCancelReservationPostPresenter:
         response = response_result.unwrap()
         assert isinstance(response, HttpResponseRedirect)
         assert response.url == reverse('home')
+
+        # Verify messages
+        messages = list(request_with_messages._messages)
+        assert len(messages) == 1
+        assert messages[0].message == 'Failed'
