@@ -1,7 +1,7 @@
 import pytest
-from datetime import datetime, date, timedelta, time, timezone
+from datetime import date, timedelta
 from decimal import Decimal
-from unittest.mock import Mock, ANY
+from unittest.mock import Mock, ANY, call
 from exc import Result
 from reservations.application.usecases import CancelReservationUseCase
 from reservations.domain.value_objects import ReservationStatusEnum
@@ -84,10 +84,6 @@ class TestCancelReservationUseCase:
 
         mock_reservation_repo.find_by_id.return_value = Result.Ok(res)
 
-        # We need to make sure timezone.now() vs checkin logic triggers the error
-        # Implementation: if checkin_datetime - now < timedelta(hours=24): return Err
-        # Since checkin is today (midnight), and now is likely > midnight, the diff is negative or small.
-
         result = use_case(reservation_id=1, client_id=1)
 
         assert result.is_err()
@@ -141,7 +137,7 @@ class TestCancelReservationUseCase:
             amount=Decimal("200.00"),
             status=ReservationStatusEnum.ACTIVE
         ).unwrap()
-        res.room.available = False # Should be false initially
+        res.room.available = False
 
         mock_reservation_repo.find_by_id.return_value = Result.Ok(res)
         mock_reservation_repo.save.return_value = Result.Ok(res)
@@ -248,15 +244,14 @@ class TestCancelReservationUseCase:
 
         assert result.is_ok()
         # Ensure refund task NOT called
-        calls = [call.args[0] for call in mock_task_queuer.queue_task.call_args_list]
+        calls = [c.args[0] for c in mock_task_queuer.queue_task.call_args_list]
         assert 'payments.infra.tasks.process_refund' not in calls
 
     def test_cancel_no_id_refund_skipped(self, use_case, mock_reservation_repo, mock_logger, client_entity, room_entity):
         """Should skip refund and log warning if reservation has no ID."""
-        # Arrange
         client_entity.id = 1
         res = Reservation.safe_create(
-            id=None,  # No ID
+            id=None,
             checkin=date.today() + timedelta(days=10),
             checkout=date.today() + timedelta(days=12),
             client=client_entity,
@@ -269,23 +264,20 @@ class TestCancelReservationUseCase:
         mock_reservation_repo.find_by_id.return_value = Result.Ok(res)
         mock_reservation_repo.save.return_value = Result.Ok(res)
 
-        # Act
         result = use_case(reservation_id=1, client_id=1)
 
-        # Assert
         assert result.is_ok()
         mock_logger.warning.assert_called_with('Reservation has no ID, cannot process refund')
 
     def test_calculate_refund_amount(self, use_case, client_entity, room_entity):
         """Should calculate full refund if > 24h and partial if < 24h."""
-        # Arrange
         payment = Mock()
         payment.amount = Decimal("100.00")
 
         # 1. Full refund (> 24h)
         res_full = Reservation.safe_create(
-            checkin=date.today() + timedelta(days=2),
-            checkout=date.today() + timedelta(days=4),
+            checkin=date.today() + timedelta(days=10),
+            checkout=date.today() + timedelta(days=12),
             client=client_entity,
             room=room_entity,
             observations="",
@@ -294,10 +286,9 @@ class TestCancelReservationUseCase:
         ).unwrap()
 
         refund_full = use_case._calculate_refund_amount(res_full, payment)
-        assert refund_full == 10000  # 100.00 * 100
+        assert refund_full == 10000
 
         # 2. Partial refund (< 24h)
-        # Using today's date ensures it's within 24h of "now"
         res_partial = Reservation.safe_create(
             checkin=date.today(),
             checkout=date.today() + timedelta(days=2),
@@ -309,4 +300,19 @@ class TestCancelReservationUseCase:
         ).unwrap()
 
         refund_partial = use_case._calculate_refund_amount(res_partial, payment)
-        assert refund_partial == 5000  # 100.00 * 100 * 0.5
+        assert refund_partial == 5000
+
+    def test_send_notifications(self, use_case, mocker):
+        """Should call task queuer to send cancellation notification."""
+        reservation = mocker.Mock()
+        reservation.id = 123
+
+        result = use_case._send_notifications(reservation)
+
+        assert result.is_ok()
+        assert result.unwrap() == reservation
+        use_case._task_queuer.queue_task.assert_called_with(
+            'reservations.infra.tasks.send_cancellation_notification',
+            (123,),
+            name='send_cancellation_notification_123'
+        )

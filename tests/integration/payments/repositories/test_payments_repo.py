@@ -492,6 +492,27 @@ class TestPaymentRepository:
         assert result.is_err()
         assert 'Payment not found for session' in result.unwrap_err().msg
 
+    def test_get_by_gateway_session_id_conversion_error(self, mocker):
+        """Should return error when model_to_entity fails."""
+        repo = PaymentRepository()
+        mocker.patch('payments.infra.repo.model_to_entity', return_value=Result.Err('Conversion error'))
+        # We need a model to exist
+        mock_model = mocker.Mock()
+        mocker.patch.object(PaymentModel.objects, 'filter', return_value=mocker.Mock(first=lambda: mock_model))
+
+        result = repo.get_by_gateway_session_id('sess_123')
+        assert result.is_err()
+        assert 'Failed to convert payment model to entity' in result.unwrap_err().msg
+
+    def test_get_by_gateway_session_id_db_error(self, mocker):
+        """Should return error when DB query fails."""
+        repo = PaymentRepository()
+        mocker.patch.object(PaymentModel.objects, 'filter', side_effect=Exception('DB Error'))
+
+        result = repo.get_by_gateway_session_id('sess_123')
+        assert result.is_err()
+        assert 'Failed to get payment for session' in result.unwrap_err().msg
+
     def test_get_by_gateway_payment_intent_id_success(self, mocker):
         """Should successfully retrieve payment by gateway payment intent ID."""
         # Arrange
@@ -556,6 +577,26 @@ class TestPaymentRepository:
         assert result.is_err()
         assert 'Payment not found for payment intent' in result.unwrap_err().msg
 
+    def test_get_by_gateway_payment_intent_id_conversion_error(self, mocker):
+        """Should return error when model_to_entity fails."""
+        repo = PaymentRepository()
+        mocker.patch('payments.infra.repo.model_to_entity', return_value=Result.Err('Conversion error'))
+        mock_model = mocker.Mock()
+        mocker.patch.object(PaymentModel.objects, 'filter', return_value=mocker.Mock(first=lambda: mock_model))
+
+        result = repo.get_by_gateway_payment_intent_id('pi_123')
+        assert result.is_err()
+        assert 'Failed to convert payment model to entity' in result.unwrap_err().msg
+
+    def test_get_by_gateway_payment_intent_id_db_error(self, mocker):
+        """Should return error when DB query fails."""
+        repo = PaymentRepository()
+        mocker.patch.object(PaymentModel.objects, 'filter', side_effect=Exception('DB Error'))
+
+        result = repo.get_by_gateway_payment_intent_id('pi_123')
+        assert result.is_err()
+        assert 'Failed to get payment for payment intent' in result.unwrap_err().msg
+
     def test_update_success(self):
         """Should successfully update a payment in the database."""
         # Arrange
@@ -610,6 +651,26 @@ class TestPaymentRepository:
         # Verify in DB
         db_payment = PaymentModel.objects.get(id=payment_entity.id)
         assert db_payment.status == PaymentStatus.COMPLETED
+
+    def test_update_conversion_error_after_save(self, mocker, client_model_instance, reservation_model_instance):
+        """Should return error when model_to_entity fails after successful save."""
+        repo = PaymentRepository()
+        pm = PaymentModel.objects.create(
+            reservation=reservation_model_instance,
+            client=client_model_instance,
+            amount=100,
+            status=PaymentModel.Status.PENDING
+        )
+
+        from utils.support import model_to_entity
+        entity = model_to_entity(pm, Payment).unwrap()
+
+        # Patch model_to_entity to fail inside repo.update
+        mocker.patch('payments.infra.repo.model_to_entity', return_value=Result.Err('Conversion error'))
+
+        result = repo.update(entity)
+        assert result.is_err()
+        assert 'Failed to convert updated payment model back to entity' in result.unwrap_err().msg
 
     def test_update_entity_to_model_error(self, mocker):
         """Should return error when entity_to_model fails for update."""
@@ -783,6 +844,17 @@ class TestPaymentRepository:
         # Assert
         assert result.is_err()
         assert 'Payment not found' in result.unwrap_err().msg
+
+    def test_get_by_id_conversion_error(self, mocker):
+        """Should return error if model_to_entity fails."""
+        repo = PaymentRepository()
+        mocker.patch('payments.infra.repo.model_to_entity', return_value=Result.Err('Conversion error'))
+        mock_model = mocker.Mock()
+        mocker.patch.object(PaymentModel.objects, 'filter', return_value=mocker.Mock(first=lambda: mock_model))
+
+        result = repo.get_by_id(1)
+        assert result.is_err()
+        assert result.unwrap_err().msg == 'Conversion error'
 
     def test_get_pending_from_success(self, mocker):
         """Should successfully retrieve pending payment by reservation ID."""

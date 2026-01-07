@@ -1,6 +1,5 @@
 import pytest
 import json
-from unittest.mock import Mock, patch
 from django.conf import settings
 from exc import Result
 from payments.domain.dtos import CheckoutSessionInputDTO, CheckoutItemDTO

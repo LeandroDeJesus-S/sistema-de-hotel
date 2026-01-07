@@ -47,6 +47,7 @@ The primary goal is to build and maintain a clean, testable, and scalable applic
 - Don't delete tests they should be kept for the sake of the project.
 - Before starting to write a pytest fixture check whether or not it already exists in a outer `conftest.py` file to avoid duplicates.
 - Fixtures cannot be defined in the same file as a test function, they must be set in `tests/unit/conftest.py` if it's globally shared or in its related app score (e.g.: `tests/unit/clients/conftest.py` for clients, `tests/unit/reservations/conftest.py` for reservations)
+- Don't use `unittest.mock` nor anything else from `unittest` module. Always use pytest-related tools.
 - `poetry run task test` - Run all tests with coverage
 - `poetry run pytest tests/unit/path/to/test_file.py` - Run tests in specific directory
 - `poetry run pytest tests/unit/path/to/test_file.py::TestClass::test_method` - Run single test method

@@ -123,3 +123,125 @@ class TestReservationRepository:
 
         assert result.is_ok()
         assert result.unwrap().id == reservation_model_instance.id
+
+    def test_fetch_active_reservations_include_scheduled(self, repo, reservation_model_instance):
+        """Should return scheduled reservations when include_scheduled is True."""
+        reservation_model_instance.status = ReservationStatusEnum.SCHEDULED.value
+        reservation_model_instance.save()
+
+        result = repo.fetch_active_reservations(reservation_model_instance.client.id, include_scheduled=True)
+
+        assert result.is_ok()
+        reservations = result.unwrap()
+        assert any(r.id == reservation_model_instance.id for r in reservations)
+
+    def test_has_active_reservation_include_scheduled(self, repo, reservation_model_instance):
+        """Should return True for scheduled reservations when include_scheduled is True."""
+        reservation_model_instance.status = ReservationStatusEnum.SCHEDULED.value
+        reservation_model_instance.save()
+
+        assert repo.has_active_reservation(reservation_model_instance.client.id, include_scheduled=True).unwrap() is True
+
+    def test_save_conversion_error(self, repo, client_model_instance, room_model_instance, mocker):
+        from utils.support import model_to_entity
+        from clients.domain.entities import Client as ClientEntity
+        from reservations.domain.entities import Room as RoomEntity
+        from exc import Result
+
+        client_entity = model_to_entity(client_model_instance, ClientEntity).unwrap()
+        room_entity = model_to_entity(room_model_instance, RoomEntity).unwrap()
+        reservation_entity = Reservation.safe_create(
+            checkin=date.today(), checkout=date.today()+timedelta(days=1),
+            client=client_entity, room=room_entity, observations="", amount=Decimal("100"), status="I"
+        ).unwrap()
+
+        mocker.patch('reservations.infra.repo.entity_to_model', return_value=Result.Err("Conversion error"))
+        result = repo.save(reservation_entity)
+        assert result.is_err()
+
+    def test_save_validation_error(self, repo, client_model_instance, room_model_instance, mocker):
+        from utils.support import model_to_entity
+        from clients.domain.entities import Client as ClientEntity
+        from reservations.domain.entities import Room as RoomEntity
+        from exc import Result
+        from django.core.exceptions import ValidationError
+
+        client_entity = model_to_entity(client_model_instance, ClientEntity).unwrap()
+        room_entity = model_to_entity(room_model_instance, RoomEntity).unwrap()
+        reservation_entity = Reservation.safe_create(
+            checkin=date.today(), checkout=date.today()+timedelta(days=1),
+            client=client_entity, room=room_entity, observations="", amount=Decimal("100"), status="I"
+        ).unwrap()
+
+        mock_model = mocker.Mock()
+        mock_model.full_clean.side_effect = ValidationError("Invalid")
+        mocker.patch('reservations.infra.repo.entity_to_model', return_value=Result.Ok(mock_model))
+
+        result = repo.save(reservation_entity)
+        assert result.is_err()
+        assert result.unwrap_err().msg == 'Invalid reservation'
+
+    def test_save_db_error(self, repo, client_model_instance, room_model_instance, mocker):
+        from utils.support import model_to_entity
+        from clients.domain.entities import Client as ClientEntity
+        from reservations.domain.entities import Room as RoomEntity
+        from exc import Result
+
+        client_entity = model_to_entity(client_model_instance, ClientEntity).unwrap()
+        room_entity = model_to_entity(room_model_instance, RoomEntity).unwrap()
+        reservation_entity = Reservation.safe_create(
+            checkin=date.today(), checkout=date.today()+timedelta(days=1),
+            client=client_entity, room=room_entity, observations="", amount=Decimal("100"), status="I"
+        ).unwrap()
+
+        mock_model = mocker.Mock()
+        mock_model.save.side_effect = Exception("DB Error")
+        mocker.patch('reservations.infra.repo.entity_to_model', return_value=Result.Ok(mock_model))
+
+        result = repo.save(reservation_entity)
+        assert result.is_err()
+        assert result.unwrap_err().msg == 'Could not save reservation'
+
+    def test_has_overlapping_reservation_exception(self, repo, mocker):
+        mocker.patch.object(ReservationModel.objects, 'filter', side_effect=Exception("DB Error"))
+        result = repo.has_overlapping_reservation(1, date.today(), date.today())
+        assert result.is_err()
+        assert result.unwrap_err().msg == 'Could not check for overlapping reservations'
+
+    def test_fetch_active_reservations_exception(self, repo, mocker):
+        mocker.patch.object(ReservationModel.objects, 'filter', side_effect=Exception("DB Error"))
+        result = repo.fetch_active_reservations(1)
+        assert result.is_err()
+        assert result.unwrap_err().msg == 'Could not fetch active reservations'
+
+    def test_has_active_reservation_exception(self, repo, mocker):
+        mocker.patch.object(ReservationModel.objects, 'filter', side_effect=Exception("DB Error"))
+        result = repo.has_active_reservation(1, False)
+        assert result.is_err()
+        assert result.unwrap_err().msg == 'Could not check for active reservation'
+
+    def test_fetch_client_history_exception(self, repo, mocker):
+        mocker.patch.object(ReservationModel.objects, 'filter', side_effect=Exception("DB Error"))
+        result = repo.fetch_client_history(1)
+        assert result.is_err()
+        assert result.unwrap_err().msg == 'Could not fetch client history'
+
+    def test_fetch_for_history_detail_not_found(self, repo):
+        result = repo.fetch_for_history_detail(999, 999)
+        assert result.is_err()
+        assert "Reservation not found" in result.unwrap_err().msg
+
+    def test_find_by_id_not_found(self, repo):
+        result = repo.find_by_id(999)
+        assert result.is_err()
+        assert result.unwrap_err().msg == 'Reservation not found'
+
+    def test_fetch_pending_not_found(self, repo):
+        result = repo.fetch_pending(999, 999, date.today(), date.today())
+        assert result.is_err()
+        assert result.unwrap_err().msg == 'Reservation not found'
+
+    def test_from_room_no_reservations(self, repo):
+        result = repo.from_room(999)
+        assert result.is_err()
+        assert result.unwrap_err().msg == 'No reservations found'

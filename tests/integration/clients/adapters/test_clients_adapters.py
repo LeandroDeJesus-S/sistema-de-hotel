@@ -1,7 +1,6 @@
 import pytest
 import responses
 from http import HTTPStatus
-from unittest.mock import Mock, patch
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory
 

@@ -146,7 +146,7 @@ exclude_dirs = [
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "HOTEL.settings"
-python_files = "*/test_*.py"
+python_files = "test_*.py"
 testpaths = [
     "tests",
 ]

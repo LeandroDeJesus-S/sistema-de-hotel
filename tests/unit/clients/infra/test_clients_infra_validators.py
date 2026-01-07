@@ -82,6 +82,11 @@ class TestPhoneNumberValidator:
         result = validator.validate("(11) 99999-9999")
         assert result.is_ok()
 
+    def test_validate_success_weak(self):
+        validator = PhoneNumberValidator(weak=True)
+        result = validator.validate("(11) 99999-9999")
+        assert result.is_ok()
+
     def test_validate_invalid(self, mocker):
         validator = PhoneNumberValidator()
         result = validator.validate("123")
