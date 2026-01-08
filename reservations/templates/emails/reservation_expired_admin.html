@@ -1,0 +1,9 @@
+<h2>Reservation Expired</h2>
+<p>The following reservation has expired:</p>
+<ul>
+  <li>Client: {{ client.complete_name }}</li>
+  <li>Room: {{ reservation.room.number }}</li>
+  <li>Check-in: {{ reservation.checkin|date:"d/m/Y" }}</li>
+  <li>Check-out: {{ reservation.checkout|date:"d/m/Y" }}</li>
+</ul>
+<p>The room has been made available for new reservations.</p>

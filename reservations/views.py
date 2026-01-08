@@ -9,13 +9,13 @@ from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 
+from base.dtos import TemplateRenderResultDTO
 from reservations.container import ReservationsContainer
 from reservations.domain.entities import Reservation
 from reservations.domain.repo import AbsRoomRepository
 from utils import support
 
 from .application import services
-from .application.usecases import CancelReservationUseCase
 from .infra import presenters
 from .mixins import LoginRequired
 from .models import Room
@@ -197,27 +197,28 @@ class ReservationsHistory(LoginRequired, ListView):
 class ReservationHistory(LoginRequired, DetailView):
     """exibe os dados de um reserva específica do histórico de reservas"""
 
-    context_object_name = 'reservation'
     template_name = 'reservation_history.html'
 
     @inject
-    def get_object(
+    def get_context_data(
         self,
-        _=None,
         svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
-        logger: logging.Logger = Provide[ReservationsContainer.logger],
+        **kwargs,
     ):
-        result = svc.fetch_reservation_detail(
+        """Add cancellation eligibility information."""
+        context = super().get_context_data(**kwargs)
+        result_dto = svc.fetch_reservation_detail(
             reservation_id=self.kwargs.get('pk'), client_id=self.request.user.pk
         )
-        *_, reservation = result.match(
-            on_ok=lambda r: (None, r),
-            on_err=lambda err: (
-                logger.error(err.msg, exc_info=err.src_error),  # type: ignore
-                Http404(err.msg),
-            ),
-        )
-        return reservation
+        res = result_dto.unwrap_or(None)
+        if not isinstance(res, TemplateRenderResultDTO):
+            raise Http404('Reservation not found')
+
+        context.update(res.context)
+        return context
+
+    def get_object(self, _=None):
+        return None  # just ensures that the reseration is returned by `get_context_data`
 
 
 @method_decorator(support.captcha_required('cancel_reservation', params=('pk',)), 'post')
@@ -230,11 +231,9 @@ class CancelReservationView(LoginRequired, View):
         request,
         pk,
         svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
-        logger: logging.Logger = Provide[ReservationsContainer.logger],
     ):
         """Show cancellation confirmation page."""
         result = svc.fetch_reservation_detail(reservation_id=pk, client_id=request.user.pk)
-
         return presenters.cancel_reservation_get_presenter(request, result).unwrap()
 
     @inject
@@ -242,12 +241,10 @@ class CancelReservationView(LoginRequired, View):
         self,
         request,
         pk,
-        usecase: CancelReservationUseCase = Provide[
-            ReservationsContainer.cancel_reservation_usecase
-        ],
+        svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
     ):
         """Process reservation cancellation."""
         reason = request.POST.get('reason', '').strip()
-        result = usecase(pk, request.user.pk, reason)
+        result = svc.cancel_reservation(pk, request.user.pk, reason)
 
         return presenters.cancel_reservation_post_presenter(request, result).unwrap()

@@ -12,6 +12,8 @@
                 <img src="{{MEDIA_URL}}{{reservation.room.image}}" alt="" class="img-fluid rounded">
             {% endif %}
         </div>
+
+
         <div class="col-md-8 d-flex align-items-center">
             <div class="jubroton">
                 <h1 class="text-center display-4">Quarto {{reservation.room.number}} | {{reservation.room.room_class.name|capfirst}}</h1>
@@ -22,6 +24,11 @@
                     <p class="fs-5">Status: {% include "partials/_reservation_status_badge.html" %}</small></p>
                 </div>
             </div>
+            {% if reservation.status == 'I' and can_create_reservation %}
+                <div>
+                    <a href="{% url 'checkout' reservation.id %}" class="btn btn-primary btn-sm me-2">Continuar Reserva</a>
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>

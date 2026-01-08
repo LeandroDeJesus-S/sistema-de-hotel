@@ -271,3 +271,12 @@ class ReservationRepository(AbsReservationRepository):
             return Result.Err('Reservation not found')
 
         return model_to_entity(reservation, self._entityclass)
+
+    def fetch_all_active(self) -> Result[list[entities.Reservation]]:
+        try:
+            reservations = self._modelclass.objects.filter(
+                status=ReservationStatusEnum.ACTIVE.value
+            )
+            return models_to_entities(reservations, self._entityclass)
+        except Exception as e:
+            return Result.Err(msg='Could not fetch all active reservations', src_error=e)

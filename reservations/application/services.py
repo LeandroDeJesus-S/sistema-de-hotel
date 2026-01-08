@@ -120,12 +120,12 @@ class ReservationService:
 
         return Result.Ok(TemplateRenderResultDTO(template_name='reserve.html', context={}))
 
-    def can_cancel_reservation(self, reservation: Reservation) -> bool:
+    def can_cancel_reservation(self, reservation: Reservation) -> Result[bool]:
         """Determine if a specific reservation can be cancelled."""
         now = timezone.now()
         checkin_datetime = datetime.combine(reservation.checkin, time.min, tzinfo=now.tzinfo)
         time_diff = checkin_datetime - now
-        return (
+        return Result.Ok(
             reservation.status in {'A', 'S'}  # ACTIVE or SCHEDULED
             and time_diff >= timedelta(hours=settings.RESERVATION_CANCELLATION_HOURS)
         )
@@ -136,7 +136,7 @@ class ReservationService:
         """Return reservations with cancellation eligibility information."""
         reservation_items = []
         for reservation in reservations:
-            can_cancel = self.can_cancel_reservation(reservation)
+            can_cancel = self.can_cancel_reservation(reservation).unwrap_or(False)
             reservation_items.append({
                 'reservation': reservation,
                 'can_cancel': can_cancel,
@@ -161,7 +161,10 @@ class ReservationService:
         return Result.Ok(
             TemplateRenderResultDTO(
                 template_name='cancel_reservation.html',
-                context={'reservation': res, 'can_cancel': self.can_cancel_reservation(res)},
+                context={
+                    'reservation': res,
+                    'can_cancel': self.can_cancel_reservation(res).unwrap_or(False),
+                },
             )
         )
 
@@ -176,9 +179,9 @@ class ReservationService:
         return self._fetch_client_reservation_history(client_id)
 
     def cancel_reservation(
-        self, reservation_id: int, client_id: int
+        self, reservation_id: int, client_id: int, reason: str = ''
     ) -> Result[TemplateRenderResultDTO | RedirectResultDTO]:
-        res = self._cancel_reservation(reservation_id, client_id)
+        res = self._cancel_reservation(reservation_id, client_id, reason)
         if res.is_err():
             return Result.Ok(
                 RedirectResultDTO(

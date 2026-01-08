@@ -67,6 +67,11 @@ class AbsReservationRepository(Protocol):
         """Fetches a pending reservation for a client, room and date range."""
         ...
 
+    @abstractmethod
+    def fetch_all_active(self) -> Result[list[entities.Reservation]]:
+        """Fetches all active reservations."""
+        ...
+
 
 class AbsBenefitRepository(Protocol):
     @abstractmethod

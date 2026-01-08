@@ -108,7 +108,9 @@ class TestReservationService:
             status=ReservationStatusEnum.ACTIVE
         ).unwrap()
 
-        assert service.can_cancel_reservation(res) is True
+        result = service.can_cancel_reservation(res)
+        assert result.is_ok()
+        assert result.unwrap() is True
 
     def test_can_cancel_reservation_false_status(self, service, client_entity, room_entity):
         """Should return False if the reservation status is not ACTIVE or SCHEDULED."""
@@ -122,7 +124,9 @@ class TestReservationService:
             status=ReservationStatusEnum.FINISHED
         ).unwrap()
 
-        assert service.can_cancel_reservation(res) is False
+        result = service.can_cancel_reservation(res)
+        assert result.is_ok()
+        assert result.unwrap() is False
 
     def test_fetch_reservation_detail_success(self, service, mock_reservation_repo, client_entity, room_entity):
         """Should successfully fetch reservation details and return a TemplateRenderResultDTO."""
