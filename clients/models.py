@@ -2,7 +2,6 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.validators import UnicodeUsernameValidator
-from django.core.exceptions import ValidationError
 from django.core.validators import (
     MaxLengthValidator,
     MinLengthValidator,
@@ -181,9 +180,7 @@ class Client(AbstractUser):
     def clean(self):
         super().clean()
         for pw_validator in self._PW_VALIDATORS:
-            result = pw_validator(self.password)
-            if result.is_err():
-                raise ValidationError(result.unwrap_err().msg)
+            pw_validator(self.password)
 
     @staticmethod
     def _create_mask(value: str, start: int, end: int, maskchar='*') -> str:

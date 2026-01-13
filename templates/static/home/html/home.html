@@ -38,7 +38,9 @@
             {% for room in rooms %}
                 <div class="col-md-4">
                     <div class="card p-1">
-                        <img src="{{room.image.url}}" alt="" class="card-img-top rounded">
+                        {% if room.image %}
+                            <img src="{{room.image.url}}" alt="" class="card-img-top rounded">
+                        {% endif %}
                         <div class="card-body">
                             <h5 class="card-title">Quarto {{room.number}} | {{room.room_class}}</h5>
                             <p class="card-text">
@@ -74,14 +76,18 @@
                             </p>
                         </div>
                         <div class="col-md-4">
-                            <img src="{{service.logo.url}}" alt="" class="img-fluid rounded">
+                            {% if service.logo %}
+                                <img src="{{service.logo.url}}" alt="" class="img-fluid rounded">
+                            {% endif %}
                         </div>
                     </div>
 
                 {% else %}
                     <div class="row d-flex align-items-center mb-5">
                         <div class="col-md-4">
-                            <img src="{{service.logo.url}}" alt="" class="img-fluid rounded">
+                            {% if service.logo %}
+                                <img src="{{service.logo.url}}" alt="" class="img-fluid rounded">
+                            {% endif %}
                         </div>
                         <div class="col-md-8">
                             <h2 style="color: var(--realce-2-color); text-align: end; margin-right: 8%;">{{service.name|capfirst}}</h2>
@@ -107,7 +113,9 @@
         <div class="row d-flex justify-content-center">
             {% for benefit in benefits %}
                 <div class="col-md-2 d-flex flex-column justify-content-center align-items-center mb-3">
-                    <img src="{{benefit.icon.url}}" alt="" width="64" class="img-fluid mr-3">
+                    {% if benefit.icon %}
+                        <img src="{{benefit.icon.url}}" alt="" width="64" class="img-fluid mr-3">
+                    {% endif %}
                     <p>
                         {{benefit.short_desc|capfirst}}
                     </p>
