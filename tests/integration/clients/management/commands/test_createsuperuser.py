@@ -27,6 +27,7 @@ class TestCreateSuperuserCommand:
         assert result is None
         mock_command.stderr.write.assert_called_once_with('command stopped')
 
+    @pytest.mark.django_db
     def test_successful_superuser_creation(self, mocker, mock_command):
         """Should create superuser with valid inputs and set proper flags."""
         # Mock all user inputs
@@ -37,9 +38,9 @@ class TestCreateSuperuserCommand:
             '1990-01-01',  # birth date
             'john@example.com',  # email
             '123456789',  # phone
-            '12345678901',  # cpf
+            '11144477735',  # cpf
         ]
-        mock_passwords = ['password123', 'password123']  # password and confirmation
+        mock_passwords = ['Password123!', 'Password123!']  # password and confirmation
 
         mocker.patch(
             'clients.management.commands.createsuperuser.input', side_effect=mock_inputs
@@ -48,46 +49,29 @@ class TestCreateSuperuserCommand:
             'clients.management.commands.createsuperuser.getpass', side_effect=mock_passwords
         )
 
-        # Mock Client model
-        mock_client = Mock()
-        mock_client.username = 'testuser'
-        mocker.patch(
-            'clients.management.commands.createsuperuser.Client', return_value=mock_client
-        )
-
         # Execute command
         mock_command.program()
 
-        # Verify Client was created with correct data
-        from clients.management.commands.createsuperuser import Client
+        # Verify Client was created in database
+        from clients.models import Client
 
-        Client.assert_called_once_with(
-            username='testuser',
-            password='password123',
-            first_name='John',
-            last_name='Doe',
-            birthdate=date(1990, 1, 1),
-            email='john@example.com',
-            phone='123456789',
-            cpf='12345678901',
-        )
+        client = Client.objects.get(username='testuser')
 
-        # Verify validation was called
-        mock_client.full_clean.assert_called_once()
-
-        # Verify password was set
-        mock_client.set_password.assert_called_once_with('password123')
-
-        # Verify superuser flags were set
-        assert mock_client.is_superuser is True
-        assert mock_client.is_staff is True
-
-        # Verify client was saved
-        mock_client.save.assert_called_once()
+        assert client.first_name == 'John'
+        assert client.last_name == 'Doe'
+        assert client.birthdate == date(1990, 1, 1)
+        assert client.email == 'john@example.com'
+        assert client.phone == '123456789'
+        assert client.cpf == '11144477735'
+        assert client.is_superuser is True
+        assert client.is_staff is True
 
         # Verify success message
         mock_command.stdout.write.assert_any_call('Pass the requested informations')
         mock_command.stdout.write.assert_any_call('user successfully created: testuser')
+
+        # Cleanup
+        client.delete()
 
     def test_password_mismatch(self, mocker, mock_command):
         """Should raise CommandError when passwords don't match."""
@@ -112,6 +96,7 @@ class TestCreateSuperuserCommand:
         with pytest.raises(CommandError, match='passwords do not match'):
             mock_command.program()
 
+    @pytest.mark.django_db
     def test_invalid_data_validation(self, mocker, mock_command):
         """Should raise CommandError when Client validation fails."""
         mock_inputs = [
@@ -119,7 +104,7 @@ class TestCreateSuperuserCommand:
             'John',
             'Doe',
             '1990-01-01',
-            'john@example.com',
+            'invalid-email',  # invalid email
             '123456789',
             '12345678901',
         ]
@@ -132,14 +117,7 @@ class TestCreateSuperuserCommand:
             'clients.management.commands.createsuperuser.getpass', side_effect=mock_passwords
         )
 
-        mock_client = Mock()
-        validation_error = Exception('Invalid email format')
-        mock_client.full_clean.side_effect = validation_error
-        mocker.patch(
-            'clients.management.commands.createsuperuser.Client', return_value=mock_client
-        )
-
-        with pytest.raises(CommandError, match='invalid data: Invalid email format'):
+        with pytest.raises(CommandError, match='invalid data'):
             mock_command.program()
 
     def test_input_date_valid_format(self, mocker):

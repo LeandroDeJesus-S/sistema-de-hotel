@@ -35,14 +35,12 @@ class TestReservationTasks:
             assert result.is_ok()
             mock_usecase.assert_called_once_with(reservation)
 
-    def test_activate_reservation_task_not_found(
-        self, mocker, mock_reservation_repository, reservations_container
-    ):
-        mock_reservation_repository.find_by_id.return_value = Result.Err('Not found')
+    def test_activate_reservation_task_not_found(self, mocker, reservations_container):
+        mock_usecase = mocker.Mock()
 
-        with reservations_container.reservation_repo.override(mock_reservation_repository):
+        with reservations_container.activate_reservation_usecase.override(mock_usecase):
             with pytest.raises(Error) as exc:
-                activate_reservation_task(reservation_id=1)
+                activate_reservation_task(reservation_id=99999)
             assert 'not found' in str(exc.value)
 
     def test_release_reservation_task_success(
