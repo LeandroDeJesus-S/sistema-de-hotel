@@ -620,8 +620,7 @@ class TestGetAvailableDatesMessage:
         result = get_available_dates_message(reservations)
 
         assert result.is_ok()
-        assert 'apartir de' in result.unwrap()
-        assert '10/01/2023' in result.unwrap()
+        assert 'This room is only available for reservation from 10 Jan 2023 onwards.' == result.unwrap()
 
     def test_reservations_with_gaps(self):
         """Should return message with available date ranges when there are gaps."""
@@ -636,9 +635,8 @@ class TestGetAvailableDatesMessage:
         result = get_available_dates_message(reservations)
 
         assert result.is_ok()
-        assert '05/01/2023 a 09/01/2023' in result.unwrap()
-        assert 'apartir de' in result.unwrap()
-        assert '15/01/2023' in result.unwrap()
+
+        assert 'This room is only available for reservation from 05 Jan 2023 to 09 Jan 2023, and 15 Jan 2023 onwards.' == result.unwrap()
 
     def test_single_reservation(self):
         """Should handle single reservation correctly."""
@@ -650,4 +648,4 @@ class TestGetAvailableDatesMessage:
         result = get_available_dates_message(reservations)
 
         assert result.is_ok()
-        assert '10/01/2023.' in result.unwrap()
+        assert 'This room is only available for reservation from 10 Jan 2023 onwards.' in result.unwrap()

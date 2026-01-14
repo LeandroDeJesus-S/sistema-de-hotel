@@ -4,6 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.timezone import now
+from django.utils.translation import gettext_lazy as gtl
 
 from base.ports.email import AbsEmailSender
 from base.ports.queue import TaskQueuer
@@ -208,7 +209,7 @@ def send_reservation_expired_client_email_task(
             'emails/reservation_expired_client.html', client_context
         )
         mailer.send_single_mail(
-            subject='Reservation Expired',
+            subject=gtl('Reservation Expired'),
             body=client_html_message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to_emails=[reservation.client.email],
@@ -240,7 +241,7 @@ def send_reservation_expired_admin_email_task(
             'emails/reservation_expired_admin.html', admin_context
         )
         mailer.send_single_mail(
-            subject=f'Reservation Expired - {reservation.id}',
+            subject=gtl('Reservation Expired - %s') % reservation.id,
             body=admin_html_message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to_emails=list(settings.ADMINS),
@@ -279,7 +280,7 @@ def send_cancellation_client_email_task(
                 refund_info = {'amount': payment.refunded_amount, 'date': payment.refunded_at}
 
         # Send email to client
-        client_subject = 'Confirmação de Cancelamento de Reserva'
+        client_subject = gtl('Reservation Cancellation Confirmation')
         client_context = {
             'reservation': reservation,
             'refund_info': refund_info,
@@ -327,7 +328,7 @@ def send_cancellation_admin_email_task(
                 refund_info = {'amount': payment.refunded_amount, 'date': payment.refunded_at}
 
         # Send email to admins
-        admin_subject = f'Reserva Cancelada - {reservation.id}'
+        admin_subject = gtl('Reservation Cancelled - %s') % reservation.id
         admin_context = {
             'reservation': reservation,
             'refund_info': refund_info,
@@ -366,7 +367,7 @@ def send_scheduling_email_task(
         reservation = reservation_result.unwrap()
 
         # Send email to client
-        client_subject = 'Confirmação de Agendamento de Reserva'
+        client_subject = gtl('Reservation Scheduling Confirmation')
         client_context = {
             'reservation': reservation,
             'client': reservation.client,

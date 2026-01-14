@@ -9,6 +9,12 @@ from services.models import Service
 
 @require_GET
 def home(request: HttpRequest):
+    """Renders the homepage with benefits, top rooms, and services.
+    Args:
+        request (HttpRequest): The HTTP request object.
+    Returns:
+        HttpResponse: The rendered homepage.
+    """
     context = {'benefits': Benefit.objects.filter(displayable_on_homepage=True)}
     top4_rooms = (
         Reservation.objects.filter(status__in=['F', 'A', 'S'])

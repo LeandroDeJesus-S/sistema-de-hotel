@@ -17,44 +17,46 @@ from utils.models.middleware import ResizeImageMiddleware, model_middleware
     )
 )
 class Service(models.Model):
-    """serviços de um determinado hotel"""
+    """Hotel services"""
 
     name = models.CharField(
-        'Nome',
+        gtl('Name'),
         max_length=ServiceRules.NAME_MAX_LEN,
         unique=True,
         null=False,
         blank=False,
         validators=[RegexValidator(r'[\w\s]+')],
-        help_text=gtl('Nome único do serviço oferecido pelo hotel (máximo %(max)s caracteres)')
+        help_text=gtl(
+            'Unique name of the service offered by the hotel (maximum %(max)s characters)'
+        )
         % {'max': ServiceRules.NAME_MAX_LEN},
     )
     presentation_text = models.TextField(
-        'Apresentação',
+        gtl('Presentation'),
         max_length=ServiceRules.PRESENTATION_TEXT_MAX_LEN,
         unique=True,
         null=False,
         blank=False,
-        help_text=gtl('Texto descritivo do serviço (até %(max)s caracteres)')
+        help_text=gtl('Descriptive text of the service (up to %(max)s characters)')
         % {'max': ServiceRules.PRESENTATION_TEXT_MAX_LEN},
     )
     logo = models.ImageField(
-        'Logo',
+        gtl('Logo'),
         upload_to=ServiceRules.LOGO_UPLOAD_PATH,
         validators=[validate_service_logo],
-        help_text=gtl('Imagem do logotipo ou ícone do serviço'),
+        help_text=gtl('Service logo image or icon'),
     )
     hotel = models.ForeignKey(
         Hotel,
         on_delete=models.CASCADE,
         related_name='hotel_services',
         related_query_name='hotel_service',
-        help_text=gtl('Hotel ao qual o serviço pertence'),
+        help_text=gtl('Hotel to which the service belongs'),
     )
 
     def __str__(self) -> str:
         return str(self.name)
 
     class Meta:
-        verbose_name = 'Serviço'
-        verbose_name_plural = 'Serviços'
+        verbose_name = 'Service'
+        verbose_name_plural = 'Services'

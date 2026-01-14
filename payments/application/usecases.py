@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as gtl
 
 from base.ports.pdf import AbsPDFGenerator
 from base.ports.unit_of_work import AbsUnitOfWork
@@ -81,10 +82,11 @@ class CheckoutUseCase:
                     return_url=dto.cancel_url,
                     items=[
                         CheckoutItemDTO.safe_create(
-                            name=(
-                                f'Reserva: Quarto Nº{reservation.room.number}, '  # XXX: put it in another place for i18n  # noqa: E501
-                                f'classe {reservation.room.room_class.name}.'
-                            ),
+                            name=gtl('Reservation: Room No. %(number)s, class %(class)s.')
+                            % {
+                                'number': reservation.room.number,
+                                'class': reservation.room.room_class.name,
+                            },
                             unit_price_cents=int(reservation.room.daily_price * 100),
                             quantity=reservation_days,
                         ).unwrap()
@@ -177,14 +179,14 @@ class SendPaymentConfirmationUseCase:
 
         html_body = render_to_string('emails/payment_confirmation.html', {'payment': payment})
         sent = self._mailer.send_single_mail(
-            subject='Comprovante de pagamento da reserva',
+            subject=gtl('Reservation payment receipt'),
             body=html_body,
             from_email=None,
             to_emails=[payment.reservation.client.email],
             is_html=True,
             attachments=(
                 (
-                    'Comprovante de pagamento.pdf',
+                    gtl('Payment receipt.pdf'),
                     pdf_bytes.unwrap(),
                     'application/pdf',
                 ),

@@ -193,6 +193,8 @@ class ReservationService:
         return Result.Ok(
             RedirectResultDTO(
                 url='reservations_history',
-                messages=[MessageDTO(typ='success', msg='Reserva cancelada com sucesso.')],
+                messages=[
+                    MessageDTO(typ='success', msg=str(ReservationMessages.CANCELED_SUCCESS))
+                ],
             )
         )

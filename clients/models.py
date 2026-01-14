@@ -24,7 +24,7 @@ from .rules import ClientRules
 
 
 class Client(AbstractUser):
-    """model que representa o usuário final"""
+    """Model that represents the end user"""
 
     _PW_VALIDATORS = [
         PasswordValidator([validate_password], raise_exc=True).validate,
@@ -60,12 +60,12 @@ class Client(AbstractUser):
             'invalid': ClientErrorMessages.INVALID_USERNAME_CHARS,
         },
         help_text=gtl(
-            'Nome de usuário único para login, deve ter entre %(min)s e %(max)s caracteres'
+            'Unique username for login, must be between %(min)s and %(max)s characters'
         )
         % {'min': ClientRules.USERNAME_MIN_SIZE, 'max': ClientRules.USERNAME_MAX_SIZE},
     )
     first_name = models.CharField(
-        gtl('Nome'),
+        gtl('First name'),
         max_length=ClientRules.MAX_FIRSTNAME_CHARS,
         blank=False,
         null=False,
@@ -84,12 +84,12 @@ class Client(AbstractUser):
             ),
         ],
         help_text=gtl(
-            'Nome próprio do cliente, apenas letras e espaços (máximo %(max)s caracteres)'
+            "Client's first name, only letters and spaces (maximum %(max)s characters)"
         )
         % {'max': ClientRules.MAX_FIRSTNAME_CHARS},
     )
     last_name = models.CharField(
-        gtl('Sobrenome'),
+        gtl('Last name'),
         max_length=ClientRules.MAX_SURNAME_CHARS,
         blank=False,
         null=False,
@@ -108,21 +108,21 @@ class Client(AbstractUser):
             ),
         ],
         help_text=gtl(
-            'Sobrenome do cliente, apenas letras e espaços (máximo %(max)s caracteres)'
+            "Client's last name, only letters and spaces (maximum %(max)s characters)"
         )
         % {'max': ClientRules.MAX_SURNAME_CHARS},
     )
     birthdate = models.DateField(
-        gtl('Data de nascimento'),
+        gtl('Birth date'),
         blank=False,
         null=False,
         validators=[
             BirthDateValidator(raise_exc=True).validate,
         ],
-        help_text=gtl('Data de nascimento no formato DD/MM/AAAA'),
+        help_text=gtl('Birth date in YYYY-MM-DD format'),
     )
     email = models.EmailField(
-        gtl('E-mail'),
+        gtl('Email'),
         max_length=ClientRules.EMAIL_MAX_LEN,
         unique=True,
         null=False,
@@ -136,11 +136,11 @@ class Client(AbstractUser):
             'unique': ContactErrorMessages.DUPLICATED_EMAIL,
             'invalid': ContactErrorMessages.INVALID_EMAIL,
         },
-        help_text=gtl('Endereço de e-mail único do cliente (máximo %(max)s caracteres)')
+        help_text=gtl("Client's unique email address (maximum %(max)s characters)")
         % {'max': ClientRules.EMAIL_MAX_LEN},
     )
     phone = models.CharField(
-        gtl('Telefone'),
+        gtl('Phone'),
         max_length=ClientRules.PHONE_NUMBER_MAX_SIZE,
         null=False,
         blank=False,
@@ -154,9 +154,7 @@ class Client(AbstractUser):
             'unique': ContactErrorMessages.DUPLICATED_PHONE,
             'invalid': ContactErrorMessages.INVALID_PHONE,
         },
-        help_text=gtl(
-            'Número de telefone no formato (XX) XXXXX-XXXX (máximo %(max)s caracteres)'
-        )
+        help_text=gtl('Phone number in (XX) XXXXX-XXXX format (maximum %(max)s characters)')
         % {'max': ClientRules.PHONE_NUMBER_MAX_SIZE},
     )
     cpf = models.CharField(
@@ -169,7 +167,7 @@ class Client(AbstractUser):
             CpfValidator(message=ClientErrorMessages.INVALID_CPF, raise_exc=True).validate,
         ],
         error_messages={'unique': ClientErrorMessages.DUPLICATED_CPF},
-        help_text=gtl('Seu CPF sem pontuação (máximo %(max)s caracteres)')
+        help_text=gtl('Your CPF without punctuation (maximum %(max)s characters)')
         % {'max': ClientRules.CPF_MAX_LEN},
     )
 
@@ -182,5 +180,5 @@ class Client(AbstractUser):
             pw_validator(self.password)
 
     class Meta:
-        verbose_name = gtl('Cliente')
-        verbose_name_plural = gtl('Clientes')
+        verbose_name = gtl('Client')
+        verbose_name_plural = gtl('Clients')

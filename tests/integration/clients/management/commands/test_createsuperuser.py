@@ -67,8 +67,8 @@ class TestCreateSuperuserCommand:
         assert client.is_staff is True
 
         # Verify success message
-        mock_command.stdout.write.assert_any_call('Pass the requested informations')
-        mock_command.stdout.write.assert_any_call('user successfully created: testuser')
+        mock_command.stdout.write.assert_any_call('Please provide the requested information.')
+        mock_command.stdout.write.assert_any_call('User successfully created: testuser')
 
         # Cleanup
         client.delete()
@@ -93,7 +93,7 @@ class TestCreateSuperuserCommand:
             'clients.management.commands.createsuperuser.getpass', side_effect=mock_passwords
         )
 
-        with pytest.raises(CommandError, match='passwords do not match'):
+        with pytest.raises(CommandError, match='Passwords do not match.'):
             mock_command.program()
 
     @pytest.mark.django_db
@@ -137,6 +137,6 @@ class TestCreateSuperuserCommand:
         )
 
         with pytest.raises(
-            CommandError, match='cannot convert birth date to the valid date format yyy-mm-dd'
+            CommandError, match='Cannot convert birth date to the valid date format YYYY-MM-DD.'
         ):
             Command.input_date()

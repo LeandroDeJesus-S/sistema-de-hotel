@@ -132,16 +132,16 @@ AUTH_USER_MODEL = 'clients.Client'
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = 'pt-BR'
+LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'America/Sao_Paulo'
+TIME_ZONE = 'UTC'
 
 USE_I18N = True
 USE_TZ = True
 
-DATE_FORMAT = 'd/m/Y'
-DATETIME_FORMAT = 'd/m/Y H:i:s'
-SHORT_DATE_FORMAT = 'd/m/Y'
+DATE_FORMAT = 'N j, Y'
+DATETIME_FORMAT = 'N j, Y, P'
+SHORT_DATE_FORMAT = 'm/d/Y'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/

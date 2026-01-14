@@ -5,6 +5,7 @@ from dependency_injector.wiring import Provide, inject
 from django.contrib import messages
 from django.http import Http404, HttpRequest
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext_lazy as _
 from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
@@ -27,11 +28,11 @@ def setup_reservation_context(
     context: dict[str, Any],
     svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
 ):
-    """add the reservations to the context
+    """Adds the reservations to the context.
     Args:
         request (HttpRequest)
         svc (ReservationService)
-        context (Any): view context
+        context (Any): View context
     """
     if request.user.is_authenticated:
         context['reservation_on'] = svc.fetch_client_active_reservations(
@@ -42,7 +43,7 @@ def setup_reservation_context(
 
 
 class Rooms(ListView):
-    """lista todos os quartos da base de dados"""
+    """Lists all rooms in the database"""
 
     model = Room
     template_name = 'rooms.html'
@@ -54,7 +55,7 @@ class Rooms(ListView):
         svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
         logger: logging.Logger = Provide[ReservationsContainer.logger],
     ):
-        """retorna todos os quartos com seus benefícios"""
+        """Returns all rooms with their benefits"""
         result = svc.room_repo.fetch_all(with_benefits=True)
 
         def _on_ok(rs):
@@ -63,7 +64,7 @@ class Rooms(ListView):
 
         def _on_err(err):
             logger.error(err.msg, exc_info=err.src_error)
-            messages.error(self.request, 'Could not load rooms.')
+            messages.error(self.request, _('Could not load rooms.'))
             return []
 
         rooms = result.match(
@@ -76,25 +77,23 @@ class Rooms(ListView):
         self,
         **kwargs,
     ):
-        """retorna todos os quartos, todos os benefícios e todas as reservas
-        ativas ou agendadas do cliente, caso tenha.
-        """
+        """Returns all rooms, all benefits, and all active or scheduled
+        reservations for the client, if any."""
         context = super().get_context_data(**kwargs)
         setup_reservation_context(self.request, context)
         return context
 
 
 class RoomDetail(DetailView):
-    """mostra os dados de um quarto em especifico"""
+    """Shows the details of a specific room"""
 
     model = Room
     template_name = 'room.html'
     context_object_name = 'room'
 
     def get_context_data(self, **kwargs):
-        """add os benefícios e reservas ativas ou agendadas do cliente
-        caso tenha
-        """
+        """Adds benefits and active or scheduled reservations for the client,
+        if any."""
         context = super().get_context_data(**kwargs)
         setup_reservation_context(self.request, context)
         return context
@@ -102,7 +101,7 @@ class RoomDetail(DetailView):
 
 @method_decorator(support.captcha_required('reserve', params=('room_pk',)), 'post')
 class Reserve(LoginRequired, View):
-    """gerencia a criação de novas reservas"""
+    """Manages the creation of new reservations"""
 
     @inject
     def setup(
@@ -122,14 +121,14 @@ class Reserve(LoginRequired, View):
         if result.is_err():
             err = result.unwrap_err()
             self.logger.error(err.msg, exc_info=err.src_error)
-            messages.error(request, err.msg)
+            messages.error(request, _('Could not load room classes.'))
 
         self.context: dict[str, Any] = {'room_classes': result.unwrap_or([])}
         self.template_name = 'reserve.html'
 
     def get(self, request: HttpRequest, room_pk: int):
-        """renderiza o formulário para nova reserva caso o usuário não
-        tenha uma reserva ativa ou agendada"""
+        """Renders the form for a new reservation if the user does not
+        have an active or scheduled reservation."""
         result = self.svc.can_client_create_reservation(client_id=request.user.pk)
         return presenters.reserve_get_presenter(request, result, room_pk).unwrap()
 
@@ -149,7 +148,7 @@ class Reserve(LoginRequired, View):
 
 
 class ReservationsHistory(LoginRequired, ListView):
-    """exibe o histórico de reservas do usuário"""
+    """Displays the user's reservation history"""
 
     template_name = 'reservations_history.html'
     context_object_name = 'reservations'
@@ -195,7 +194,7 @@ class ReservationsHistory(LoginRequired, ListView):
 
 
 class ReservationHistory(LoginRequired, DetailView):
-    """exibe os dados de um reserva específica do histórico de reservas"""
+    """Displays the data of a specific reservation from the reservation history"""
 
     template_name = 'reservation_history.html'
 
@@ -212,7 +211,7 @@ class ReservationHistory(LoginRequired, DetailView):
         )
         res = result_dto.unwrap_or(None)
         if not isinstance(res, TemplateRenderResultDTO):
-            raise Http404('Reservation not found')
+            raise Http404(_('Reservation not found'))
 
         context.update(res.context)
         return context

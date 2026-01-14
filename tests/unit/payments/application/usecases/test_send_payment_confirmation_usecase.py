@@ -26,10 +26,10 @@ class TestSendPaymentConfirmationUseCase:
         mock_pdf_generator.generate.assert_called_once_with(payment_model_instance)
         mock_email_sender.send_single_mail.assert_called_once()
         call_args = mock_email_sender.send_single_mail.call_args[1]
-        assert call_args['subject'] == 'Comprovante de pagamento da reserva'
+        assert call_args['subject'] == 'Reservation payment receipt'
         assert call_args['is_html'] is True
         assert len(call_args['attachments']) == 1
-        assert call_args['attachments'][0][0] == 'Comprovante de pagamento.pdf'
+        assert call_args['attachments'][0][0] == 'Payment receipt.pdf'
         assert call_args['attachments'][0][1] == pdf_bytes
 
     def test_send_fails_when_pdf_generation_fails(

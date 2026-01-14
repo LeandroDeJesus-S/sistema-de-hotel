@@ -16,15 +16,15 @@ def _check_perfil_ownership(
     received_pk: int,
     logger: logging.Logger = Provide[ClientsContainer.logger],
 ) -> None:
-    """função que verifica se o perfil recebido é o mesmo
-    perfil que enviou o request."""
+    """Function that checks if the received profile is the same
+    profile that sent the request."""
     if request.user.is_authenticated and request.user.pk != received_pk:
         logger.warning('user has no permission to access this profile')
         raise PermissionDenied
 
 
 def profile_ownership_required(profile_pk_arg: str = 'pk'):
-    """Decorator para verificar a propriedade do perfil."""
+    """Decorator to check profile ownership."""
 
     def decorator(view_func: Callable[..., HttpResponse]) -> Callable[..., HttpResponse]:
         @wraps(view_func)

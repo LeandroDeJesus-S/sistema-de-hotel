@@ -208,7 +208,7 @@ class TestInitializeReservationUseCase:
 
         result = use_case(input_dto)
         assert result.is_err()
-        assert result.unwrap_err().msg == "The room is not available"
+        assert result.unwrap_err().msg == ReservationMessages.UNAVAILABLE_ROOM
 
     def test_create_entity_failure(self, use_case, mock_client_repo, mock_room_repo, mock_reservation_repo, client_entity, room_entity, mocker):
         """Should fail if Reservation.safe_create fails."""

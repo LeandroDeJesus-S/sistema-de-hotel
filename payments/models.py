@@ -17,22 +17,22 @@ class Payment(models.Model):
     """
 
     class Status(models.TextChoices):
-        PENDING = 'pending', gtl('Pending')
-        COMPLETED = 'completed', gtl('Completed')
-        FAILED = 'failed', gtl('Failed')
-        REFUNDED = 'refunded', gtl('Refunded')
-        CANCELLED = 'cancelled', gtl('Cancelled')
+        PENDING = 'pending', gtl('Pendente')
+        COMPLETED = 'completed', gtl('Concluído')
+        FAILED = 'failed', gtl('Falhou')
+        REFUNDED = 'refunded', gtl('Reembolsado')
+        CANCELLED = 'cancelled', gtl('Cancelado')
 
     class MethodType(models.TextChoices):
-        CREDIT_CARD = 'credit_card', gtl('Credit Card')
-        BANK_TRANSFER = 'bank_transfer', gtl('Bank Transfer')
+        CREDIT_CARD = 'credit_card', gtl('Cartão de Crédito')
+        BANK_TRANSFER = 'bank_transfer', gtl('Transferência Bancária')
         PIX = 'pix', gtl('Pix')
-        UNKNOWN = 'unknown', gtl('Unknown')
+        UNKNOWN = 'unknown', gtl('Desconhecido')
 
     class Gateway(models.TextChoices):
         STRIPE = 'stripe', gtl('Stripe')
         PAYPAL = 'paypal', gtl('PayPal')
-        UNKNOWN = 'unknown', gtl('Unknown')
+        UNKNOWN = 'unknown', gtl('Desconhecido')
 
     client = models.ForeignKey(
         Client,
@@ -78,7 +78,7 @@ class Payment(models.Model):
         null=True,
         blank=True,
         db_index=True,
-        help_text=gtl('Customer ID from the payment gateway (máximo %(max)s caracteres)')
+        help_text=gtl('ID do cliente no gateway de pagamento (máximo %(max)s caracteres)')
         % {'max': PaymentRules.GATEWAY_FIELD_MAX_LEN},
     )
     gateway_payment_intent_id = models.CharField(
@@ -86,7 +86,7 @@ class Payment(models.Model):
         null=True,
         blank=True,
         db_index=True,
-        help_text=gtl('Payment Intent ID from the payment gateway (máximo %(max)s caracteres)')
+        help_text=gtl('ID da intenção de pagamento no gateway (máximo %(max)s caracteres)')
         % {'max': PaymentRules.GATEWAY_FIELD_MAX_LEN},
     )
     gateway_payment_session_id = models.CharField(
@@ -94,7 +94,7 @@ class Payment(models.Model):
         null=True,
         blank=True,
         db_index=True,
-        help_text=gtl('Session ID from the payment gateway (máximo %(max)s caracteres)')
+        help_text=gtl('ID da sessão de pagamento no gateway (máximo %(max)s caracteres)')
         % {'max': PaymentRules.GATEWAY_FIELD_MAX_LEN},
     )
     gateway_charge_id = models.CharField(
@@ -103,7 +103,7 @@ class Payment(models.Model):
         blank=True,
         db_index=True,
         help_text=gtl(
-            'Charge ID from the payment gateway after successful payment '
+            'ID da cobrança no gateway após o pagamento bem-sucedido '
             '(máximo %(max)s caracteres)'
         )
         % {'max': PaymentRules.GATEWAY_FIELD_MAX_LEN},

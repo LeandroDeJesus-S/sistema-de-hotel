@@ -6,40 +6,39 @@ from .rules import ContactRules, HotelRules
 
 
 class Hotel(models.Model):
-    """classe que representa um hotel contendo as informações base
-    do site"""
+    """Class that represents a hotel containing basic website information"""
 
     name = models.CharField(
-        'Nome',
+        gtl('Name'),
         max_length=HotelRules.NAME_MAX_LEN,
         null=False,
         blank=False,
         unique=True,
-        help_text=gtl('Nome único do hotel'),
+        help_text=gtl('Unique name of the hotel'),
     )
     slogan = models.CharField(
-        'Slogan',
+        gtl('Slogan'),
         max_length=HotelRules.SLOGAN_MAX_LEN,
         blank=False,
         null=False,
         unique=True,
-        help_text=gtl('Frase de destaque exibida no site'),
+        help_text=gtl('Tagline displayed on the website'),
     )
     logo = models.ImageField(
-        'Logo',
+        gtl('Logo'),
         upload_to=HotelRules.LOGO_UPLOAD_PATH,
-        help_text=gtl('Imagem do logotipo do hotel (recomendado: PNG transparente)'),
+        help_text=gtl('Hotel logo image (recommended: transparent PNG)'),
     )
     icon = models.ImageField(
-        'Ícone',
+        gtl('Icon'),
         upload_to=HotelRules.ICON_UPLOAD_PATH,
-        help_text=gtl('Ícone pequeno do hotel (recomendado: formato quadrado)'),
+        help_text=gtl('Small hotel icon (recommended: square format)'),
     )
     presentation_text = models.TextField(
-        'Texto de apresentação',
+        gtl('Presentation text'),
         max_length=HotelRules.PRESENTATION_TEXT_MAX_LEN,
         help_text=gtl(
-            'Texto descritivo do hotel exibido na página inicial, até %(max)s caracteres'
+            'Hotel description text displayed on the homepage, up to %(max)s characters'
         )
         % {'max': HotelRules.PRESENTATION_TEXT_MAX_LEN},
     )
@@ -48,54 +47,54 @@ class Hotel(models.Model):
         return str(self.name)
 
     class Meta:
-        verbose_name_plural = 'Hotéis'
+        verbose_name_plural = 'Hotels'
 
 
 class Contact(models.Model):
-    """representa os dados de contato de um hotel"""
+    """Represents the contact details of a hotel"""
 
     email = models.EmailField(
-        'E-mail',
+        gtl('Email'),
         max_length=ContactRules.EMAIL_MAX_LEN,
         unique=True,
         blank=False,
         null=False,
         validators=[validate_email],
-        help_text=gtl('E-mail de contato do hotel (máximo %(max)s caracteres)')
+        help_text=gtl('Hotel contact email (maximum %(max)s characters)')
         % {'max': ContactRules.EMAIL_MAX_LEN},
     )
     phone = models.CharField(
-        'Telefone',
+        gtl('Phone'),
         max_length=ContactRules.PHONE_MAX_LEN,
         null=False,
         blank=False,
         unique=True,
-        help_text=gtl('Telefone fixo do hotel'),
+        help_text=gtl('Hotel landline phone'),
     )
     whatsapp = models.CharField(
-        'Whatsapp',
+        gtl('Whatsapp'),
         max_length=ContactRules.SOCIAL_MEDIA_MAX_LEN,
         null=False,
         blank=False,
         unique=True,
-        help_text=gtl('Número do WhatsApp para atendimento (máximo %(max)s caracteres)')
+        help_text=gtl('WhatsApp number for customer service (maximum %(max)s characters)')
         % {'max': ContactRules.SOCIAL_MEDIA_MAX_LEN},
     )
     instagram = models.CharField(
-        'Instagram',
+        gtl('Instagram'),
         max_length=ContactRules.SOCIAL_MEDIA_MAX_LEN,
-        help_text=gtl('Nome de usuário do Instagram (sem @, máximo %(max)s caracteres)')
+        help_text=gtl('Instagram username (without @, maximum %(max)s characters)')
         % {'max': ContactRules.SOCIAL_MEDIA_MAX_LEN},
     )
     facebook = models.CharField(
-        'Facebook',
+        gtl('Facebook'),
         max_length=ContactRules.SOCIAL_MEDIA_MAX_LEN,
-        help_text=gtl('URL ou nome da página no Facebook'),
+        help_text=gtl('Facebook page URL or name'),
     )
     twitter = models.CharField(
-        'Twitter',
+        gtl('Twitter'),
         max_length=ContactRules.SOCIAL_MEDIA_MAX_LEN,
-        help_text=gtl('Nome de usuário do Twitter (sem @, máximo %(max)s caracteres)')
+        help_text=gtl('Twitter username (without @, maximum %(max)s characters)')
         % {'max': ContactRules.SOCIAL_MEDIA_MAX_LEN},
     )
     hotel = models.OneToOneField(
@@ -104,12 +103,12 @@ class Contact(models.Model):
         related_name='hotel_contacts',
         related_query_name='hotel_contact',
         verbose_name='Hotel',
-        help_text=gtl('Hotel ao qual estes contatos pertencem'),
+        help_text=gtl('Hotel to which these contacts belong'),
     )
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__} {self.pk}'
 
     class Meta:
-        verbose_name = 'Contato'
-        verbose_name_plural = 'Contatos'
+        verbose_name = 'Contact'
+        verbose_name_plural = 'Contacts'

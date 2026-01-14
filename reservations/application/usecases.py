@@ -71,7 +71,7 @@ class InitializeReservationUseCase:
                 get_available_dates_message
             )
             if result.is_err():
-                return Result.Err(msg='The room is not available')
+                return Result.Err(msg=feedback_messages.ReservationMessages.UNAVAILABLE_ROOM)
             return Result.Err(msg=result.unwrap())
         return Result.Ok(data)
 

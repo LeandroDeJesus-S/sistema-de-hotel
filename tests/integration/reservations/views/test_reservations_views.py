@@ -174,7 +174,7 @@ def test_rooms_list_view_error(client, reservations_container, mocker):
     assert list(response.context['rooms']) == []
     # Check for error message
     messages = list(response.context['messages'])
-    assert any('Could not load rooms' in str(m) for m in messages)
+    assert any('Could not load rooms.' in str(m) for m in messages)
 
 @pytest.mark.django_db
 def test_reserve_view_setup_error(authenticated_client, room_model_instance, reservations_container, mocker):
@@ -207,7 +207,7 @@ def test_reserve_view_setup_error(authenticated_client, room_model_instance, res
 
     # Check for error message from setup
     messages = list(response.context['messages'])
-    assert any('Classes load error' in str(m) for m in messages)
+    assert any('Could not load room classes.' in str(m) for m in messages)
 
 @pytest.mark.django_db
 def test_reservations_history_view_error(authenticated_client, reservations_container, mocker):

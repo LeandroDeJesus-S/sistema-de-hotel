@@ -26,7 +26,7 @@ from .infra import presenters
 
 @method_decorator(support.captcha_required('signup'), name='post')
 class SignUp(View):
-    """View responsável por realizar o registro de novos usuários"""
+    """View responsible for registering new users"""
 
     @inject
     def setup(
@@ -57,7 +57,7 @@ class SignUp(View):
 
 @method_decorator(support.captcha_required('signin'), name='post')
 class SignIn(View):
-    """View responsável por realizar a autenticação do usuário"""
+    """View responsible for authenticating the user"""
 
     @inject
     def setup(
@@ -100,8 +100,8 @@ class SignIn(View):
 
 
 def axes_locked_out(request, *args, **kwargs):
-    """callback que add uma msg e redireciona para a url referer
-    quando número de tentativas de fazer login é excedia"""
+    """Callback that adds a message and redirects to the referer URL
+    when the number of login attempts is exceeded"""
     messages.error(request, feedback_messages.SignIn.LOCKOUT_MESSAGE)
     redirect_url = request.META.get('HTTP_REFERER', 'signin')
     return redirect(redirect_url)
@@ -115,7 +115,7 @@ def logout_user(request: HttpRequest):
 
 @method_decorator(profile_ownership_required(), name='dispatch')
 class Perfil(LoginRequired, DetailView):
-    """view responsável de exibir os dados do usuário"""
+    """View responsible for displaying user data"""
 
     model = Client
     template_name = 'perfil.html'
@@ -124,7 +124,7 @@ class Perfil(LoginRequired, DetailView):
 @method_decorator(support.captcha_required('update_perfil', params=('pk',)), name='post')
 @method_decorator(profile_ownership_required(), name='dispatch')
 class PerfilUpdate(LoginRequired, UpdateView):
-    """view responsável por gerenciar a atualização dos dados do usuário."""
+    """View responsible for managing user data updates."""
 
     model = Client
     template_name = 'perfil_update.html'
@@ -142,7 +142,7 @@ class PerfilUpdate(LoginRequired, UpdateView):
 )
 @method_decorator(profile_ownership_required(), name='dispatch')
 class PerfilChangePassword(LoginRequired, View):
-    """view responsável por gerenciar a alteração da senha do usuário"""
+    """View responsible for managing user password changes"""
 
     @inject
     def setup(

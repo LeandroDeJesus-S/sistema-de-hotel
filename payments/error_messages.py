@@ -1,19 +1,20 @@
+from django.utils.translation import gettext_lazy as _
+
+
 class PaymentErrorMessages:
-    INVALID_PAYMENT_VALUE = 'Valor de pagamento inválido'
+    INVALID_PAYMENT_VALUE = _('Invalid payment value')
 
 
 class CheckoutMessages:
-    TRANSACTION_BLOCKING = (
-        'Não foi possível prosseguir para o pagamento ou quarto não esta mais disponível.'
-    )
-    PAYMENT_FAIL = (
-        'Não foi possível concluir o pagamento devido a um erro inesperado '
-        'tente novamente ou contate o suporte caso o problema persista.'
+    TRANSACTION_BLOCKING = _('Could not proceed to payment or room is no longer available.')
+    PAYMENT_FAIL = _(
+        'Could not complete the payment due to an unexpected error '
+        'please try again or contact support if the problem persists.'
     )
 
 
 class PaymentCancelMessages:
-    PAYMENT_DOES_NOT_EXISTS = 'Pagamento não existe.'
-    UNEXPECTED_ERROR = (
-        'Tivemos um erro inesperado. Tente novamente mais tarde ou contate o desenvolvedor.'
+    PAYMENT_DOES_NOT_EXISTS = _('Payment does not exist.')
+    UNEXPECTED_ERROR = _(
+        'We had an unexpected error. Please try again later or contact the developer.'
     )

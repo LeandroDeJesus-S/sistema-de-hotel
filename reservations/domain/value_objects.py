@@ -1,11 +1,11 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Annotated
 
 from pydantic import BeforeValidator, Field, StringConstraints
 
-from reservations.validators import convert_date
+from utils.decorators import ensure_result
 
 from .. import rules
 
@@ -122,3 +122,17 @@ CheckInOut = Annotated[
     BeforeValidator(cast_date),
     'represents a check-in/out date',
 ]
+
+
+@ensure_result
+def convert_date(value: str) -> date:
+    """Converts a date string to `datetime.date`. If the date format is invalid and
+    raises a ValueError, returns the date 1-1-1.
+
+    Args:
+        value (str): Date as a string.
+
+    Returns:
+        datetime.date: `datetime.date` instance of the formatted date.
+    """
+    return datetime.strptime(value, '%Y-%m-%d').date()

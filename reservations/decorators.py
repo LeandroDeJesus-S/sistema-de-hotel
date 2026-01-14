@@ -7,6 +7,8 @@ from reservations.models import Reservation
 
 
 def check_reservation_ownership(view):
+    """Decorator that checks if the authenticated user is the owner of the reservation."""
+
     @wraps(view)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:

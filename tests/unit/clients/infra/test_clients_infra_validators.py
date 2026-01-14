@@ -27,13 +27,13 @@ class TestUsernameValidator:
         validator = UsernameValidator(dj_extra=[], min_len=5)
         result = validator.validate("usr")
         assert result.is_err()
-        assert "caracteres" in result.unwrap_err().msg
+        assert "characters long" in result.unwrap_err().msg
 
     def test_validate_length_long(self):
         validator = UsernameValidator(dj_extra=[], max_len=5)
         result = validator.validate("toolong")
         assert result.is_err()
-        assert "caracteres" in result.unwrap_err().msg
+        assert "characters long" in result.unwrap_err().msg
 
     def test_validate_raise_exc(self):
         validator = UsernameValidator(dj_extra=[], min_len=5, raise_exc=True)
@@ -113,13 +113,13 @@ class TestPasswordValidator:
         validator = PasswordValidator(dj_extra=[], min_len=8)
         result = validator.validate("Short1!")
         assert result.is_err()
-        assert "senha deve conter" in result.unwrap_err().msg
+        assert "password must contain" in result.unwrap_err().msg
 
     def test_validate_no_symbols(self):
         validator = PasswordValidator(dj_extra=[])
         result = validator.validate("NoSymbols123")
         assert result.is_err()
-        assert "senha deve conter" in result.unwrap_err().msg
+        assert "password must contain" in result.unwrap_err().msg
 
     def test_validate_raise_exc(self):
         validator = PasswordValidator(dj_extra=[], raise_exc=True)

@@ -20,12 +20,12 @@ from reservations.domain.entities import Reservation as ReservationEntity
 
 
 def resize_image(img_path, w, h=None):
-    """redimensiona imagem com tamanhos expecificados
+    """Resizes an image to specified dimensions.
 
     Args:
-        img_path (Any): caminho da imagem
-        w (int): largura da imagem
-        h (int, optional): altura da imagem. Defaults to None.
+        img_path (Any): Path to the image.
+        w (int): Width of the image.
+        h (int, optional): Height of the image. Defaults to None.
     """
     img = Image.open(img_path)
     original_w, original_h = img.size
@@ -42,13 +42,13 @@ def resize_image(img_path, w, h=None):
 
 
 def verify_captcha(captcha_resp) -> bool:
-    """realiza a validação do google recaptcha v3
+    """Performs Google reCAPTCHA v3 validation.
 
     Args:
-        captcha_resp (Any): resposta do usuário para o captcha
+        captcha_resp (Any): User's captcha response.
 
     Returns:
-        bool: retorna True se o captcha é valido
+        bool: Returns True if the captcha is valid.
     """
     MIN_SCORE = settings.CAPTCHA_MIN_SCORE
     data = {
@@ -241,33 +241,43 @@ def get_available_dates_message(reservations: list[ReservationEntity]) -> Result
         str: A formatted string with the available dates for a room.
     """
 
-    def fmt_date(d):
-        return d.strftime('%d/%m/%Y')
-
-    msg_prefix = gt('Este quarto só está disponível para reserva apartir de')
-    msg: list[str] = []
+    date_format = '%d %b %Y'
+    msg_prefix = gt('This room is only available for reservation from')
+    msg_parts: list[str] = []
     lst: ReservationEntity | None = None
     for reserva in reservations:
         if lst is None:
             lst = reserva
             continue
 
+        # calculates the gap between the current and the previous reservation and then
+        # if the gap is bigger than 1 day, it's a availble date, so adds a message part
+        # with the start and end dates
         if (reserva.checkin - lst.checkout).days >= 1:
             start, end = (
-                fmt_date(lst.checkout),
-                fmt_date(reserva.checkin - timedelta(days=1)),
+                lst.checkout,
+                reserva.checkin - timedelta(days=1),
             )
-            msg.append(
-                gtl('%(from_date)s a %(to_date)s') % {'from_date': start, 'to_date': end}
-            )
+            if (end - start).days > 1:
+                msg_parts.append(
+                    gtl('%(from_date)s to %(to_date)s')
+                    % {
+                        'from_date': start.strftime(date_format),
+                        'to_date': end.strftime(date_format),
+                    }
+                )
 
         lst = reserva
 
-    if msg:
-        msg.append(msg_prefix)
-        msg.append(gtl('e %(date)s para frente.') % {'date': fmt_date(reserva.checkout)})
-        return Result.Ok(', '.join(msg))
+    if msg_parts:
+        msg_parts.append(
+            gtl('and %(date)s onwards.') % {'date': reserva.checkout.strftime(date_format)}
+        )
+        joined_msg = ', '.join(msg_parts)
+        return Result.Ok(f'{msg_prefix} {joined_msg}')
 
-    msg.append(msg_prefix)
-    msg.append(gtl('%(fmt_date)s.') % {'fmt_date': fmt_date(reserva.checkout)})
-    return Result.Ok(' '.join(msg))
+    msg_parts.append(
+        gtl('%(fmt_date)s onwards.') % {'fmt_date': reserva.checkout.strftime(date_format)}
+    )
+    joined_msg = ', '.join(msg_parts)
+    return Result.Ok(f'{msg_prefix} {joined_msg}')

@@ -2,81 +2,75 @@ from django.utils.translation import gettext_lazy as _
 
 
 class Generic:
-    UNEXPECTED_ERROR = _('Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.')
-    INVALID_DATA = _('Dados inválidos.')
+    UNEXPECTED_ERROR = _('An unexpected error occurred. Please try again later.')
+    INVALID_DATA = _('Invalid data.')
 
 
 class Recaptcha:
-    INVALID_MESSAGE = _('Captcha inválido, por favor, tente novamente.')
+    INVALID_MESSAGE = _('Invalid captcha, please try again.')
 
 
 class SignUp:
-    MISSING_FIELDS = _('Ainda há campos não preenchidos.')
-    DUPLICATED_USER = _('Usuário já existe.')
-    INVALID_USERNAME = _('Nome de usuário inválido.')
+    MISSING_FIELDS = _('There are still unfilled fields.')
+    DUPLICATED_USER = _('User already exists.')
+    INVALID_USERNAME = _('Invalid username.')
 
 
 class SignIn:
-    INVALID_CREDENTIALS = _('Credenciais inválidas, por favor, tente novamente.')
-    LOGIN_SUCCESS = _('Olá %(username)s, seja bem-vindo.')
-    LOCKOUT_MESSAGE = _(
-        'Número de tentativas excedido. Por favor, tente novamente mais tarde.'
-    )
+    INVALID_CREDENTIALS = _('Invalid credentials, please try again.')
+    LOGIN_SUCCESS = _('Hello %(username)s, welcome back.')
+    LOCKOUT_MESSAGE = _('Maximum number of attempts exceeded. Please try again later.')
 
 
 class Profile:
-    UPDATE_SUCCESS = _('Perfil atualizado com sucesso.')
+    UPDATE_SUCCESS = _('Profile updated successfully.')
 
 
 class ChangePassword:
-    PASSWORDS_DIFFER = _('As senhas não são as mesmas.')
-    SUCCESS = _('Senha alterada com sucesso.')
+    PASSWORDS_DIFFER = _('Passwords do not match.')
+    SUCCESS = _('Password changed successfully.')
 
 
 class ClientErrorMessages:
-    GENERIC = _('Dados de cliente inválidos.')
-    SIGNUP_ERROR = _('Não foi possível criar a conta. Verifique seus dados e tente novamente.')
+    GENERIC = _('Invalid client data.')
+    SIGNUP_ERROR = _('Could not create account. Check your details and try again.')
 
-    DUPLICATED_CPF = _('CPF não disponível.')
-    DUPLICATED_USERNAME = _('Nome de usuário já existe.')
+    DUPLICATED_CPF = _('CPF not available.')
+    DUPLICATED_USERNAME = _('Username already exists.')
 
-    INVALID_BIRTHDATE = _('Data de nascimento inválida.')
-    INVALID_CPF = _('CPF inválido.')
-    INVALID_EMAIL = _('E-mail inválido.')
-    INVALID_FIRSTNAME_MAX_LENGTH = _('Nome muito longo.')
-    INVALID_FIRSTNAME_MIN_LENGTH = _('Nome muito curto.')
-    INVALID_FIRSTNAME_LETTERS = _('O nome deve conter apenas letras.')
-    INVALID_SURNAME_MAX_LENGTH = _('Sobrenome muito longo.')
-    INVALID_SURNAME_MIN_LENGTH = _('Sobrenome muito curto.')
-    INVALID_SURNAME_LETTERS = _('O sobrenome deve conter apenas letras e espaços.')
+    INVALID_BIRTHDATE = _('Invalid birth date.')
+    INVALID_CPF = _('Invalid CPF.')
+    INVALID_EMAIL = _('Invalid email.')
+    INVALID_FIRSTNAME_MAX_LENGTH = _('First name is too long.')
+    INVALID_FIRSTNAME_MIN_LENGTH = _('First name is too short.')
+    INVALID_FIRSTNAME_LETTERS = _('First name must contain only letters.')
+    INVALID_SURNAME_MAX_LENGTH = _('Surname is too long.')
+    INVALID_SURNAME_MIN_LENGTH = _('Surname is too short.')
+    INVALID_SURNAME_LETTERS = _('Surname must contain only letters and spaces.')
     INVALID_USERNAME_CHARS = _(
-        'Por favor, insira um nome de usuário válido. O valor deve conter apenas letras, '
-        'números e os seguintes caracteres @.+-_'
+        'Please enter a valid username. The value must contain only letters, '
+        'numbers, and the following characters @.+-_'
     )
-    INVALID_USERNAME_MIN_LEN = _(
-        'O nome de usuário deve ter pelo menos %(limit_value)d caracteres.'
-    )
-    INVALID_USERNAME_MAX_LEN = _(
-        'O nome de usuário deve ter no máximo %(limit_value)d caracteres.'
-    )
+    INVALID_USERNAME_MIN_LEN = _('Username must be at least %(limit_value)d characters long.')
+    INVALID_USERNAME_MAX_LEN = _('Username must be at most %(limit_value)d characters long.')
     INVALID_USERNAME_LEN = _(
-        'O nome de usuário deve ter de %(min_len)d a %(max_len)d caracteres.'
+        'Username must be between %(min_len)d and %(max_len)d characters long.'
     )
 
-    NOT_PROVIDED_EMAIL = _('Por favor, preencha o campo de e-mail.')
-    NOT_PROVIDED_USERNAME = _('O nome de usuário não pode estar vazio.')
-    NOT_PROVIDED_PHONE = _('O telefone não pode estar vazio.')
+    NOT_PROVIDED_EMAIL = _('Please fill in the email field.')
+    NOT_PROVIDED_USERNAME = _('The username cannot be empty.')
+    NOT_PROVIDED_PHONE = _('The phone number cannot be empty.')
 
     PASSWORD_WEAK = _(
-        'A senha deve conter pelo menos %(min_len)d dígitos, letras,'
-        ' números e alguns dos símbolos %(symbols)s'
+        'The password must contain at least %(min_len)d digits, letters,'
+        ' numbers and some of the symbols %(symbols)s'
     )
 
 
 class ContactErrorMessages:
-    GENERIC = _('Dados de contato inválidos.')
-    DUPLICATED_PHONE = _('Número de telefone não disponível.')
-    DUPLICATED_EMAIL = _('E-mail não disponível.')
+    GENERIC = _('Invalid contact data.')
+    DUPLICATED_PHONE = _('Phone number not available.')
+    DUPLICATED_EMAIL = _('Email not available.')
 
-    INVALID_PHONE = _('Número de telefone inválido.')
-    INVALID_EMAIL = _('Por favor, insira um endereço de e-mail válido.')
+    INVALID_PHONE = _('Invalid phone number.')
+    INVALID_EMAIL = _('Please enter a valid email address.')
