@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load humanize i18n %}
 
-{% block title %}histórico{% endblock title %}
+{% block title %}{% trans "History" %}{% endblock title %}
 
 {% block content %}
 
@@ -14,7 +14,7 @@
                 <div class="row">
                     <div class="col-md-6">
                         <a href="{% url 'reservation_history' reservation.id %}" class="text-decoration-none" style="color: inherit;">
-                            <h1 class="mb-1 display-5">Quarto {{reservation.room.number}} | {{reservation.room.room_class.name}}</h1>
+                            <h1 class="mb-1 display-5">{% trans "Room" %} {{reservation.room.number}} | {{reservation.room.room_class.name}}</h1>
                         </a>
                         <p class="mb-1">{{reservation.checkin}} - {{reservation.checkout}}</p>
                     </div>
@@ -28,11 +28,11 @@
                     </div>
                     <div class="col-md-6 text-end d-flex align-items-center justify-content-end">
                         {% if reservation.status == 'I' and can_create_reservation %}
-                            <a href="{% url 'checkout' reservation.id %}" class="btn btn-primary btn-sm me-2">Continuar Reserva</a>
+                            <a href="{% url 'checkout' reservation.id %}" class="btn btn-primary btn-sm me-2">{% trans "Continue reservation" %}</a>
                         {% endif %}
                         {% if item.can_cancel %}
                             <a href="{% url 'cancel_reservation' reservation.id %}" class="btn btn-danger btn-sm me-2">
-                                Cancelar
+                                {% trans "Cancel" %}
                             </a>
                         {% endif %}
                         {% include "partials/_reservation_status_badge.html" %}
@@ -42,7 +42,7 @@
             </div>
         {% endwith %}
         {% empty %}
-            <p class="text-center position-absolute top-50 start-50 translate-middle">Nenhuma reserva encontrada.</p>
+            <p class="text-center position-absolute top-50 start-50 translate-middle">{% trans "No reservations found." %}</p>
         {% endfor %}
 
     </div>

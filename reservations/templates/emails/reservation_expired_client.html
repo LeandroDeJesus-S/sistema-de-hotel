@@ -1,7 +1,8 @@
-<h2>Reservation Expired</h2>
-<p>Hello {{ client.complete_name }},</p>
-<p>Your reservation for room {{ reservation.room.number }} has expired.</p>
-<p>Check-in: {{ reservation.checkin|date:"d/m/Y" }}</p>
-<p>Check-out: {{ reservation.checkout|date:"d/m/Y" }}</p>
-<p>If you need to make a new reservation, please visit our website.</p>
-<p>Thank you for choosing our hotel!</p>
+{% load i18n %}
+<h2>{% trans "Reservation Expired" %}</h2>
+<p>{% trans "Hello" %} {{ client.complete_name }},</p>
+<p>{% trans "Your reservation for room" %} {{ reservation.room.number }} {% trans "has expired." %}</p>
+<p>{% trans "Check-in:" %} {{ reservation.checkin|date:"Y-m-d" }}</p>
+<p>{% trans "Check-out:" %} {{ reservation.checkout|date:"Y-m-d" }}</p>
+<p>{% trans "If you need to make a new reservation, please visit our website." %}</p>
+<p>{% trans "Thank you for choosing our hotel!" %}</p>

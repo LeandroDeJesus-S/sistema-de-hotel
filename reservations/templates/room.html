@@ -1,6 +1,7 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Quarto {{room.number}}{% endblock title %}
+{% block title %}{% trans "Room" %} {{room.number}}{% endblock title %}
 
 {% block content %}
 
@@ -12,7 +13,7 @@
         </div>
         <div class="col-md-8 d-flex align-items-center">
             <div class="jubroton">
-                <h1 class="text-center display-4">Quarto {{room.number}} | {{room.room_class|capfirst}}</h1>
+                <h1 class="text-center display-4">{% trans "Room" %} {{room.number}} | {{room.room_class|capfirst}}</h1>
                 <p>{{room.short_desc}}</p>
             </div>
         </div>

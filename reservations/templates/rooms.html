@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 
 {% block css %}<link rel="stylesheet" href={% static "/reserva/css/rooms.css" %}>{% endblock css %}
 
-{% block title %}Acomodações{% endblock title %}
+{% block title %}{% trans "Accommodations" %}{% endblock title %}
 
 {% block content %}
 <div class="container">
@@ -17,7 +17,7 @@
                 </div>
                 <div class="col-md-7">
                     <div class="card-body">
-                        <h1 class="card-title"><a style="text-decoration: none;color: var(--realce-3-color);" href="{% url "room" room.id %}">Quarto {{room.number}} | {{room.room_class.name|capfirst}}</a></h1>
+                        <h1 class="card-title"><a style="text-decoration: none;color: var(--realce-3-color);" href="{% url "room" room.id %}">{% trans "Room" %} {{room.number}} | {{room.room_class.name|capfirst}}</a></h1>
                         <span class="text-light"><i class="fa-solid fa-person fs-5"></i> {{room.adults_capacity}}</span>
                         <span class="text-light"><i class="fa-solid fa-child "></i> {{room.children_capacity}}</span>
 
@@ -44,7 +44,7 @@
         </div>
 
     {% empty %}
-        Não há quartos disponíveis no momento.
+        {% trans "No rooms available at the moment." %}
 
     {% endfor %}
 

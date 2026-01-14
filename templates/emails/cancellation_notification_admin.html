@@ -1,55 +1,56 @@
+{% load i18n %}
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Cancelamento de Reserva - ID: {{ reservation.id }}</title>
+    <title>{% trans "Reservation Cancellation" %} - ID: {{ reservation.id }}</title>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #d9534f;">Cancelamento de Reserva</h1>
+        <h1 style="color: #d9534f;">{% trans "Reservation Cancellation" %}</h1>
 
-        <p>Uma reserva foi cancelada pelo cliente.</p>
+        <p>{% trans "A reservation has been cancelled by the client." %}</p>
 
         <div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;">
-            <h3>Detalhes do Cliente:</h3>
+            <h3>{% trans "Client Details:" %}</h3>
             <ul style="list-style: none; padding: 0;">
-                <li><strong>Nome:</strong> {{ client.first_name }} {{ client.last_name }}</li>
-                <li><strong>Email:</strong> {{ client.email }}</li>
-                <li><strong>Telefone:</strong> {{ client.phone }}</li>
+                <li><strong>{% trans "Name:" %}</strong> {{ client.first_name }} {{ client.last_name }}</li>
+                <li><strong>{% trans "Email:" %}</strong> {{ client.email }}</li>
+                <li><strong>{% trans "Phone:" %}</strong> {{ client.phone }}</li>
             </ul>
         </div>
 
         <div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;">
-            <h3>Detalhes da Reserva Cancelada:</h3>
+            <h3>{% trans "Cancelled Reservation Details:" %}</h3>
             <ul style="list-style: none; padding: 0;">
-                <li><strong>ID da Reserva:</strong> {{ reservation.id }}</li>
-                <li><strong>Quarto:</strong> {{ reservation.room.number }} - {{ reservation.room.room_class.name }}</li>
-                <li><strong>Check-in:</strong> {{ reservation.checkin|date:"d/m/Y" }}</li>
-                <li><strong>Check-out:</strong> {{ reservation.checkout|date:"d/m/Y" }}</li>
-                <li><strong>Valor Total:</strong> {{ reservation.formatted_price }}</li>
-                <li><strong>Data do Cancelamento:</strong> {{ reservation.cancelled_at|date:"d/m/Y H:i" }}</li>
+                <li><strong>{% trans "Reservation ID:" %}</strong> {{ reservation.id }}</li>
+                <li><strong>{% trans "Room:" %}</strong> {{ reservation.room.number }} - {{ reservation.room.room_class.name }}</li>
+                <li><strong>{% trans "Check-in:" %}</strong> {{ reservation.checkin|date:"Y-m-d" }}</li>
+                <li><strong>{% trans "Check-out:" %}</strong> {{ reservation.checkout|date:"Y-m-d" }}</li>
+                <li><strong>{% trans "Total Amount:" %}</strong> {{ reservation.formatted_price }}</li>
+                <li><strong>{% trans "Cancellation Date:" %}</strong> {{ reservation.cancelled_at|date:"Y-m-d H:i" }}</li>
             </ul>
 
             {% if reservation.cancellation_reason %}
-            <p><strong>Motivo do Cancelamento:</strong> {{ reservation.cancellation_reason }}</p>
+            <p><strong>{% trans "Cancellation Reason:" %}</strong> {{ reservation.cancellation_reason }}</p>
             {% endif %}
         </div>
 
         {% if refund_info %}
         <div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; margin: 20px 0; border-radius: 5px;">
-            <h3 style="color: #155724;">Reembolso Processado</h3>
+            <h3 style="color: #155724;">{% trans "Refund Processed" %}</h3>
             <ul style="list-style: none; padding: 0; color: #155724;">
-                <li><strong>Valor Reembolsado:</strong> R$ {{ refund_info.amount }}</li>
-                <li><strong>Data do Reembolso:</strong> {{ refund_info.date|date:"d/m/Y H:i" }}</li>
+                <li><strong>{% trans "Refunded Amount:" %}</strong> $ {{ refund_info.amount }}</li>
+                <li><strong>{% trans "Refund Date:" %}</strong> {{ refund_info.date|date:"Y-m-d H:i" }}</li>
             </ul>
         </div>
         {% else %}
         <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px 0; border-radius: 5px;">
-            <p style="color: #856404; margin: 0;"><strong>Nota:</strong> Nenhum reembolso foi processado para esta reserva.</p>
+            <p style="color: #856404; margin: 0;"><strong>{% trans "Note:" %}</strong> {% trans "No refund was processed for this reservation." %}</p>
         </div>
         {% endif %}
 
-        <p>Verifique o painel administrativo para mais detalhes.</p>
+        <p>{% trans "Check the admin panel for more details." %}</p>
     </div>
 </body>
 </html>

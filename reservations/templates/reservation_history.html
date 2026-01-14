@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load humanize i18n %}
 
-{% block title %}histórico - reserva {{reservation.created_at|date}}{% endblock title %}
+{% block title %}{% trans "History - reservation" %} {{reservation.created_at|date}}{% endblock title %}
 
 {% block content %}
 
@@ -16,17 +16,17 @@
 
         <div class="col-md-8 d-flex align-items-center">
             <div class="jubroton">
-                <h1 class="text-center display-4">Quarto {{reservation.room.number}} | {{reservation.room.room_class.name|capfirst}}</h1>
+                <h1 class="text-center display-4">{% trans "Room" %} {{reservation.room.number}} | {{reservation.room.room_class.name|capfirst}}</h1>
                 <div class="reservation-info ms-3 mt-3">
-                    <p class="fs-5">Periodo de estadia: {{reservation.checkin}} - {{reservation.checkout}}</p>
-                    <p class="fs-5">Valor total: {{reservation.amount}}</p>
-                    <p class="fs-5">Data de emissão: {{reservation.created_at|naturaltime}}</p>
-                    <p class="fs-5">Status: {% include "partials/_reservation_status_badge.html" %}</small></p>
+                    <p class="fs-5">{% trans "Stay period:" %} {{reservation.checkin}} - {{reservation.checkout}}</p>
+                    <p class="fs-5">{% trans "Total amount:" %} {{reservation.amount}}</p>
+                    <p class="fs-5">{% trans "Issue date:" %} {{reservation.created_at|naturaltime}}</p>
+                    <p class="fs-5">{% trans "Status:" %} {% include "partials/_reservation_status_badge.html" %}</small></p>
                 </div>
             </div>
             {% if reservation.status == 'I' and can_create_reservation %}
                 <div>
-                    <a href="{% url 'checkout' reservation.id %}" class="btn btn-primary btn-sm me-2">Continuar Reserva</a>
+                    <a href="{% url 'checkout' reservation.id %}" class="btn btn-primary btn-sm me-2">{% trans "Continue reservation" %}</a>
                 </div>
             {% endif %}
         </div>

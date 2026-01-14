@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 
 {% block css %}{% endblock css %}
 
@@ -18,11 +18,11 @@
     </div>
     {% if not request.user.is_authenticated %}
         <div class="d-flex justify-content-center">
-            <a href="{% url "signup" %}" class="btn btn-outline-info signup_btn">Registrar-se</a>
+            <a href="{% url "signup" %}" class="btn btn-outline-info signup_btn">{% trans "Sign up" %}</a>
         </div>
     {% else %}
     <div class="d-flex justify-content-center">
-            <a href="{% url "rooms" %}" class="btn btn-outline-info signup_btn">Ver acomodações</a>
+            <a href="{% url "rooms" %}" class="btn btn-outline-info signup_btn">{% trans "See accommodations" %}</a>
         </div>
     {% endif %}
 </section>
@@ -31,7 +31,7 @@
 {% if rooms %}
 <section class="best-seller-rooms mb-5">
 
-    <h1 class="text-center mb-5">Quartos mais procurados</h1>
+    <h1 class="text-center mb-5">{% trans "Most popular rooms" %}</h1>
     <div class="container">
         <div class="row">
 
@@ -42,12 +42,12 @@
                             <img src="{{room.image.url}}" alt="" class="card-img-top rounded">
                         {% endif %}
                         <div class="card-body">
-                            <h5 class="card-title">Quarto {{room.number}} | {{room.room_class}}</h5>
+                            <h5 class="card-title">{% trans "Room" %} {{room.number}} | {{room.room_class}}</h5>
                             <p class="card-text">
                                 {{room.short_desc}}
                             </p>
                         </div>
-                        <a href="{% url "room" room.pk %}" class="btn reserve-btn btn-outline-info">Conhecer</a>
+                        <a href="{% url "room" room.pk %}" class="btn reserve-btn btn-outline-info">{% trans "View details" %}</a>
                     </div>
                 </div>
             {% endfor %}
@@ -61,7 +61,7 @@
 <!--services section-->
 {% if services %}
 <section class="services mb-5">
-    <h1 class="text-center mb-4 ">Alguns de nossos serviços</h1>
+    <h1 class="text-center mb-4 ">{% trans "Some of our services" %}</h1>
 
     <div class="container">
         <div class="row d-flex align-items-center mb-5">
@@ -108,7 +108,7 @@
 <!--benefits section-->
 {% if benefits%}
 <section class="benefits ">
-    <h1 class="text-center">Benefícios Destaques</h1>
+    <h1 class="text-center">{% trans "Featured benefits" %}</h1>
     <div class="container mt-4">
         <div class="row d-flex justify-content-center">
             {% for benefit in benefits %}

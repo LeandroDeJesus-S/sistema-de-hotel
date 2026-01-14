@@ -1,17 +1,18 @@
 {% extends "base.html" %}
+{% load i18n %}
 
 {% block content %}
 <div class="row">
 
     <div class="col-md-12 d-flex flex-column justify-content-center align-items-center mt-5">
-        <h5>Pagamento efetuado com sucesso.</h5>
-        <p>Data de pagamento: {{payment.created_at}}</p>
-        <p>Status: {{payment.status.value|title}}</p>
-        <p>Pagador: {{payment.reservation.client.first_name}} {{payment.reservation.client.last_name}}</p>
-        <p>de {{payment.reservation.checkin}} a {{payment.reservation.checkout}}</p>
-        <p>Classe {{payment.reservation.room.room_class.name}}</p>
-        <p>Nº{{payment.reservation.room.number}}</p>
-        <p>Total: {{payment.reservation.amount}}</p>
+        <h5>{% trans "Payment successful." %}</h5>
+        <p>{% trans "Payment date:" %} {{payment.created_at}}</p>
+        <p>{% trans "Status:" %} {{payment.status.value|title}}</p>
+        <p>{% trans "Payer:" %} {{payment.reservation.client.first_name}} {{payment.reservation.client.last_name}}</p>
+        <p>{% trans "from" %} {{payment.reservation.checkin}} {% trans "to" %} {{payment.reservation.checkout}}</p>
+        <p>{% trans "Class" %} {{payment.reservation.room.room_class.name}}</p>
+        <p>{% trans "No." %}{{payment.reservation.room.number}}</p>
+        <p>{% trans "Total:" %} {{payment.reservation.amount}}</p>
     </div>
 
 </div>

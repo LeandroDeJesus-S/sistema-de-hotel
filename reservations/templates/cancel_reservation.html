@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Cancelar Reserva{% endblock %}
+{% block title %}{% trans "Cancel Reservation" %}{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
@@ -9,29 +9,29 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title mb-0">Confirmar Cancelamento de Reserva</h3>
+                    <h3 class="card-title mb-0">{% trans "Confirm Reservation Cancellation" %}</h3>
                     {% include "partials/_messages.html" %}
                 </div>
                 <div class="card-body">
                     {% if can_cancel %}
                         <div class="alert alert-warning">
-                            <h5>Política de Cancelamento</h5>
-                            <p class="text-dark">Cancelamentos podem ser feitos gratuitamente até 24 horas antes do check-in.</p>
+                            <h5>{% trans "Cancellation Policy" %}</h5>
+                            <p class="text-dark">{% trans "Cancellations can be made for free up to 24 hours before check-in." %}</p>
                         </div>
 
                         <div class="reservation-details mb-4">
-                            <h5>Detalhes da Reserva</h5>
+                            <h5>{% trans "Reservation Details" %}</h5>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <p><strong>Quarto:</strong> {{ reservation.room.number }} | {{reservation.room.room_class.name}}</p>
-                                    <p><strong>Check-in:</strong> {{ reservation.checkin|date:"d/m/Y" }}</p>
-                                    <p><strong>Check-out:</strong> {{ reservation.checkout|date:"d/m/Y" }}</p>
+                                    <p><strong>{% trans "Room:" %}</strong> {{ reservation.room.number }} | {{reservation.room.room_class.name}}</p>
+                                    <p><strong>{% trans "Check-in:" %}</strong> {{ reservation.checkin|date:"Y-m-d" }}</p>
+                                    <p><strong>{% trans "Check-out:" %}</strong> {{ reservation.checkout|date:"Y-m-d" }}</p>
                                 </div>
                                 <div class="col-md-6">
-                                    <p><strong>Valor Total:</strong> {{ reservation.amount }}</p>
-                                    <p><strong>Status:</strong>
-                                        {% if reservation.status == 'A' %}Ativa{% endif %}
-                                        {% if reservation.status == 'S' %}Agendada{% endif %}
+                                    <p><strong>{% trans "Total Amount:" %}</strong> {{ reservation.amount }}</p>
+                                    <p><strong>{% trans "Status:" %}</strong>
+                                        {% if reservation.status == 'A' %}{% trans "Active" %}{% endif %}
+                                        {% if reservation.status == 'S' %}{% trans "Scheduled" %}{% endif %}
                                     </p>
                                 </div>
                             </div>
@@ -41,29 +41,29 @@
                             {% csrf_token %}
                             {% include "partials/_recaptcha_input.html" %}
                             <div class="mb-3">
-                                <label for="reason" class="form-label">Motivo do Cancelamento (Opcional)</label>
+                                <label for="reason" class="form-label">{% trans "Cancellation Reason (Optional)" %}</label>
                                 <textarea class="form-control" id="reason" name="reason" rows="3"
-                                          placeholder="Descreva o motivo do cancelamento..."></textarea>
+                                          placeholder="{% trans "Describe the reason for cancellation..." %}"></textarea>
                             </div>
 
                             <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                                 <a href="{% url 'reservations_history' %}" class="btn btn-secondary me-md-2">
-                                    Voltar
+                                    {% trans "Back" %}
                                 </a>
-                                <button type="submit" class="btn btn-danger" onclick="return confirm('Tem certeza que deseja cancelar esta reserva?')">
-                                    Confirmar Cancelamento
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('{% trans "Are you sure you want to cancel this reservation?" %}')">
+                                    {% trans "Confirm Cancellation" %}
                                 </button>
                             </div>
                         </form>
                     {% else %}
                         <div class="alert alert-danger">
-                            <h5>Cancelamento Não Permitido</h5>
-                            <p class="text-dark">Esta reserva não pode ser cancelada. As reservas só podem ser canceladas se estiverem ativas ou agendadas e com pelo menos 24 horas de antecedência do check-in.</p>
+                            <h5>{% trans "Cancellation Not Allowed" %}</h5>
+                            <p class="text-dark">{% trans "This reservation cannot be cancelled. Reservations can only be cancelled if they are active or scheduled and at least 24 hours before check-in." %}</p>
                         </div>
 
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                             <a href="{% url 'reservations_history' %}" class="btn btn-primary">
-                                Voltar ao Histórico
+                                {% trans "Back to History" %}
                             </a>
                         </div>
                     {% endif %}

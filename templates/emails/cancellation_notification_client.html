@@ -1,51 +1,52 @@
+{% load i18n %}
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Cancelamento de Reserva - {{ reservation.id }}</title>
+    <title>{% trans "Reservation Cancellation" %} - {{ reservation.id }}</title>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #d9534f;">Cancelamento de Reserva</h1>
+        <h1 style="color: #d9534f;">{% trans "Reservation Cancellation" %}</h1>
 
-        <p>Olá <strong>{{ client.get_full_name }}</strong>,</p>
+        <p>{% trans "Hello" %} <strong>{{ client.get_full_name }}</strong>,</p>
 
-        <p>Sua reserva foi cancelada com sucesso.</p>
+        <p>{% trans "Your reservation has been successfully cancelled." %}</p>
 
         <div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;">
-            <h3>Detalhes da Reserva Cancelada:</h3>
+            <h3>{% trans "Cancelled Reservation Details:" %}</h3>
             <ul style="list-style: none; padding: 0;">
-                <li><strong>Quarto:</strong> {{ reservation.room }}</li>
-                <li><strong>Check-in:</strong> {{ reservation.checkin|date:"d/m/Y" }}</li>
-                <li><strong>Check-out:</strong> {{ reservation.checkout|date:"d/m/Y" }}</li>
-                <li><strong>Valor Total:</strong> {{ reservation.formatted_price }}</li>
-                <li><strong>Data do Cancelamento:</strong> {{ reservation.cancelled_at|date:"d/m/Y H:i" }}</li>
+                <li><strong>{% trans "Room:" %}</strong> {{ reservation.room }}</li>
+                <li><strong>{% trans "Check-in:" %}</strong> {{ reservation.checkin|date:"Y-m-d" }}</li>
+                <li><strong>{% trans "Check-out:" %}</strong> {{ reservation.checkout|date:"Y-m-d" }}</li>
+                <li><strong>{% trans "Total Amount:" %}</strong> {{ reservation.formatted_price }}</li>
+                <li><strong>{% trans "Cancellation Date:" %}</strong> {{ reservation.cancelled_at|date:"Y-m-d H:i" }}</li>
             </ul>
 
             {% if reservation.cancellation_reason %}
-            <p><strong>Motivo do Cancelamento:</strong> {{ reservation.cancellation_reason }}</p>
+            <p><strong>{% trans "Cancellation Reason:" %}</strong> {{ reservation.cancellation_reason }}</p>
             {% endif %}
         </div>
 
         {% if refund_info %}
         <div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; margin: 20px 0; border-radius: 5px;">
-            <h3 style="color: #155724;">Reembolso Processado</h3>
+            <h3 style="color: #155724;">{% trans "Refund Processed" %}</h3>
             <ul style="list-style: none; padding: 0; color: #155724;">
-                <li><strong>Valor Reembolsado:</strong> R$ {{ refund_info.amount }}</li>
-                <li><strong>Data do Reembolso:</strong> {{ refund_info.date|date:"d/m/Y H:i" }}</li>
+                <li><strong>{% trans "Refunded Amount:" %}</strong> $ {{ refund_info.amount }}</li>
+                <li><strong>{% trans "Refund Date:" %}</strong> {{ refund_info.date|date:"Y-m-d H:i" }}</li>
             </ul>
-            <p style="color: #155724;">O reembolso será processado em sua forma de pagamento original em até 5-10 dias úteis.</p>
+            <p style="color: #155724;">{% trans "The refund will be processed to your original payment method within 5-10 business days." %}</p>
         </div>
         {% else %}
         <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px 0; border-radius: 5px;">
-            <p style="color: #856404; margin: 0;"><strong>Nota:</strong> Nenhum reembolso foi processado para esta reserva.</p>
+            <p style="color: #856404; margin: 0;"><strong>{% trans "Note:" %}</strong> {% trans "No refund was processed for this reservation." %}</p>
         </div>
         {% endif %}
 
-        <p>Se você tiver alguma dúvida, entre em contato conosco.</p>
+        <p>{% trans "If you have any questions, please contact us." %}</p>
 
-        <p>Atenciosamente,<br>
-        Equipe do Hotel</p>
+        <p>{% trans "Sincerely," %}<br>
+        {% trans "Hotel Team" %}</p>
     </div>
 </body>
 </html>

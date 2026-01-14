@@ -1,10 +1,10 @@
-{% load static %}
+{% load static i18n %}
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
     {% include "partials/_head.html" %}
     {% block css %}{% endblock css %}
-    <title>{{hotel.name}} | {% block title %}Início{% endblock title %}</title>
+    <title>{{hotel.name}} | {% block title %}{% trans "Home" %}{% endblock title %}</title>
 </head>
 <body>
 

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 
 {% block css %}
     <link rel="stylesheet" href="{% static 'reserva/css/reserve.css' %}">
     <link rel="stylesheet" href="{% static 'cliente/css/signin.css' %}">
 {% endblock css %}
 
-{% block title %} Sign-in{% endblock title %}
+{% block title %} {% trans "Sign-in" %}{% endblock title %}
 
 
 
@@ -19,27 +19,27 @@
             {% include "partials/_messages.html" %}
             <div class="text-end">
                 <a href="{% url "signup" %}" class="text-light">
-                    Criar conta.
+                    {% trans "Create account." %}
                 </a>
             </div>
 
             <div class="row">
                 <div class="col-md-12">
                     <div class="form-group">
-                        <label for="username" class="form-label">Usuário ou E-mail</label>
-                        <input required id="username" name="username" type="text" class="form-control" placeholder="Insira seu e-mail ou nome de usuário">
+                        <label for="username" class="form-label">{% trans "Username or Email" %}</label>
+                        <input required id="username" name="username" type="text" class="form-control" placeholder="{% trans "Enter your email or username" %}">
                     </div>
                 </div>
                 <div class="col-md-12">
                     <div class="form-group">
-                        <label for="password" class="form-label">Senha</label>
-                        <input required id="password" name="password" type="password" class="form-control" placeholder="Informe a sua senha">
+                        <label for="password" class="form-label">{% trans "Password" %}</label>
+                        <input required id="password" name="password" type="password" class="form-control" placeholder="{% trans "Enter your password" %}">
                     </div>
                 </div>
 
                 {% include "partials/_recaptcha_input.html" %}
                 <div class="col-md-12 d-flex justify-content-center mt-3">
-                    <button type="submit" class="btn btn-outline-info">Enviar</button>
+                    <button type="submit" class="btn btn-outline-info">{% trans "Submit" %}</button>
                 </div>
             </div>
         </div>

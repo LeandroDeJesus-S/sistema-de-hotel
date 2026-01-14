@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Sign-up{% endblock title %}
+{% block title %}{% trans "Sign-up" %}{% endblock title %}
 {% block css %}
     <link rel="stylesheet" href="{% static "reserva/css/reserve.css" %}">
     <link rel="stylesheet" href="{% static "cliente/css/signin.css" %}">
@@ -17,70 +17,70 @@
 
             <div class="text-end">
                 <a href="{% url "signin" %}" class="text-light">
-                    Já tenho uma conta.
+                    {% trans "I already have an account." %}
                 </a>
             </div>
 
             <div class="row">
                 <div class="col-md-6 mb-2">
                     <div class="form-group">
-                        <label for="username" class="form-label">Usuário</label>
-                        <input required id="username" name="username" type="text" class="form-control" placeholder="Insira seu nome de usuário" value="{% if request.POST.username %}{{request.POST.username}}{% endif %}">
+                        <label for="username" class="form-label">{% trans "Username" %}</label>
+                        <input required id="username" name="username" type="text" class="form-control" placeholder="{% trans "Enter your username" %}" value="{% if request.POST.username %}{{request.POST.username}}{% endif %}">
                     </div>
                 </div>
 
                 <div class="col-md-6 mb-2">
                     <div class="form-group">
-                        <label for="nome" class="form-label">Nome</label>
-                        <input required id="nome" name="nome" type="nome" class="form-control" placeholder="Informe o seu primeiro nome" value="{% if request.POST.nome %}{{request.POST.nome}}{% endif %}">
+                        <label for="nome" class="form-label">{% trans "First name" %}</label>
+                        <input required id="nome" name="nome" type="nome" class="form-control" placeholder="{% trans "Enter your first name" %}" value="{% if request.POST.nome %}{{request.POST.nome}}{% endif %}">
                     </div>
                 </div>
 
                 <div class="col-md-6 mb-2">
                     <div class="form-group">
-                        <label for="email" class="form-label">E-mail</label>
+                        <label for="email" class="form-label">{% trans "Email" %}</label>
                         <input required id="email" name="email" type="email" class="form-control" placeholder="email@example.com" value="{% if request.POST.email %}{{request.POST.email}}{% endif %}">
                     </div>
                 </div>
 
                 <div class="col-md-6 mb-2">
                     <div class="form-group">
-                        <label for="sobrenome" class="form-label">Sobrenome</label>
-                        <input required id="sobrenome" name="sobrenome" type="sobrenome" class="form-control" placeholder="Informe o seu sobrenome" value="{% if request.POST.sobrenome %}{{request.POST.sobrenome}}{% endif %}">
+                        <label for="sobrenome" class="form-label">{% trans "Last name" %}</label>
+                        <input required id="sobrenome" name="sobrenome" type="sobrenome" class="form-control" placeholder="{% trans "Enter your last name" %}" value="{% if request.POST.sobrenome %}{{request.POST.sobrenome}}{% endif %}">
                     </div>
                 </div>
 
                 <div class="col-md-6 mb-2">
                     <div class="form-group">
-                        <label for="password" class="form-label">Senha</label>
-                        <input required id="password" name="password" type="password" class="form-control" placeholder="Informe a sua senha">
+                        <label for="password" class="form-label">{% trans "Password" %}</label>
+                        <input required id="password" name="password" type="password" class="form-control" placeholder="{% trans "Enter your password" %}">
                     </div>
                 </div>
 
                 <div class="col-md-6 mb-2">
                     <div class="form-group">
-                        <label for="cpf" class="form-label">CPF</label>
-                        <input required id="cpf" name="cpf" type="cpf" class="form-control" placeholder="Informe seu CPF" value="{% if request.POST.cpf %}{{request.POST.cpf}}{% endif %}">
+                        <label for="cpf" class="form-label">{% trans "CPF" %}</label>
+                        <input required id="cpf" name="cpf" type="cpf" class="form-control" placeholder="{% trans "Enter your CPF" %}" value="{% if request.POST.cpf %}{{request.POST.cpf}}{% endif %}">
                     </div>
                 </div>
 
                 <div class="col-md-6 mb-2">
                     <div class="form-group">
-                        <label for="telefone" class="form-label">Telefone</label>
-                        <input id="telefone" required name="telefone" type="telefone" class="form-control" placeholder="Apenas números" value="{% if request.POST.telefone %}{{request.POST.telefone}}{% endif %}">
+                        <label for="telefone" class="form-label">{% trans "Phone" %}</label>
+                        <input id="telefone" required name="telefone" type="telefone" class="form-control" placeholder="{% trans "Numbers only" %}" value="{% if request.POST.telefone %}{{request.POST.telefone}}{% endif %}">
                     </div>
                 </div>
 
                 <div class="col-md-6 mb-2">
                     <div class="form-group">
-                        <label for="nascimento" class="form-label">Data de Nascimento</label>
+                        <label for="nascimento" class="form-label">{% trans "Birth date" %}</label>
                         <input required id="nascimento" name="nascimento" type="date" class="form-control">
                     </div>
                 </div>
 
                 {% include "partials/_recaptcha_input.html" %}
                 <div class="col-md-12 d-flex justify-content-center mt-3">
-                    <button type="submit" class="btn btn-outline-info">Enviar</button>
+                    <button type="submit" class="btn btn-outline-info">{% trans "Submit" %}</button>
                 </div>
             </div>
         </div>

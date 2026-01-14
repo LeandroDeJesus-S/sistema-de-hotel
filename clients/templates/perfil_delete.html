@@ -1,13 +1,14 @@
 {% extends "base.html" %}
+{% load i18n %}
 
 {% block content %}
 <div class="container d-flex justify-content-center align-items-center text-center" style="padding: 10%;">
     <form id="form" method="post">{% csrf_token %}
-        <p>Tem certeza que deseja deletar sua conta com o usuário "{{ object }}"?</p>
-        <small class="text-danger">esta ação não podera ser desfeita</small><br>
+        <p>{% trans "Are you sure you want to delete your account with the username" %} "{{ object }}"?</p>
+        <small class="text-danger">{% trans "this action cannot be undone" %}</small><br>
         {{ form }}
         {% include "partials/_recaptcha_input.html" %}
-        <input class="btn btn-danger mt-5" type="submit" value="Excluir">
+        <input class="btn btn-danger mt-5" type="submit" value="{% trans "Delete" %}">
     </form>
 </div>
 

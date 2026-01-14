@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 {% block css %}
     <link rel="stylesheet" href="{% static "reserva/css/reserve.css" %}">
 {% endblock css %}
-{% block title %}editar perfil{% endblock title %}
+{% block title %}{% trans "Edit Profile" %}{% endblock title %}
 {% block content %}
 
 

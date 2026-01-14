@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static i18n %}
 
 {% block css %}
     <link rel="stylesheet" href={% static "/reserva/css/reserve.css" %}>
@@ -17,24 +17,24 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label for="checkin" class="form-label">Check-In</label>
+                        <label for="checkin" class="form-label">{% trans "Check-In" %}</label>
                         <input required id="checkin" name="checkin" type="date" class="form-control">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label for="checkout" class="form-label">Check-Out</label>
+                        <label for="checkout" class="form-label">{% trans "Check-Out" %}</label>
                         <input required id="checkout" name="checkout" type="date" class="form-control">
                     </div>
                 </div>
                 <div class="col-md-12 mt-3">
                     <div class="form-group">
-                        <label class="form-label text-light" for="obs">Observações</label>
-                        <textarea maxlength="100" name="obs" id="obs" class="form-control" placeholder="Ex.: Decoração de aniversário de casamento"></textarea>
+                        <label class="form-label text-light" for="obs">{% trans "Observations" %}</label>
+                        <textarea maxlength="100" name="obs" id="obs" class="form-control" placeholder="{% trans "Ex.: Wedding anniversary decoration" %}"></textarea>
                     </div>
                 </div>
                 <div class="col-md-12 d-flex justify-content-center mt-3">
-                    <button type="submit" class="btn btn-outline-info">Enviar</button>
+                    <button type="submit" class="btn btn-outline-info">{% trans "Submit" %}</button>
                 </div>
             </div>
         </div>
