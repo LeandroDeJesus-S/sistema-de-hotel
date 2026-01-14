@@ -5,7 +5,6 @@ from django.utils.timezone import now
 from unittest.mock import Mock
 
 from clients.infra.validators import (
-    DjangoValidatorAdapter,
     UsernameValidator,
     PhoneNumberValidator,
     BirthDateValidator,
@@ -14,42 +13,6 @@ from clients.infra.validators import (
 )
 from clients.feedback_messages import ClientErrorMessages, ContactErrorMessages
 from exc import Result
-
-class TestDjangoValidatorAdapter:
-    def test_call_success(self):
-        mock_validator = Mock()
-        mock_validator.validate.return_value = Result.Ok("value")
-        adapter = DjangoValidatorAdapter(mock_validator)
-
-        # Should not raise
-        adapter("value")
-        mock_validator.validate.assert_called_once_with("value")
-
-    def test_call_failure(self):
-        mock_validator = Mock()
-        mock_validator.validate.return_value = Result.Err("error msg")
-        adapter = DjangoValidatorAdapter(mock_validator)
-
-        with pytest.raises(ValidationError) as exc:
-            adapter("value")
-        assert "error msg" in str(exc.value)
-
-    def test_hash_and_eq(self):
-        class V1: pass
-        class V2: pass
-
-        mock_v1 = V1()
-        mock_v2 = V1()
-        mock_v3 = V2()
-
-        a1 = DjangoValidatorAdapter(mock_v1)
-        a2 = DjangoValidatorAdapter(mock_v2)
-        a3 = DjangoValidatorAdapter(mock_v3)
-
-        assert hash(a1) == hash(a2)
-        assert a1 == a2
-        assert a1 != a3
-        assert a1 != "not an adapter"
 
 class TestUsernameValidator:
     def test_validate_success(self):

@@ -116,22 +116,3 @@ def validate_service_logo(image_file):
         size_result = size_validator(abs_image)
         if size_result.is_err():
             raise ValidationError(size_result.unwrap_err().msg)
-
-
-def django_image_validator(validator: ImageValidator):
-    """Wraps an ImageValidator to work as a Django field validator."""
-
-    def validate(image_file):
-        if (
-            hasattr(image_file, 'width')
-            and hasattr(image_file, 'height')
-            and hasattr(image_file, 'size')
-        ):
-            abs_image = DjangoImageAdapter(
-                width=image_file.width, height=image_file.height, size=image_file.size
-            )
-            result = validator(abs_image)
-            if result.is_err():
-                raise ValidationError(result.unwrap_err().msg)
-
-    return validate

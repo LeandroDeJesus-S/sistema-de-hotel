@@ -254,12 +254,6 @@ class Room(models.Model):
 
     daily_price_formatted.short_description = 'Preço da diária'  # type: ignore[attr-defined]
 
-    @property
-    def daily_price_in_cents(self) -> int:
-        """retorna o valor da diária em centavos para auxilio
-        com api do stripe"""
-        return int(self.daily_price * Decimal('100'))
-
 
 class Reservation(models.Model):
     """representa o registro de uma reserva"""
@@ -389,8 +383,6 @@ class Reservation(models.Model):
             return f'R${self.amount:.2f}'
         raise AttributeError('Custo não foi persistido.')
 
-    formatted_price.short_description = 'Valor total da reserva'  # type: ignore[attr-defined]
-
     def calc_reservation_value(self) -> Decimal:
         """ "calcula o valor da reserva atribuindo a model e retorna o valor
         em centavos."""
@@ -405,13 +397,3 @@ class Reservation(models.Model):
             res_err = result.unwrap_err()
             err = res_err.src_error or res_err
             raise ValidationError(getattr(err, 'msg', str(err)))
-
-    @property
-    def reservation_days(self) -> int:
-        """retorna a quantidade dias da reserva"""
-        return int((self.checkout - self.checkin).days)
-
-    @property
-    def coast_in_cents(self):
-        """custo da reserva em centavos"""
-        return int(self.amount * Decimal('100'))

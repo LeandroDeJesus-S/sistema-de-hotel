@@ -1,3 +1,4 @@
+import re
 from datetime import date
 from typing import Callable, TypeAlias, TypeVar
 
@@ -14,27 +15,6 @@ from exc import Result
 
 T = TypeVar('T')
 ValidatorCall: TypeAlias = Callable[[T], Result[T] | None]
-
-
-@deconstructible
-class DjangoValidatorAdapter:
-    """A django validator to handle abs validators"""
-
-    def __init__(self, validator: AbsValidator):
-        self._validator = validator
-
-    def __call__(self, value: object) -> None:
-        result = self._validator.validate(value)
-        if result.is_err():
-            raise ValidationError(result.unwrap_err().msg)
-
-    def __hash__(self) -> int:
-        return hash(self._validator.__class__.__name__)
-
-    def __eq__(self, value: object) -> bool:
-        if not isinstance(value, DjangoValidatorAdapter):
-            return False
-        return self._validator.__class__.__name__ == value._validator.__class__.__name__
 
 
 class UsernameValidator(AbsValidator):
@@ -177,3 +157,85 @@ class DjangoPasswordValidatorAdapter:
 
     def get_help_text(self) -> str:
         return self._help_msg
+
+
+@deconstructible
+class CpfValidator(AbsValidator):  # noqa: PLW1641
+    _FIRST_DIGIT_THRESHOLD = 9
+    _CPF_LENGTH = 11
+
+    def __init__(
+        self, message: str = ClientErrorMessages.INVALID_CPF, raise_exc: bool = False
+    ) -> None:
+        self._cpf = ''
+        self._verified_cpf = ''
+        self.message = message
+        self.raise_exc = raise_exc
+
+    def __eq__(self, value: object) -> bool:
+        return (
+            isinstance(value, CpfValidator)
+            and self._cpf == value._cpf
+            and self._verified_cpf == value._verified_cpf
+            and self.message == value.message
+        )
+
+    def _calculate_first_digit(self) -> str:
+        """Calculates the first digit of the CPF."""
+        if not self._cpf:
+            return ''  # Should be caught by has_valid_length earlier
+        result, m = 0, 10
+        for c in self._cpf[:-2]:
+            calc = int(c) * m
+            result += calc
+            m -= 1
+        final_result = str(11 - result % 11)
+        return final_result if int(final_result) <= self._FIRST_DIGIT_THRESHOLD else '0'
+
+    def _calculate_second_digit(self) -> str:
+        """Calculates the second digit of the CPF."""
+        if not self._cpf:
+            return ''  # Should be caught by has_valid_length earlier
+        m, ac = 11, 0
+        for i in self._cpf[:-2] + self._calculate_first_digit():
+            calc = int(i) * m
+            ac += calc
+            m -= 1
+        final_result = str(11 - ac % 11)
+        return final_result if int(final_result) <= self._FIRST_DIGIT_THRESHOLD else '0'
+
+    def _is_valid_sequence(self) -> bool:
+        """Checks if the CPF is a sequence (e.g., 000.000.000-00)."""
+        if not self._cpf:
+            return False
+        return self._cpf == self._cpf[0] * len(self._cpf)
+
+    def _has_valid_length(self) -> bool:
+        """Checks if the CPF has a valid length."""
+        return len(self._cpf) == self._CPF_LENGTH
+
+    def validate(self, value: str) -> Result[str]:
+        self._cpf = re.sub(r'\D', '', value)
+
+        if not self._has_valid_length():
+            if self.raise_exc:
+                raise ValidationError(self.message)
+            return Result.Err(self.message)
+
+        if self._is_valid_sequence():
+            if self.raise_exc:
+                raise ValidationError(self.message)
+            return Result.Err(self.message)
+
+        _first_digit = self._calculate_first_digit()
+        _second_digit = self._calculate_second_digit()
+        self._verified_cpf = self._cpf[:-2]
+        self._verified_cpf += _first_digit
+        self._verified_cpf += _second_digit  # noqa: E501
+
+        if not self._cpf == self._verified_cpf:
+            if self.raise_exc:
+                raise ValidationError(self.message)
+            return Result.Err(self.message)
+
+        return Result.Ok(value)

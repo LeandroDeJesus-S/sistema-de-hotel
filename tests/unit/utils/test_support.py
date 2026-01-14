@@ -13,7 +13,6 @@ from reservations.domain.entities import Reservation as ReservationEntity
 from utils.support import (
     captcha_required,
     entity_to_model,
-    fmt_date,
     get_available_dates_message,
     model_to_entity,
     model_validate,
@@ -22,22 +21,6 @@ from utils.support import (
     update_changed_fields,
     verify_captcha,
 )
-
-
-class TestFmtDate:
-    """Tests for the fmt_date function."""
-
-    def test_default_format(self):
-        """Should format date with default %d/%m/%Y format."""
-        test_date = date(2023, 12, 25)
-        result = fmt_date(test_date)
-        assert result == '25/12/2023'
-
-    def test_custom_format(self):
-        """Should format date with custom format string."""
-        test_date = date(2023, 12, 25)
-        result = fmt_date(test_date, fmt='%Y-%m-%d')
-        assert result == '2023-12-25'
 
 
 class TestResizeImage:

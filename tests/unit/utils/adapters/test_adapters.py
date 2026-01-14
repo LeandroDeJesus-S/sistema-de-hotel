@@ -8,7 +8,6 @@ from utils.adapters.image_validators import (
     DjangoImageAdapter,
     validate_benefit_icon,
     validate_service_logo,
-    django_image_validator
 )
 from utils.adapters.queue import DjangoQTaskQueuer
 from utils.adapters.unit_of_work import UnitOfWork
@@ -163,17 +162,6 @@ class TestImageValidators:
         image.size = 6 * 1000000 # 6MB > 5MB limit
         with pytest.raises(ValidationError):
             validate_service_logo(image)
-
-    def test_django_image_validator_wrapper(self, mocker):
-        mock_v = mocker.Mock(return_value=Result.Err("Error"))
-        wrapped = django_image_validator(mock_v)
-        image = mocker.Mock()
-        image.width = 10
-        image.height = 10
-        image.size = 100
-        with pytest.raises(ValidationError):
-            wrapped(image)
-
 
 class TestDjangoQTaskQueuer:
     def test_schedule_task(self, mocker):

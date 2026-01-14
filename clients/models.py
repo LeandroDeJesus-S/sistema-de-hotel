@@ -9,19 +9,18 @@ from django.core.validators import (
     validate_email,
 )
 from django.db import models
-from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as gtl
 
-from clients.infra.validators import PasswordValidator
-
-from .feedback_messages import ClientErrorMessages, ContactErrorMessages
-from .infra.validators import (
+from clients.infra.validators import (
     BirthDateValidator,
+    CpfValidator,
+    PasswordValidator,
     PhoneNumberValidator,
     UsernameValidator,
 )
+
+from .feedback_messages import ClientErrorMessages, ContactErrorMessages
 from .rules import ClientRules
-from .validators import CpfValidator
 
 
 class Client(AbstractUser):
@@ -167,7 +166,7 @@ class Client(AbstractUser):
         blank=False,
         null=False,
         validators=[
-            CpfValidator(message=ClientErrorMessages.INVALID_CPF),
+            CpfValidator(message=ClientErrorMessages.INVALID_CPF, raise_exc=True).validate,
         ],
         error_messages={'unique': ClientErrorMessages.DUPLICATED_CPF},
         help_text=gtl('Seu CPF sem pontuação (máximo %(max)s caracteres)')
@@ -181,66 +180,6 @@ class Client(AbstractUser):
         super().clean()
         for pw_validator in self._PW_VALIDATORS:
             pw_validator(self.password)
-
-    @staticmethod
-    def _create_mask(value: str, start: int, end: int, maskchar='*') -> str:
-        """substitui caracteres pelo caractere especificado por `mask_char`
-        indo de start até end incluindo end
-
-        Args:
-            value (str): valor a ser mascarado
-            start (int): index de inicio da mascara
-            end (int): index negativo de onde a mascara termina.
-            maskchar (str, optional): o caractere usado para fazer a mascara. Defaults to '*'.
-
-        Raises:
-            ValueError: caso `end` não seja negativo
-
-        Returns:
-            str: valor mascarado
-        """
-        if end > 0:
-            raise ValueError('end must be a negative value')
-
-        end = len(value) + end
-        mask_list = [maskchar if start <= i <= end else d for i, d in enumerate(value)]
-        masked_value = ''.join(mask_list)
-        return masked_value
-
-    @property
-    def complete_name(self) -> str:
-        """retorna o nome completo do usuário com as primeiras letras maiúsculas"""
-        return str(self.get_full_name().title())
-
-    @property
-    def age(self) -> int:
-        """retorna a idade do usuário"""
-        return int(now().year - self.birthdate.year)
-
-    @property
-    def formatted_phone(self) -> str:
-        """retorna o telefone do usuário no formato (xx) xxxx-xxxx"""
-        phone: str = self.phone
-        ddd = phone[:2]
-        mid = -4
-        phone = f'({ddd}) {phone[2:mid]}-{phone[mid:]}'
-        return phone
-
-    @property
-    def masked_phone(self) -> str:
-        """retorna o telefone com dígitos mascarados"""
-        return self._create_mask(self.phone, *ClientRules.PHONE_MASK_RANGE)
-
-    @property
-    def masked_email(self) -> str:
-        """retorna o email com caracteres mascarados"""
-        return self._create_mask(self.email, *ClientRules.EMAIL_MASK_RANGE)
-
-    @property
-    def masked_cpf(self) -> str:
-        """cpf com dígitos mascarados"""
-        masked = self._create_mask(self.cpf, *ClientRules.CPF_MASK_RANGE)
-        return masked
 
     class Meta:
         verbose_name = gtl('Cliente')

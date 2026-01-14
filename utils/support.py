@@ -1,4 +1,4 @@
-from datetime import date, datetime, time, timedelta
+from datetime import datetime, time, timedelta
 from functools import wraps
 from typing import Type, TypeVar
 
@@ -103,19 +103,6 @@ def captcha_required(
         return decorated
 
     return decorator
-
-
-def fmt_date(value: date, fmt='%d/%m/%Y') -> str:
-    """formata a data no formato especificado.
-
-    Args:
-        value (date): data a ser formatada
-        fmt (str, optional): padrão para a formatação. Defaults to '%d/%m/%Y'.
-
-    Returns:
-        str: data formatada.
-    """
-    return value.strftime(fmt)
 
 
 def update_changed_fields(model_instance, update_data: dict) -> list[str]:

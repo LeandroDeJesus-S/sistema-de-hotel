@@ -4,7 +4,7 @@ import django.contrib.auth.validators
 import django.core.validators
 from django.db import migrations, models
 
-import clients.validators
+import clients.infra.validators
 
 
 class Migration(migrations.Migration):
@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='client',
             name='cpf',
-            field=models.CharField(max_length=11, unique=True, validators=[clients.validators.CpfValidator(message='CPF inválido.')], verbose_name='CPF'),
+            field=models.CharField(max_length=11, unique=True, validators=[clients.infra.validators.CpfValidator(message='CPF inválido.')], verbose_name='CPF'),
         ),
         migrations.AlterField(
             model_name='client',
