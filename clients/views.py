@@ -15,6 +15,7 @@ from django.views.generic.edit import DeleteView, UpdateView
 
 from clients.application.services import ClientService
 from clients.models import Client
+from HOTEL import settings
 from reservations.mixins import LoginRequired
 from utils import support
 
@@ -85,7 +86,9 @@ class RequestPasswordChangeView(View):
         if form.is_valid():
             email = form.cleaned_data['email']
             domain = request.get_host()
-            result = self.svc.request_magic_link(email, domain)
+            result = self.svc.request_magic_link(
+                email, domain, cooldown_seconds=settings.PASSWORD_CHANGE_EMAIL_COOLDOWN
+            )
             if result.is_err():
                 messages.error(request, result.unwrap_err().msg)
                 return render(request, self.template, {'form': form})

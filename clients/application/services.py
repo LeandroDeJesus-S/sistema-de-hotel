@@ -46,7 +46,9 @@ class ClientService:
         self._repo = repo
         self.logger = logger
 
-    def request_magic_link(self, email: str, domain: str) -> Result[TemplateRenderResultDTO]:
+    def request_magic_link(
+        self, email: str, domain: str, cooldown_seconds=60
+    ) -> Result[TemplateRenderResultDTO]:
         """
         Request a magic link for password change.
 
@@ -62,7 +64,6 @@ class ClientService:
         # 1. Check Rate Limit (Cooldown)
         # Key is unique per email to prevent spamming a single user.
         rate_limit_key = f'magic_link_cooldown_{email}'
-        cooldown_seconds = 300  # 5 minutes
 
         rate_limit_result = self.rate_limiter.check_cooldown(rate_limit_key, cooldown_seconds)
         if rate_limit_result.is_err():
@@ -244,6 +245,10 @@ class ClientService:
         # Validate input data with DTO
         signin_input_result = SignInInput.safe_validate(credentials)
         if signin_input_result.is_err():
+            self.logger.error(
+                f'SignInInput.safe_validate failed: {signin_input_result.unwrap_err().msg}',
+                exc_info=signin_input_result.unwrap_err(),
+            )
             return Result.Ok(
                 TemplateRenderResultDTO(
                     template_name='signin.html',
@@ -263,6 +268,10 @@ class ClientService:
             password=validated_credentials.password,
         )
         if user_result.is_err():
+            self.logger.error(
+                f'authenticate failed: {user_result.unwrap_err().msg}',
+                exc_info=user_result.unwrap_err(),
+            )
             return Result.Ok(
                 TemplateRenderResultDTO(
                     template_name='signin.html',
@@ -274,6 +283,10 @@ class ClientService:
         # Log user in
         login_result = self.session_manager.login(request, user_result.unwrap())
         if login_result.is_err():
+            self.logger.error(
+                f'login failed: {login_result.unwrap_err().msg}',
+                exc_info=login_result.unwrap_err(),
+            )
             return Result.Ok(
                 TemplateRenderResultDTO(
                     template_name='signin.html',
@@ -313,7 +326,7 @@ class ClientService:
         if validation_res.is_err():
             return Result.Ok(
                 RedirectResultDTO(
-                    url='perfil',
+                    url='update_perfil_password',
                     messages=[
                         MessageDTO(typ='error', msg=str(validation_res.unwrap_err().msg))
                     ],
@@ -325,7 +338,7 @@ class ClientService:
         if inp_result.is_err():
             return Result.Ok(
                 RedirectResultDTO(
-                    url='perfil',
+                    url='update_perfil_password',
                     messages=[MessageDTO(typ='error', msg=str(inp_result.unwrap_err().msg))],
                     args=(user_id,),
                 )
@@ -335,7 +348,7 @@ class ClientService:
         if change_pw_result.is_err():
             return Result.Ok(
                 RedirectResultDTO(
-                    url='perfil',
+                    url='update_perfil_password',
                     messages=[
                         MessageDTO(typ='error', msg=str(change_pw_result.unwrap_err().msg))
                     ],
