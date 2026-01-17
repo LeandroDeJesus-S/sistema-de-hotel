@@ -2,6 +2,7 @@ import logging
 from typing import Union
 
 from base.dtos import MessageDTO, RedirectResultDTO, TemplateRenderResultDTO
+from base.ports.queue import TaskQueuer
 from clients.application.dtos import ChangePasswordInput, SignInInput, SignUpInput
 from clients.application.usecases import (
     # AuthenticateUserUseCase,
@@ -15,26 +16,96 @@ from clients.domain.ports import (
     AbsClientRepository,
     AbsPasswordManager,
     AbsSessionManager,
+    AbsTokenManager,
 )
 from clients.feedback_messages import ChangePassword, SignUp
 from exc import Result
 
 
 class ClientService:
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         repo: AbsClientRepository,
         password_manager: AbsPasswordManager,
         session_manager: AbsSessionManager,
         captcha_service: AbsCaptchaVerifier,
+        task_queuer: TaskQueuer,
         logger: logging.Logger,
+        token_manager: AbsTokenManager,
     ):
         self.create_user = CreateUserUseCase(repo, password_manager, logger)
         self.change_pw = ChangePasswordUseCase(repo, password_manager, session_manager)
         self.captcha = VerifyCaptchaUseCase(captcha_service)
         self.session_manager = session_manager
+        self.task_queuer = task_queuer
+        self.token_manager = token_manager
         self._repo = repo
         self.logger = logger
+
+    def request_magic_link(self, email: str, domain: str) -> Result[TemplateRenderResultDTO]:
+        """
+        Request a magic link for password change.
+
+        Args:
+            email: The email to send the link to.
+            domain: The domain of the site.
+
+        Returns:
+            Result with TemplateRenderResultDTO
+        """
+
+        client_result = self._repo.get_by_email(email)
+
+        if client_result.is_err():
+            # generic message to avoid enumeration
+            return Result.Ok(
+                TemplateRenderResultDTO(
+                    template_name='request_magic_link.html',
+                    context={},
+                    messages=[
+                        MessageDTO(
+                            typ='success',
+                            msg='If the email is registered, you will receive a link shortly.',
+                        )
+                    ],
+                )
+            )
+
+        client = client_result.unwrap()
+        token = self.token_manager.make_token(client)
+
+        self.task_queuer.queue_task(
+            'clients.infra.taskssend_password_change_email_task',
+            (client.id, token, domain),
+            name=f'send_password_change_email_{client.id}',
+        )
+
+        return Result.Ok(
+            TemplateRenderResultDTO(
+                template_name='request_magic_link.html',
+                context={},
+                messages=[
+                    MessageDTO(
+                        typ='success',
+                        msg='If the email is registered, you will receive a link shortly.',
+                    )
+                ],
+            )
+        )
+
+    def validate_magic_link_token(self, user_id: int, token: str) -> bool:
+        """
+        Validates the password change token.
+        """
+        client_result = self._repo.get_by_id(user_id)
+        if client_result.is_err():
+            self.logger.error(
+                f'failed to validate magic link token: {client_result.unwrap_err().msg}'
+            )
+            return False
+
+        client = client_result.unwrap()
+        return self.token_manager.check_token(client, token)
 
     def signup_user(
         self, form_data: dict, request
