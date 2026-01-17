@@ -60,11 +60,11 @@ CPF = Annotated[
     'Represents a CPF value object.',
 ]
 
+
 Password = Annotated[
     str,
     StringConstraints(
         min_length=ClientRules.PASSWORD_MIN_SIZE,
-        max_length=ClientRules.PASSWORD_MAX_SIZE,
         strip_whitespace=True,
     ),
     'Represents a password value object.',

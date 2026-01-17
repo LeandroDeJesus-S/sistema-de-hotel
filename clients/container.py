@@ -15,6 +15,7 @@ from clients.infra.adapters import (
 from clients.infra.repo import ClientRepository
 from utils.adapters.email import DjangoEmailSender
 from utils.adapters.queue import DjangoQTaskQueuer
+from utils.adapters.rate_limiter import DjangoCacheRateLimiter
 
 
 class ClientsContainer(containers.DeclarativeContainer):
@@ -33,6 +34,7 @@ class ClientsContainer(containers.DeclarativeContainer):
     )
     task_queuer = providers.Singleton(DjangoQTaskQueuer)
     email_sender = providers.Singleton(DjangoEmailSender)
+    rate_limiter = providers.Singleton(DjangoCacheRateLimiter)
 
     # Application services
     client_service = providers.Factory(
@@ -44,4 +46,5 @@ class ClientsContainer(containers.DeclarativeContainer):
         task_queuer=task_queuer,
         logger=logger,
         token_manager=token_manager,
+        rate_limiter=rate_limiter,
     )

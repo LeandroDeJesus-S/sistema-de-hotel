@@ -3,6 +3,8 @@ from typing import Union
 
 from base.dtos import MessageDTO, RedirectResultDTO, TemplateRenderResultDTO
 from base.ports.queue import TaskQueuer
+from base.ports.rate_limiter import AbsRateLimiter
+from clients import feedback_messages
 from clients.application.dtos import ChangePasswordInput, SignInInput, SignUpInput
 from clients.application.usecases import (
     # AuthenticateUserUseCase,
@@ -32,6 +34,7 @@ class ClientService:
         task_queuer: TaskQueuer,
         logger: logging.Logger,
         token_manager: AbsTokenManager,
+        rate_limiter: AbsRateLimiter,
     ):
         self.create_user = CreateUserUseCase(repo, password_manager, logger)
         self.change_pw = ChangePasswordUseCase(repo, password_manager, session_manager)
@@ -39,6 +42,7 @@ class ClientService:
         self.session_manager = session_manager
         self.task_queuer = task_queuer
         self.token_manager = token_manager
+        self.rate_limiter = rate_limiter
         self._repo = repo
         self.logger = logger
 
@@ -53,9 +57,31 @@ class ClientService:
         Returns:
             Result with TemplateRenderResultDTO
         """
+        from clients.infra.tasks import send_password_change_email_task  # noqa: PLC0415
+
+        # 1. Check Rate Limit (Cooldown)
+        # Key is unique per email to prevent spamming a single user.
+        rate_limit_key = f'magic_link_cooldown_{email}'
+        cooldown_seconds = 300  # 5 minutes
+
+        rate_limit_result = self.rate_limiter.check_cooldown(rate_limit_key, cooldown_seconds)
+        if rate_limit_result.is_err():
+            return Result.Ok(
+                TemplateRenderResultDTO(
+                    template_name='request_magic_link.html',
+                    context={},
+                    messages=[
+                        MessageDTO(
+                            typ='error',
+                            msg=str(
+                                feedback_messages.EMAIL_CONFIRMATION_TOKEN_RATE_LIMIT_EXCEEDED
+                            ),
+                        )
+                    ],
+                )
+            )
 
         client_result = self._repo.get_by_email(email)
-
         if client_result.is_err():
             # generic message to avoid enumeration
             return Result.Ok(
@@ -75,7 +101,7 @@ class ClientService:
         token = self.token_manager.make_token(client)
 
         self.task_queuer.queue_task(
-            'clients.infra.taskssend_password_change_email_task',
+            send_password_change_email_task,  # type: ignore
             (client.id, token, domain),
             name=f'send_password_change_email_{client.id}',
         )
@@ -99,9 +125,6 @@ class ClientService:
         """
         client_result = self._repo.get_by_id(user_id)
         if client_result.is_err():
-            self.logger.error(
-                f'failed to validate magic link token: {client_result.unwrap_err().msg}'
-            )
             return False
 
         client = client_result.unwrap()
@@ -276,11 +299,27 @@ class ClientService:
         Returns:
             Result with RedirectResultDTO on success or failure
         """
+        from clients.infra.validators import PasswordValidator  # noqa: PLC0415
+
         data = {
             'user_id': user_id,
             'password': form_data.get('new_password', '').strip(),
             'password_repeat': form_data.get('password_repeat', '').strip(),
         }
+
+        # 1. Strict Password Validation (Complexity, etc.)
+        password_validator = PasswordValidator([])
+        validation_res = password_validator.validate(data['password'])
+        if validation_res.is_err():
+            return Result.Ok(
+                RedirectResultDTO(
+                    url='perfil',
+                    messages=[
+                        MessageDTO(typ='error', msg=str(validation_res.unwrap_err().msg))
+                    ],
+                    args=(user_id,),
+                )
+            )
 
         inp_result = ChangePasswordInput.safe_validate(data)
         if inp_result.is_err():
