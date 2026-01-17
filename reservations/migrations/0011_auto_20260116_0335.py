@@ -75,16 +75,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterField(
             model_name='reservation',
-            name='checkin',
-            field=models.DateField(help_text='Check-in date in YYYY-MM-DD format', verbose_name='Check-in'),
-        ),
-        migrations.AlterField(
-            model_name='reservation',
-            name='checkout',
-            field=models.DateField(help_text='Check-out date in YYYY-MM-DD format', verbose_name='Check-out'),
-        ),
-        migrations.AlterField(
-            model_name='reservation',
             name='client',
             field=models.ForeignKey(help_text='Client who made the reservation', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='reservation_clients', related_query_name='reservation_client', to=settings.AUTH_USER_MODEL),
         ),
