@@ -283,17 +283,17 @@ class Reservation(models.Model):
             ),
         ]
 
-    checkin = models.DateField(
+    checkin = models.DateTimeField(
         gtl('Check-in'),
         blank=False,
         null=False,
-        help_text=gtl('Check-in date in YYYY-MM-DD format'),
+        help_text=gtl('Check-in date and time in YYYY-MM-DD HH:MM:SS format'),
     )
-    checkout = models.DateField(
+    checkout = models.DateTimeField(
         gtl('Check-out'),
         blank=False,
         null=False,
-        help_text=gtl('Check-out date in YYYY-MM-DD format'),
+        help_text=gtl('Check-out date and time in YYYY-MM-DD HH:MM:SS format'),
     )
     client = models.ForeignKey(
         Client,

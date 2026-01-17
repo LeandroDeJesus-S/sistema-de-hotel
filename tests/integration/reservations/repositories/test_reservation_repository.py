@@ -1,5 +1,5 @@
 import pytest
-from datetime import date, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from reservations.infra.repo import ReservationRepository
 from reservations.domain.entities import Reservation
@@ -24,7 +24,7 @@ class TestReservationRepository:
         client_entity = model_to_entity(client_model_instance, ClientEntity).unwrap()
         room_entity = model_to_entity(room_model_instance, RoomEntity).unwrap()
 
-        checkin = date.today() + timedelta(days=10)
+        checkin = datetime.now(timezone.utc) + timedelta(days=10)
         checkout = checkin + timedelta(days=5)
 
         reservation_entity = Reservation.safe_create(
@@ -44,34 +44,87 @@ class TestReservationRepository:
         assert saved_res.id is not None
         assert ReservationModel.objects.filter(id=saved_res.id).exists()
 
-    def test_has_overlapping_reservation(self, repo, reservation_model_instance):
+    @pytest.mark.parametrize('existing_checkin,existing_checkout,new_checkin,new_checkout', (
+        (
+            datetime.now(timezone.utc)+timedelta(days=1), datetime.now(timezone.utc)+timedelta(days=2),
+            datetime.now(timezone.utc)+timedelta(days=5), datetime.now(timezone.utc)+timedelta(days=6),
+        ),
+    ))
+    def test_has_overlapping_reservation_without_overlap(self, repo, client_model_instance_factory, reservation_model_instance_factory, existing_checkin, existing_checkout, new_checkin, new_checkout):
         """Should return True if there is an overlapping reservation for the given room and dates."""
-        # reservation_model_instance checkin/checkout are set in conftest.py
-        # checkin = date.today() + 10, checkout = checkin + 15
 
-        # Exact overlap
+        # existing reservation
+        reservation_model_instance_factory(
+            client=client_model_instance_factory(),
+            status='A',
+            checkin=existing_checkin,
+            checkout=existing_checkout,
+        )
+
+        new_client_no_overlap = client_model_instance_factory()
+        r1 = reservation_model_instance_factory(
+            client=new_client_no_overlap,
+            checkin=new_checkin,
+            checkout=new_checkout,
+        )
+
         assert (
             repo.has_overlapping_reservation(
-                room_id=reservation_model_instance.room.id,
-                check_in=reservation_model_instance.checkin,
-                check_out=reservation_model_instance.checkout,
+                room_id=r1.room.id,
+                check_in=r1.checkin,
+                check_out=r1.checkout,
             ).unwrap()
             is False
-        )  # Wait, conftest sets status='I' (INITIALIZED).
-        # has_overlapping_reservation filters by status in [ACTIVE, SCHEDULED].
+        )
 
-        # Let's update status to ACTIVE
-        reservation_model_instance.status = ReservationStatusEnum.ACTIVE.value
-        reservation_model_instance.save()
+    @pytest.mark.parametrize('case,existing_checkin,existing_checkout,new_checkin,new_checkout', (
+        (
+            'new checkin starting exactly at existing checkout',
+            datetime.now(timezone.utc)+timedelta(days=1), datetime.now(timezone.utc)+timedelta(days=3),
+            datetime.now(timezone.utc)+timedelta(days=3), datetime.now(timezone.utc)+timedelta(days=6),
+        ),
+    ))
+    def test_has_overlapping_reservation_with_overlap(self, repo, client_model_instance_factory, reservation_model_instance_factory, existing_checkin, existing_checkout, new_checkin, new_checkout, case):
+        """Should return True if there is an overlapping reservation for the given room and dates."""
+
+        # existing reservation
+        reservation_model_instance_factory(
+            client=client_model_instance_factory(),
+            status='A',
+            checkin=existing_checkin,
+            checkout=existing_checkout,
+        )
+
+        new_client_no_overlap = client_model_instance_factory()
+        r1 = reservation_model_instance_factory(
+            client=new_client_no_overlap,
+            checkin=new_checkin,
+            checkout=new_checkout,
+        )
 
         assert (
             repo.has_overlapping_reservation(
-                room_id=reservation_model_instance.room.id,
-                check_in=reservation_model_instance.checkin,
-                check_out=reservation_model_instance.checkout,
+                room_id=r1.room.id,
+                check_in=r1.checkin,
+                check_out=r1.checkout,
             ).unwrap()
             is True
         )
+
+        # has_overlapping_reservation filters by status in [ACTIVE, SCHEDULED].
+
+        # Let's update status to ACTIVE
+        # reservation_model_instance.status = ReservationStatusEnum.ACTIVE.value
+        # reservation_model_instance.save()
+        #
+        # assert (
+        #     repo.has_overlapping_reservation(
+        #         room_id=reservation_model_instance.room.id,
+        #         check_in=reservation_model_instance.checkin,
+        #         check_out=reservation_model_instance.checkout,
+        #     ).unwrap()
+        #     is True
+        # )
 
     def test_fetch_active_reservations(self, repo, reservation_model_instance):
         """Should return a list of active reservations for a client."""
@@ -174,8 +227,8 @@ class TestReservationRepository:
         client_entity = model_to_entity(client_model_instance, ClientEntity).unwrap()
         room_entity = model_to_entity(room_model_instance, RoomEntity).unwrap()
         reservation_entity = Reservation.safe_create(
-            checkin=date.today(),
-            checkout=date.today() + timedelta(days=1),
+            checkin=datetime.now(timezone.utc),
+            checkout=datetime.now(timezone.utc) + timedelta(days=1),
             client=client_entity,
             room=room_entity,
             observations='',
@@ -202,8 +255,8 @@ class TestReservationRepository:
         client_entity = model_to_entity(client_model_instance, ClientEntity).unwrap()
         room_entity = model_to_entity(room_model_instance, RoomEntity).unwrap()
         reservation_entity = Reservation.safe_create(
-            checkin=date.today(),
-            checkout=date.today() + timedelta(days=1),
+            checkin=datetime.now(timezone.utc),
+            checkout=datetime.now(timezone.utc) + timedelta(days=1),
             client=client_entity,
             room=room_entity,
             observations='',
@@ -230,8 +283,8 @@ class TestReservationRepository:
         client_entity = model_to_entity(client_model_instance, ClientEntity).unwrap()
         room_entity = model_to_entity(room_model_instance, RoomEntity).unwrap()
         reservation_entity = Reservation.safe_create(
-            checkin=date.today(),
-            checkout=date.today() + timedelta(days=1),
+            checkin=datetime.now(timezone.utc),
+            checkout=datetime.now(timezone.utc) + timedelta(days=1),
             client=client_entity,
             room=room_entity,
             observations='',
@@ -253,7 +306,7 @@ class TestReservationRepository:
         mocker.patch.object(
             ReservationModel.objects, 'filter', side_effect=Exception('DB Error')
         )
-        result = repo.has_overlapping_reservation(1, date.today(), date.today())
+        result = repo.has_overlapping_reservation(1, datetime.now(timezone.utc), datetime.now(timezone.utc))
         assert result.is_err()
         assert result.unwrap_err().msg == 'Could not check for overlapping reservations'
 
@@ -292,7 +345,7 @@ class TestReservationRepository:
         assert result.unwrap_err().msg == 'Reservation not found'
 
     def test_fetch_pending_not_found(self, repo):
-        result = repo.fetch_pending(999, 999, date.today(), date.today())
+        result = repo.fetch_pending(999, 999, datetime.now(timezone.utc), datetime.now(timezone.utc))
         assert result.is_err()
         assert result.unwrap_err().msg == 'Reservation not found'
 
@@ -313,8 +366,8 @@ class TestReservationRepository:
             client=reservation_model_instance.client,
             room=reservation_model_instance.room,
             status=ReservationStatusEnum.ACTIVE.value,
-            checkin=date.today() + timedelta(days=20),
-            checkout=date.today() + timedelta(days=25),
+            checkin=datetime.now(timezone.utc) + timedelta(days=20),
+            checkout=datetime.now(timezone.utc) + timedelta(days=25),
             amount=Decimal('500.00'),
         )
 
@@ -324,8 +377,8 @@ class TestReservationRepository:
             client=reservation_model_instance.client,
             room=reservation_model_instance.room,
             status=ReservationStatusEnum.INITIALIZED.value,  # Not ACTIVE
-            checkin=date.today() + timedelta(days=30),
-            checkout=date.today() + timedelta(days=35),
+            checkin=datetime.now(timezone.utc) + timedelta(days=30),
+            checkout=datetime.now(timezone.utc) + timedelta(days=35),
             amount=Decimal('300.00'),
         )
 

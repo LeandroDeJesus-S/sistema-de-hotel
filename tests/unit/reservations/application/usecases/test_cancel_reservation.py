@@ -1,7 +1,7 @@
 import pytest
-from datetime import date, timedelta
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
-from unittest.mock import Mock, ANY, call
+from unittest.mock import Mock, ANY
 from exc import Result
 from reservations.application.usecases import CancelReservationUseCase
 from reservations.domain.value_objects import ReservationStatusEnum
@@ -31,8 +31,8 @@ class TestCancelReservationUseCase:
         client_entity.id = 99
         res = Reservation.safe_create(
             id=1,
-            checkin=date.today() + timedelta(days=10),
-            checkout=date.today() + timedelta(days=12),
+            checkin=datetime.now(timezone.utc) + timedelta(days=10),
+            checkout=datetime.now(timezone.utc) + timedelta(days=12),
             client=client_entity,
             room=room_entity,
             observations="",
@@ -51,8 +51,8 @@ class TestCancelReservationUseCase:
         client_entity.id = 1
         res = Reservation.safe_create(
             id=1,
-            checkin=date.today() + timedelta(days=10),
-            checkout=date.today() + timedelta(days=12),
+            checkin=datetime.now(timezone.utc) + timedelta(days=10),
+            checkout=datetime.now(timezone.utc) + timedelta(days=12),
             client=client_entity,
             room=room_entity,
             observations="",
@@ -70,7 +70,7 @@ class TestCancelReservationUseCase:
     def test_cancellation_too_late(self, use_case, mock_reservation_repo, client_entity, room_entity):
         client_entity.id = 1
         # Checkin is today, effectively less than 24h from now
-        checkin = date.today()
+        checkin = datetime.now(timezone.utc)
         res = Reservation.safe_create(
             id=1,
             checkin=checkin,
@@ -93,8 +93,8 @@ class TestCancelReservationUseCase:
         client_entity.id = 1
         res = Reservation.safe_create(
             id=1,
-            checkin=date.today() + timedelta(days=10),
-            checkout=date.today() + timedelta(days=12),
+            checkin=datetime.now(timezone.utc) + timedelta(days=10),
+            checkout=datetime.now(timezone.utc) + timedelta(days=12),
             client=client_entity,
             room=room_entity,
             observations="",
@@ -129,8 +129,8 @@ class TestCancelReservationUseCase:
         client_entity.id = 1
         res = Reservation.safe_create(
             id=1,
-            checkin=date.today() + timedelta(days=10),
-            checkout=date.today() + timedelta(days=12),
+            checkin=datetime.now(timezone.utc) + timedelta(days=10),
+            checkout=datetime.now(timezone.utc) + timedelta(days=12),
             client=client_entity,
             room=room_entity,
             observations="",
@@ -156,8 +156,8 @@ class TestCancelReservationUseCase:
         client_entity.id = 1
         res = Reservation.safe_create(
             id=1,
-            checkin=date.today() + timedelta(days=10),
-            checkout=date.today() + timedelta(days=12),
+            checkin=datetime.now(timezone.utc) + timedelta(days=10),
+            checkout=datetime.now(timezone.utc) + timedelta(days=12),
             client=client_entity,
             room=room_entity,
             observations="",
@@ -179,8 +179,8 @@ class TestCancelReservationUseCase:
         client_entity.id = 1
         res = Reservation.safe_create(
             id=1,
-            checkin=date.today() + timedelta(days=10),
-            checkout=date.today() + timedelta(days=12),
+            checkin=datetime.now(timezone.utc) + timedelta(days=10),
+            checkout=datetime.now(timezone.utc) + timedelta(days=12),
             client=client_entity,
             room=room_entity,
             observations="",
@@ -202,8 +202,8 @@ class TestCancelReservationUseCase:
         client_entity.id = 1
         res = Reservation.safe_create(
             id=1,
-            checkin=date.today() + timedelta(days=10),
-            checkout=date.today() + timedelta(days=12),
+            checkin=datetime.now(timezone.utc) + timedelta(days=10),
+            checkout=datetime.now(timezone.utc) + timedelta(days=12),
             client=client_entity,
             room=room_entity,
             observations="",
@@ -224,8 +224,8 @@ class TestCancelReservationUseCase:
         client_entity.id = 1
         res = Reservation.safe_create(
             id=1,
-            checkin=date.today() + timedelta(days=10),
-            checkout=date.today() + timedelta(days=12),
+            checkin=datetime.now(timezone.utc) + timedelta(days=10),
+            checkout=datetime.now(timezone.utc) + timedelta(days=12),
             client=client_entity,
             room=room_entity,
             observations="",
@@ -252,8 +252,8 @@ class TestCancelReservationUseCase:
         client_entity.id = 1
         res = Reservation.safe_create(
             id=None,
-            checkin=date.today() + timedelta(days=10),
-            checkout=date.today() + timedelta(days=12),
+            checkin=datetime.now(timezone.utc) + timedelta(days=10),
+            checkout=datetime.now(timezone.utc) + timedelta(days=12),
             client=client_entity,
             room=room_entity,
             observations="",
@@ -276,8 +276,8 @@ class TestCancelReservationUseCase:
 
         # 1. Full refund (> 24h)
         res_full = Reservation.safe_create(
-            checkin=date.today() + timedelta(days=10),
-            checkout=date.today() + timedelta(days=12),
+            checkin=datetime.now(timezone.utc) + timedelta(days=10),
+            checkout=datetime.now(timezone.utc) + timedelta(days=12),
             client=client_entity,
             room=room_entity,
             observations="",
@@ -290,8 +290,8 @@ class TestCancelReservationUseCase:
 
         # 2. Partial refund (< 24h)
         res_partial = Reservation.safe_create(
-            checkin=date.today(),
-            checkout=date.today() + timedelta(days=2),
+            checkin=datetime.now(timezone.utc),
+            checkout=datetime.now(timezone.utc) + timedelta(days=2),
             client=client_entity,
             room=room_entity,
             observations="",

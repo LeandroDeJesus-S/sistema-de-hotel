@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from pydantic import Field, model_validator
@@ -183,11 +183,13 @@ class Reservation(BaseEntity):
     @ensure_result
     def reservation_days(self) -> int:
         """Returns the reservation stayed period"""
-        return (self.checkout - self.checkin).days
+        return (self.checkout - self.checkin).days  # type: ignore
 
     @model_validator(mode='after')
     def validate_dates(self):
-        if self.id is None and self.checkin < date.today():
+        now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+
+        if self.id is None and self.checkin < now - timedelta(minutes=1):
             raise ValueError(ReserveErrorMessages.INVALID_CHECKIN_DATE)
 
         if self.id is None and self.checkin > ReserveRules.checkin_anticipation_offset():

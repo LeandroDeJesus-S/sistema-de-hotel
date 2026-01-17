@@ -16,7 +16,7 @@ class ReservationMessages:
     RESERVATION_NOT_FOUND = _('Reservation not found.')
     CANCELED_SUCCESS = _('Reservation successfully cancelled.')
     CANCEL_ERROR = _('Could not cancel the reservation.')
-    RESERVATION_FAIL = _('Could not complete the reservation.')
+    RESERVATION_FAIL = _('Could not complete the reservation: %(reason)s')
     ALREADY_HAVE_A_RESERVATION = _('You already have an active or scheduled reservation.')
     UNAUTHORIZED_CANCELLATION = _('You do not have permission to cancel this reservation.')
     CANNOT_CANCEL_RESERVATION = _('This reservation cannot be cancelled.')

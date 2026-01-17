@@ -1,6 +1,6 @@
 import pytest
 from decimal import Decimal
-from datetime import date, timedelta
+from datetime import datetime, timedelta, timezone
 from exc import Result
 from reservations.application.usecases import InitializeReservationUseCase
 from reservations.application.dtos import CreateReservationInput
@@ -21,7 +21,7 @@ class TestInitializeReservationUseCase:
     def test_success(self, use_case, mock_client_repo, mock_room_repo, mock_reservation_repo, client_entity, room_entity):
         """Should successfully create and save a new reservation when all checks pass."""
         # Arrange
-        checkin = date.today() + timedelta(days=1)
+        checkin = datetime.now(timezone.utc) + timedelta(days=1)
         checkout = checkin + timedelta(days=3)
         input_dto = CreateReservationInput(
             client_id=1,
@@ -68,8 +68,8 @@ class TestInitializeReservationUseCase:
         input_dto = CreateReservationInput(
             client_id=1,
             room_pk=1,
-            check_in=date.today(),
-            check_out=date.today() + timedelta(days=1),
+            check_in=datetime.now(timezone.utc),
+            check_out=datetime.now(timezone.utc) + timedelta(days=1),
             observations=""
         )
 
@@ -85,8 +85,8 @@ class TestInitializeReservationUseCase:
         input_dto = CreateReservationInput(
             client_id=1,
             room_pk=1,
-            check_in=date.today(),
-            check_out=date.today() + timedelta(days=1),
+            check_in=datetime.now(timezone.utc),
+            check_out=datetime.now(timezone.utc) + timedelta(days=1),
             observations=""
         )
 
@@ -105,8 +105,8 @@ class TestInitializeReservationUseCase:
         from reservations.domain.entities import Reservation
         from decimal import Decimal
         res = Reservation.safe_create(
-            checkin=date.today(),
-            checkout=date.today() + timedelta(days=1),
+            checkin=datetime.now(timezone.utc),
+            checkout=datetime.now(timezone.utc) + timedelta(days=1),
             client=client_entity,
             room=room_entity,
             observations="",
@@ -118,8 +118,8 @@ class TestInitializeReservationUseCase:
         input_dto = CreateReservationInput(
             client_id=1,
             room_pk=1,
-            check_in=date.today(),
-            check_out=date.today() + timedelta(days=1),
+            check_in=datetime.now(timezone.utc),
+            check_out=datetime.now(timezone.utc) + timedelta(days=1),
             observations=""
         )
 
@@ -131,7 +131,7 @@ class TestInitializeReservationUseCase:
 
     def test_save_failure(self, use_case, mock_client_repo, mock_room_repo, mock_reservation_repo, client_entity, room_entity):
         """Should fail if the repository fails to save the reservation."""
-        checkin = date.today() + timedelta(days=1)
+        checkin = datetime.now(timezone.utc) + timedelta(days=1)
         checkout = checkin + timedelta(days=3)
         input_dto = CreateReservationInput(
             client_id=1,
@@ -166,8 +166,8 @@ class TestInitializeReservationUseCase:
         from reservations.domain.entities import Reservation
         from decimal import Decimal
         res = Reservation.safe_create(
-            checkin=date.today(),
-            checkout=date.today() + timedelta(days=1),
+            checkin=datetime.now(timezone.utc),
+            checkout=datetime.now(timezone.utc) + timedelta(days=1),
             client=client_entity,
             room=room_entity,
             observations="",
@@ -179,8 +179,8 @@ class TestInitializeReservationUseCase:
         input_dto = CreateReservationInput(
             client_id=1,
             room_pk=1,
-            check_in=date.today(),
-            check_out=date.today() + timedelta(days=1),
+            check_in=datetime.now(timezone.utc),
+            check_out=datetime.now(timezone.utc) + timedelta(days=1),
             observations=""
         )
 
@@ -201,8 +201,8 @@ class TestInitializeReservationUseCase:
         input_dto = CreateReservationInput(
             client_id=1,
             room_pk=1,
-            check_in=date.today(),
-            check_out=date.today() + timedelta(days=1),
+            check_in=datetime.now(timezone.utc),
+            check_out=datetime.now(timezone.utc) + timedelta(days=1),
             observations=""
         )
 
@@ -225,11 +225,11 @@ class TestInitializeReservationUseCase:
         input_dto = CreateReservationInput(
             client_id=1,
             room_pk=1,
-            check_in=date.today(),
-            check_out=date.today() + timedelta(days=1),
+            check_in=datetime.now(timezone.utc),
+            check_out=datetime.now(timezone.utc) + timedelta(days=1),
             observations=""
         )
 
         result = use_case(input_dto)
         assert result.is_err()
-        assert result.unwrap_err().msg == ReservationMessages.RESERVATION_FAIL
+        assert result.unwrap_err().msg == ReservationMessages.RESERVATION_FAIL % {'reason': 'Invalid data'}

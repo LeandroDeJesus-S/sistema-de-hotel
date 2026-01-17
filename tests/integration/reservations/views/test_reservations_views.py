@@ -1,8 +1,7 @@
 import pytest
 from django.urls import reverse
-from django.http import Http404
 from reservations.models import Reservation
-from base.dtos import TemplateRenderResultDTO
+from datetime import datetime, timezone, timedelta
 
 @pytest.mark.django_db
 def test_rooms_list_view(client, room_model_instance):
@@ -59,8 +58,7 @@ def test_reserve_view_post_success(
     # Ensure user has no active reservations
     Reservation.objects.filter(client=user).delete()
 
-    from datetime import date, timedelta
-    checkin = date.today() + timedelta(days=10)
+    checkin = datetime.now(timezone.utc) + timedelta(days=10)
     checkout = checkin + timedelta(days=5)
 
     with reservations_container.unit_of_work.override(mock_unit_of_work):

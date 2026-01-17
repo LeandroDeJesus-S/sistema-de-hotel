@@ -1,4 +1,3 @@
-from datetime import datetime, time, timedelta
 from functools import wraps
 from typing import Type, TypeVar
 
@@ -17,6 +16,7 @@ from base.entity import BaseEntity
 from clients.feedback_messages import Recaptcha
 from exc import Result
 from reservations.domain.entities import Reservation as ReservationEntity
+from reservations.rules import ReserveRules
 
 
 def resize_image(img_path, w, h=None):
@@ -152,8 +152,6 @@ def model_to_entity(model: M, entity_cls: Type[T]) -> Result[T]:
                 data[f.name] = to_dict(value)
             elif isinstance(value, ImageFieldFile):
                 data[f.name] = value.name if value else ''
-            elif isinstance(value, datetime) and value.time() == time(0, 0):
-                data[f.name] = value.date()
             elif value is None and f.get_internal_type() in {'CharField', 'TextField'}:
                 data[f.name] = ''
             else:
@@ -241,7 +239,7 @@ def get_available_dates_message(reservations: list[ReservationEntity]) -> Result
         str: A formatted string with the available dates for a room.
     """
 
-    date_format = '%d %b %Y'
+    datetime_format = '%d %b %Y %H:%M'
     msg_prefix = gt('This room is only available for reservation from')
     msg_parts: list[str] = []
     lst: ReservationEntity | None = None
@@ -250,34 +248,42 @@ def get_available_dates_message(reservations: list[ReservationEntity]) -> Result
             lst = reserva
             continue
 
-        # calculates the gap between the current and the previous reservation and then
-        # if the gap is bigger than 1 day, it's a availble date, so adds a message part
-        # with the start and end dates
-        if (reserva.checkin - lst.checkout).days >= 1:
+        # Calculate the effective end time of previous reservation (including clean time)
+        effective_start = reserva.checkin - settings.CLEAN_TIME
+        effective_end = lst.checkout + settings.CLEAN_TIME
+
+        # If there's a gap between effective end and next reservation start
+        if reserva.checkin > effective_end:
             start, end = (
-                lst.checkout,
-                reserva.checkin - timedelta(days=1),
+                effective_end,
+                effective_start,
             )
-            if (end - start).days > 1:
+            if (end - start).days > ReserveRules.MIN_RESERVATION_DAYS:
                 msg_parts.append(
-                    gtl('%(from_date)s to %(to_date)s')
+                    gtl('%(from_datetime)s to %(to_datetime)s')
                     % {
-                        'from_date': start.strftime(date_format),
-                        'to_date': end.strftime(date_format),
+                        'from_datetime': start.strftime(datetime_format),
+                        'to_datetime': end.strftime(datetime_format),
                     }
                 )
 
         lst = reserva
 
     if msg_parts:
+        # Add the period after the last reservation
+        last_available = reserva.checkout + settings.CLEAN_TIME
         msg_parts.append(
-            gtl('and %(date)s onwards.') % {'date': reserva.checkout.strftime(date_format)}
+            gtl('and %(datetime)s onwards.')
+            % {'datetime': last_available.strftime(datetime_format)}
         )
         joined_msg = ', '.join(msg_parts)
         return Result.Ok(f'{msg_prefix} {joined_msg}')
 
+    # No gaps found, only show after last reservation
+    last_available = reserva.checkout + settings.CLEAN_TIME
     msg_parts.append(
-        gtl('%(fmt_date)s onwards.') % {'fmt_date': reserva.checkout.strftime(date_format)}
+        gtl('%(fmt_datetime)s onwards.')
+        % {'fmt_datetime': last_available.strftime(datetime_format)}
     )
     joined_msg = ', '.join(msg_parts)
     return Result.Ok(f'{msg_prefix} {joined_msg}')

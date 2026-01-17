@@ -14,17 +14,20 @@
             <div class="d-flex justify-content-center">
                 {% include "partials/_messages.html" %}
             </div>
+            <div class="alert alert-info mb-3">
+                <small>{% trans "Note: Minimum stay is 1 day. Check-out must be at least 1 day after check-in." %}</small>
+            </div>
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="checkin" class="form-label">{% trans "Check-In" %}</label>
-                        <input required id="checkin" name="checkin" type="date" class="form-control">
+                        <input required id="checkin" name="checkin" type="datetime-local" class="form-control">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="checkout" class="form-label">{% trans "Check-Out" %}</label>
-                        <input required id="checkout" name="checkout" type="date" class="form-control">
+                        <input required id="checkout" name="checkout" type="datetime-local" class="form-control">
                     </div>
                 </div>
                 <div class="col-md-12 mt-3">
@@ -45,4 +48,90 @@
 </div>
 
 {% include "partials/_recaptcha_v3.html" %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkinInput = document.getElementById('checkin');
+    const checkoutInput = document.getElementById('checkout');
+
+    // Helper function to format date for datetime-local input
+    function formatDateTime(date) {
+        return date.getFullYear() + '-' +
+               String(date.getMonth() + 1).padStart(2, '0') + '-' +
+               String(date.getDate()).padStart(2, '0') + 'T' +
+               String(date.getHours()).padStart(2, '0') + ':' +
+               String(date.getMinutes()).padStart(2, '0');
+    }
+
+    checkinInput.addEventListener('change', function() {
+        const value = this.value;
+        if (!value) return;
+
+        try {
+            // Parse the selected date/time
+            const selectedDate = new Date(value);
+
+            if (isNaN(selectedDate.getTime())) return;
+
+            // Only set default time if it's currently at midnight (00:00)
+            // This allows users to manually adjust the time without it being overridden
+            let checkinDate = new Date(selectedDate);
+            if (selectedDate.getHours() === 0 && selectedDate.getMinutes() === 0) {
+                checkinDate.setHours(14, 0, 0, 0);
+                this.value = formatDateTime(checkinDate);
+            }
+
+            // Always update check-out when check-in date changes
+            const checkoutDate = new Date(checkinDate);
+            checkoutDate.setDate(checkoutDate.getDate() + 1);
+            checkoutDate.setHours(12, 0, 0, 0);
+            checkoutInput.value = formatDateTime(checkoutDate);
+
+        } catch (error) {
+            console.error('Error setting default times:', error);
+        }
+    });
+
+    checkoutInput.addEventListener('change', function() {
+        const checkinValue = checkinInput.value;
+        const checkoutValue = this.value;
+
+        if (!checkinValue || !checkoutValue) return;
+
+        try {
+            const checkinDate = new Date(checkinValue);
+            const checkoutDate = new Date(checkoutValue);
+
+            if (isNaN(checkinDate.getTime()) || isNaN(checkoutDate.getTime())) return;
+
+            // Calculate difference in days
+            const diffTime = checkoutDate.getTime() - checkinDate.getTime();
+            const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+            // If checkout is less than 1 day after checkin, adjust it
+            if (diffDays < 1) {
+                const newCheckoutDate = new Date(checkinDate);
+                newCheckoutDate.setDate(newCheckoutDate.getDate() + 1);
+                newCheckoutDate.setHours(12, 0, 0, 0);
+                this.value = formatDateTime(newCheckoutDate);
+            }
+        } catch (error) {
+            console.error('Error validating checkout date:', error);
+        }
+    });
+
+    // Set initial default values (tomorrow at 14:00 for check-in, day after at 12:00 for check-out)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(14, 0, 0, 0);
+
+    const dayAfter = new Date(tomorrow);
+    dayAfter.setDate(dayAfter.getDate() + 1);
+    dayAfter.setHours(12, 0, 0, 0);
+
+    checkinInput.value = formatDateTime(tomorrow);
+    checkoutInput.value = formatDateTime(dayAfter);
+});
+</script>
+
 {% endblock content %}

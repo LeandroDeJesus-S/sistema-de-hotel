@@ -1,7 +1,8 @@
 import pytest
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from unittest.mock import Mock, patch
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.fields.files import ImageFieldFile
@@ -351,7 +352,7 @@ class TestModelToEntity:
 
         result = model_to_entity(mock_model, mock_entity_cls)
 
-        mock_entity_cls.safe_validate.assert_called_once_with({'field1': date(2023, 1, 1)})
+        mock_entity_cls.safe_validate.assert_called_once_with({'field1': midnight_datetime})
 
     def test_image_field_file_converts_to_name(self, mocker):
         """Should convert ImageFieldFile to its name."""
@@ -610,25 +611,36 @@ class TestGetAvailableDatesMessage:
     def test_consecutive_reservations_no_gaps(self):
         """Should return message with checkout date when reservations are consecutive."""
         reservation1 = Mock(spec=ReservationEntity)
-        reservation1.checkout = date(2023, 1, 5)
+        reservation1.checkout = datetime(2023, 1, 5, 12, tzinfo=timezone.utc)
+
         reservation2 = Mock(spec=ReservationEntity)
-        reservation2.checkin = date(2023, 1, 6)
-        reservation2.checkout = date(2023, 1, 10)
+        reservation2.checkin = datetime(2023, 1, 5, 13, tzinfo=timezone.utc)
+        reservation2.checkout = datetime(2023, 1, 10, tzinfo=timezone.utc)
 
         reservations = [reservation1, reservation2]
 
         result = get_available_dates_message(reservations)
 
         assert result.is_ok()
-        assert 'This room is only available for reservation from 10 Jan 2023 onwards.' == result.unwrap()
+        assert (
+            'This room is only available for reservation from 10 Jan 2023 01:00 onwards.'
+            == result.unwrap()
+        )
 
     def test_reservations_with_gaps(self):
         """Should return message with available date ranges when there are gaps."""
         reservation1 = Mock(spec=ReservationEntity)
-        reservation1.checkout = date(2023, 1, 5)  # Start available from day after checkout
+        reservation1.checkout = datetime(
+            2023, 1, 5, 12, tzinfo=timezone.utc
+        )
+
         reservation2 = Mock(spec=ReservationEntity)
-        reservation2.checkin = date(2023, 1, 10)
-        reservation2.checkout = date(2023, 1, 15)
+        reservation2.checkin = datetime(2023, 1, 9, tzinfo=timezone.utc)
+        reservation2.checkout = datetime(2023, 1, 15, tzinfo=timezone.utc)
+
+        expected_from = (reservation1.checkout + settings.CLEAN_TIME).strftime('%d %b %Y %H:%M')
+        expected_to = (reservation2.checkin - settings.CLEAN_TIME).strftime('%d %b %Y %H:%M')
+        expected_onwards = (reservation2.checkout + settings.CLEAN_TIME).strftime('%d %b %Y %H:%M')
 
         reservations = [reservation1, reservation2]
 
@@ -636,16 +648,22 @@ class TestGetAvailableDatesMessage:
 
         assert result.is_ok()
 
-        assert 'This room is only available for reservation from 05 Jan 2023 to 09 Jan 2023, and 15 Jan 2023 onwards.' == result.unwrap()
+        assert (
+            f'This room is only available for reservation from {expected_from} to {expected_to}, and {expected_onwards} onwards.'
+            == result.unwrap()
+        )
 
     def test_single_reservation(self):
         """Should handle single reservation correctly."""
         reservation = Mock(spec=ReservationEntity)
-        reservation.checkout = date(2023, 1, 10)
+        reservation.checkout = datetime(2023, 1, 10, tzinfo=timezone.utc)
 
         reservations = [reservation]
 
         result = get_available_dates_message(reservations)
 
         assert result.is_ok()
-        assert 'This room is only available for reservation from 10 Jan 2023 onwards.' in result.unwrap()
+        assert (
+            'This room is only available for reservation from 10 Jan 2023 01:00 onwards.'
+            in result.unwrap()
+        )

@@ -93,7 +93,8 @@ class InitializeReservationUseCase:
         )
         if result.is_err():
             return Result.Err(
-                msg=feedback_messages.ReservationMessages.RESERVATION_FAIL,
+                msg=feedback_messages.ReservationMessages.RESERVATION_FAIL
+                % {'reason': result.unwrap_err().msg},
                 src_error=result.unwrap_err(),
             )
 

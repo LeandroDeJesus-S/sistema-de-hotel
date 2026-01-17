@@ -55,6 +55,8 @@ class BaseEntity(PydanticBaseModel):
                     field_messages = custom_messages.get(field_name, {})
                     current_field_message = field_messages.get(error_type, default_error_msg)
 
+                current_field_message = str(current_field_message).split(', ', 1)[-1]
+
                 return Result.Err(msg=current_field_message, src_error=e)
 
             return Result.Err(msg='Validation error', src_error=e)

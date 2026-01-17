@@ -2,8 +2,9 @@
 This module provides concrete implementations of the reservation-related ports.
 """
 
-from datetime import date
+from datetime import datetime
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 
 from exc import Result
@@ -168,14 +169,17 @@ class ReservationRepository(AbsReservationRepository):
     def has_overlapping_reservation(
         self,
         room_id: int,
-        check_in: date,
-        check_out: date,
+        check_in: datetime,
+        check_out: datetime,
     ) -> Result[bool]:
         try:
+            # Check for overlaps including CLEAN_TIME gap
             exists = self._modelclass.objects.filter(
                 room_id=room_id,
-                checkout__gt=check_in,
-                checkin__lt=check_out,
+                checkout__gt=check_in
+                - settings.CLEAN_TIME,  # Existing reservation ends after new check-in
+                checkin__lt=check_out
+                + settings.CLEAN_TIME,  # Before new checkout + clean time
                 status__in=[
                     ReservationStatusEnum.ACTIVE.value,
                     ReservationStatusEnum.SCHEDULED.value,
@@ -258,7 +262,7 @@ class ReservationRepository(AbsReservationRepository):
         return models_to_entities(reservations, self._entityclass)
 
     def fetch_pending(
-        self, client_id: int, room_id: int, check_in: date, check_out: date
+        self, client_id: int, room_id: int, check_in: datetime, check_out: datetime
     ) -> Result[entities.Reservation]:
         reservation = self._modelclass.objects.filter(
             client_id=client_id,

@@ -238,3 +238,4 @@ CAPTCHA_MIN_SCORE = float(os.getenv('CAPTCHA_MIN_SCORE', '0.6'))
 
 # reservations
 RESERVATION_CANCELLATION_HOURS = int(os.getenv('RESERVATION_CANCELLATION_HOURS', '24'))
+CLEAN_TIME = timedelta(hours=int(os.getenv('CLEAN_TIME_HOURS', '1')))

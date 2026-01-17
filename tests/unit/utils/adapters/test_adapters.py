@@ -1,6 +1,9 @@
+from decimal import Decimal
 import pytest
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from exc import Result
+from home.domain.entities import Hotel
+from payments.domain.entities import Payment, PaymentStatus
 from utils.adapters.email import DjangoEmailSender
 from utils.adapters.image_validators import (
     MaxDimensionsImageValidator,
@@ -13,13 +16,14 @@ from utils.adapters.queue import DjangoQTaskQueuer
 from utils.adapters.unit_of_work import UnitOfWork
 from django.core.exceptions import ValidationError
 
+
 @pytest.mark.django_db
 class TestDjangoEmailSender:
     def test_send_mass_mail_success(self, mocker):
         sender = DjangoEmailSender()
-        mocker.patch("utils.adapters.email.send_mass_mail", return_value=5)
+        mocker.patch('utils.adapters.email.send_mass_mail', return_value=5)
 
-        datatuple = [("Subject", "Message", "from@example.com", ["to@example.com"])]
+        datatuple = [('Subject', 'Message', 'from@example.com', ['to@example.com'])]
         result = sender.send_mass_mail(datatuple)
 
         assert result.is_ok()
@@ -29,13 +33,13 @@ class TestDjangoEmailSender:
         sender = DjangoEmailSender()
         mock_email = mocker.Mock()
         mock_email.send.return_value = 1
-        mocker.patch("utils.adapters.email.EmailMessage", return_value=mock_email)
+        mocker.patch('utils.adapters.email.EmailMessage', return_value=mock_email)
 
         result = sender.send_single_mail(
-            subject="Test",
-            body="Body",
-            from_email="from@example.com",
-            to_emails=["to@example.com"]
+            subject='Test',
+            body='Body',
+            from_email='from@example.com',
+            to_emails=['to@example.com'],
         )
 
         assert result.is_ok()
@@ -46,20 +50,20 @@ class TestDjangoEmailSender:
         sender = DjangoEmailSender()
         mock_email = mocker.Mock()
         mock_email.send.return_value = 1
-        mocker.patch("utils.adapters.email.EmailMessage", return_value=mock_email)
+        mocker.patch('utils.adapters.email.EmailMessage', return_value=mock_email)
 
         result = sender.send_single_mail(
-            subject="Test",
-            body="<p>Body</p>",
-            from_email="from@example.com",
-            to_emails=["to@example.com"],
+            subject='Test',
+            body='<p>Body</p>',
+            from_email='from@example.com',
+            to_emails=['to@example.com'],
             is_html=True,
-            attachments=(("file.txt", b"content", "text/plain"),)
+            attachments=(('file.txt', b'content', 'text/plain'),),
         )
 
         assert result.is_ok()
-        assert mock_email.content_subtype == "html"
-        mock_email.attach.assert_called_once_with("file.txt", b"content", "text/plain")
+        assert mock_email.content_subtype == 'html'
+        mock_email.attach.assert_called_once_with('file.txt', b'content', 'text/plain')
 
 
 class TestImageValidators:
@@ -79,12 +83,14 @@ class TestImageValidators:
 
         result = validator(image)
         assert result.is_err()
-        assert "exceed maximum allowed" in result.unwrap_err().msg
+        assert 'exceed maximum allowed' in result.unwrap_err().msg
 
     def test_max_dimensions_exception(self, mocker):
         validator = MaxDimensionsImageValidator(
-            max_width=100, max_height=100,
-            raise_exception=True, exception_class=ValidationError
+            max_width=100,
+            max_height=100,
+            raise_exception=True,
+            exception_class=ValidationError,
         )
         image = mocker.Mock(spec=DjangoImageAdapter)
         image.width = 150
@@ -94,9 +100,9 @@ class TestImageValidators:
             validator(image)
 
     def test_max_size_success(self, mocker):
-        validator = MaxSizeImageValidator(max_size=1) # 1MB
+        validator = MaxSizeImageValidator(max_size=1)  # 1MB
         image = mocker.Mock(spec=DjangoImageAdapter)
-        image.size = 500000 # 0.5MB
+        image.size = 500000  # 0.5MB
 
         result = validator(image)
         assert result.is_ok()
@@ -104,19 +110,19 @@ class TestImageValidators:
     def test_max_size_failure(self, mocker):
         validator = MaxSizeImageValidator(max_size=1)
         image = mocker.Mock(spec=DjangoImageAdapter)
-        image.size = 2000000 # 2MB
+        image.size = 2000000  # 2MB
 
         result = validator(image)
         assert result.is_err()
-        assert "exceeds maximum allowed" in result.unwrap_err().msg
+        assert 'exceeds maximum allowed' in result.unwrap_err().msg
 
     def test_max_size_custom_message(self, mocker):
-        validator = MaxSizeImageValidator(max_size=1, error_message="Size {size} > {max_size}")
+        validator = MaxSizeImageValidator(max_size=1, error_message='Size {size} > {max_size}')
         image = mocker.Mock(spec=DjangoImageAdapter)
         image.size = 2000000
         result = validator(image)
         assert result.is_err()
-        assert result.unwrap_err().msg == "Size 2000000 > 1"
+        assert result.unwrap_err().msg == 'Size 2000000 > 1'
 
     def test_max_size_exception(self, mocker):
         validator = MaxSizeImageValidator(
@@ -147,7 +153,7 @@ class TestImageValidators:
         image = mocker.Mock()
         image.width = 64
         image.height = 64
-        image.size = 6 * 1000000 # 6MB > 5MB limit
+        image.size = 6 * 1000000  # 6MB > 5MB limit
         with pytest.raises(ValidationError):
             validate_benefit_icon(image)
 
@@ -159,73 +165,93 @@ class TestImageValidators:
 
     def test_validate_service_logo_fail_size(self, mocker):
         image = mocker.Mock()
-        image.size = 6 * 1000000 # 6MB > 5MB limit
+        image.size = 6 * 1000000  # 6MB > 5MB limit
         with pytest.raises(ValidationError):
             validate_service_logo(image)
+
 
 class TestDjangoQTaskQueuer:
     def test_schedule_task(self, mocker):
         queuer = DjangoQTaskQueuer()
-        mocker.patch("utils.adapters.queue.schedule")
+        mocker.patch('utils.adapters.queue.schedule')
         run_at = datetime.now()
-        queuer.schedule_task("func", run_at, ("arg",), name="task1")
+        queuer.schedule_task('func', run_at, ('arg',), name='task1')
         from utils.adapters.queue import schedule
+
         schedule.assert_called_once()
 
     def test_queue_task(self, mocker):
         queuer = DjangoQTaskQueuer()
-        mocker.patch("utils.adapters.queue.async_task")
-        queuer.queue_task("func", ("arg",), name="group1")
+        mocker.patch('utils.adapters.queue.async_task')
+        queuer.queue_task('func', ('arg',), name='group1')
         from utils.adapters.queue import async_task
+
         async_task.assert_called_once()
 
 
 class TestUnitOfWork:
     def test_context_manager(self, mocker):
-        mock_transaction = mocker.patch("utils.adapters.unit_of_work.transaction")
+        mock_transaction = mocker.patch('utils.adapters.unit_of_work.transaction')
         uow = UnitOfWork()
         with uow:
             mock_transaction.set_autocommit.assert_called_with(False)
         mock_transaction.set_autocommit.assert_called_with(True)
 
     def test_commit(self, mocker):
-        mock_transaction = mocker.patch("utils.adapters.unit_of_work.transaction")
+        mock_transaction = mocker.patch('utils.adapters.unit_of_work.transaction')
         uow = UnitOfWork()
         uow.commit()
         mock_transaction.commit.assert_called_once()
 
     def test_rollback(self, mocker):
-        mock_transaction = mocker.patch("utils.adapters.unit_of_work.transaction")
+        mock_transaction = mocker.patch('utils.adapters.unit_of_work.transaction')
         uow = UnitOfWork()
         uow.rollback()
         mock_transaction.rollback.assert_called_once()
 
+
 from utils.adapters.pdf import ReportLabPDFReceiptGenerator
+
+
 class TestReportLabPDFReceiptGenerator:
     def test_generate_success(self, mocker):
         generator = ReportLabPDFReceiptGenerator()
-        payment_entity = mocker.Mock()
 
-        # Mock payment model structure
-        payment_model = mocker.Mock()
-        hotel = mocker.Mock()
-        hotel.name = "Hotel Test"
-        hotel.logo = None
-        payment_model.reservation.room.hotel = hotel
-        payment_model.reservation.room.room_class = "Standard"
-        payment_model.reservation.room.number = "101"
-        payment_model.reservation.formatted_price.return_value = "R$ 200,00"
-        payment_model.reservation.client.complete_name = "John Doe"
-        payment_model.reservation.checkin.strftime.return_value = "01/01/2023"
-        payment_model.reservation.checkout.strftime.return_value = "05/01/2023"
-        payment_model.created_at.strftime.return_value = "12:00:00 01/01/2023"
-        payment_model.status = "Paid"
+        # Create proper payment entity mock
+        payment_entity = mocker.Mock(spec=Payment)
+        payment_entity.status = PaymentStatus.COMPLETED
+        payment_entity.created_at = datetime.now(timezone.utc)
 
-        mocker.patch("utils.adapters.pdf.entity_to_model", return_value=Result.Ok(payment_model))
+        # Mock reservation
+        reservation = mocker.Mock()
+        reservation.amount = Decimal('200.00')
+        reservation.formatted_price.return_value = 'R$ 200,00'
+        reservation.checkin = datetime.now(timezone.utc)
+        reservation.checkout = datetime.now(timezone.utc) + timedelta(days=1)
+
+        # Mock client
+        client = mocker.Mock()
+        client.first_name = 'John'
+        client.last_name = 'Doe'
+        reservation.client = client
+
+        # Mock room
+        room = mocker.Mock()
+        room.room_class = 'Standard'
+        room.number = '101'
+        reservation.room = room
+
+        # Mock hotel - properly set logo as string
+        hotel = mocker.Mock(spec=Hotel)
+        hotel.name = 'Hotel Test'
+        hotel.logo = 'logo.png'
+        room.hotel = hotel
+
+        payment_entity.reservation = reservation
 
         # Mock canvas
         mock_canvas = mocker.Mock()
-        mocker.patch("utils.adapters.pdf.canvas.Canvas", return_value=mock_canvas)
+        mocker.patch('utils.adapters.pdf.canvas.Canvas', return_value=mock_canvas)
 
         result = generator.generate(payment_entity)
 
@@ -234,39 +260,56 @@ class TestReportLabPDFReceiptGenerator:
 
     def test_generate_success_with_logo(self, mocker):
         generator = ReportLabPDFReceiptGenerator()
-        payment_entity = mocker.Mock()
 
-        payment_model = mocker.Mock()
-        hotel = mocker.Mock()
-        hotel.name = "Hotel with Logo"
-        hotel.logo.path = "/path/to/logo.png"
-        payment_model.reservation.room.hotel = hotel
-        payment_model.reservation.room.room_class = "Standard"
-        payment_model.reservation.room.number = "101"
-        payment_model.reservation.formatted_price.return_value = "R$ 200,00"
-        payment_model.reservation.client.complete_name = "John Doe"
-        payment_model.reservation.checkin.strftime.return_value = "01/01/2023"
-        payment_model.reservation.checkout.strftime.return_value = "05/01/2023"
-        payment_model.created_at.strftime.return_value = "12:00:00 01/01/2023"
-        payment_model.status = "Paid"
+        # Create proper payment entity mock with logo
+        payment_entity = mocker.Mock(spec=Payment)
+        payment_entity.status = PaymentStatus.COMPLETED
+        payment_entity.created_at = datetime.now(timezone.utc)
 
-        mocker.patch("utils.adapters.pdf.entity_to_model", return_value=Result.Ok(payment_model))
+        # Mock reservation
+        reservation = mocker.Mock()
+        reservation.amount = Decimal('200.00')
+        reservation.formatted_price.return_value = 'R$ 200,00'
+        reservation.checkin = datetime.now(timezone.utc)
+        reservation.checkout = datetime.now(timezone.utc) + timedelta(days=4)
+
+        # Mock client
+        client = mocker.Mock()
+        client.first_name = 'John'
+        client.last_name = 'Doe'
+        reservation.client = client
+
+        # Mock room
+        room = mocker.Mock()
+        room.room_class = 'Standard'
+        room.number = '101'
+        reservation.room = room
+
+        # Mock hotel with logo
+        hotel = mocker.Mock(spec=Hotel)
+        hotel.name = 'Hotel with Logo'
+        hotel.logo = 'logo.png'  # Set as string
+        room.hotel = hotel
+
+        payment_entity.reservation = reservation
+
         mock_canvas = mocker.Mock()
-        mocker.patch("utils.adapters.pdf.canvas.Canvas", return_value=mock_canvas)
+        mocker.patch('utils.adapters.pdf.canvas.Canvas', return_value=mock_canvas)
 
         result = generator.generate(payment_entity)
         assert result.is_ok()
         mock_canvas.drawInlineImage.assert_called_once()
 
-    def test_generate_conversion_error(self, mocker):
+    def test_generate_entity_access_error(self, mocker):
         generator = ReportLabPDFReceiptGenerator()
         payment_entity = mocker.Mock()
 
-        mocker.patch("utils.adapters.pdf.entity_to_model", return_value=Result.Err("Conversion error"))
+        # Mock incomplete entity structure to cause access error
+        payment_entity.reservation = None
 
         result = generator.generate(payment_entity)
         assert result.is_err()
-        assert "Failed to convert payment entity" in result.unwrap_err().msg
+        assert 'Failed to generate PDF' in result.unwrap_err().msg
 
     def test_generate_exception(self, mocker):
         generator = ReportLabPDFReceiptGenerator()
@@ -276,11 +319,9 @@ class TestReportLabPDFReceiptGenerator:
         # Mock the path to trigger exception when accessing hotel
         # payment_model.reservation.room.hotel
         mock_room = mocker.Mock()
-        type(mock_room).hotel = mocker.PropertyMock(side_effect=Exception("DB Error"))
+        type(mock_room).hotel = mocker.PropertyMock(side_effect=Exception('DB Error'))
         payment_model.reservation.room = mock_room
-
-        mocker.patch("utils.adapters.pdf.entity_to_model", return_value=Result.Ok(payment_model))
 
         result = generator.generate(payment_entity)
         assert result.is_err()
-        assert "Failed to generate PDF" in result.unwrap_err().msg
+        assert 'Failed to generate PDF' in result.unwrap_err().msg

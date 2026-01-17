@@ -193,12 +193,12 @@ class TestReservationTasks:
     def test_send_cancellation_notification_mailer_exception(
         self, mocker, mock_reservation_repository, mock_task_queuer, reservations_container
     ):
-        from datetime import date, datetime, timezone
+        from datetime import datetime, timezone
 
         reservation = mocker.Mock()
         reservation.id = 1
-        reservation.checkin = date.today()
-        reservation.checkout = date.today()
+        reservation.checkin = datetime.now(tz=timezone.utc)
+        reservation.checkout = datetime.now(tz=timezone.utc)
         reservation.cancelled_at = datetime.now(timezone.utc)
         reservation.client.email = 'client@example.com'
         reservation.client.complete_name = 'John Doe'
@@ -220,12 +220,12 @@ class TestReservationTasks:
     def test_send_cancellation_notification_admin_mailer_exception(
         self, mocker, mock_reservation_repository, mock_task_queuer, reservations_container
     ):
-        from datetime import date, datetime, timezone
+        from datetime import datetime, timezone
 
         reservation = mocker.Mock()
         reservation.id = 1
-        reservation.checkin = date.today()
-        reservation.checkout = date.today()
+        reservation.checkin = datetime.now(tz=timezone.utc)
+        reservation.checkout = datetime.now(tz=timezone.utc)
         reservation.cancelled_at = datetime.now(timezone.utc)
         reservation.client.email = 'client@example.com'
         reservation.client.complete_name = 'John Doe'
@@ -257,11 +257,11 @@ class TestReservationTasks:
     def test_send_scheduling_notification_mailer_exception(
         self, mocker, mock_reservation_repository, mock_task_queuer, reservations_container
     ):
-        from datetime import date
+        from datetime import datetime, timezone
 
         reservation = mocker.Mock()
-        reservation.checkin = date.today()
-        reservation.checkout = date.today()
+        reservation.checkin = datetime.now(tz=timezone.utc)
+        reservation.checkout = datetime.now(tz=timezone.utc)
         reservation.client.email = 'client@example.com'
         mock_reservation_repository.find_by_id.return_value = Result.Ok(reservation)
 
@@ -282,12 +282,12 @@ class TestReservationTasks:
         mock_task_queuer,
         reservations_container,
     ):
-        from datetime import date
+        from datetime import datetime, timezone, timedelta
         from reservations.domain.value_objects import ReservationStatusEnum
 
         reservation = mocker.Mock()
         reservation.id = 1
-        reservation.checkout = date.today()  # Expired
+        reservation.checkout = datetime.now(tz=timezone.utc) - timedelta(days=1)  # Expired
         reservation.room.id = 1
         mock_reservation_repository.fetch_all_active.return_value = Result.Ok([reservation])
         mock_reservation_repository.save.return_value = Result.Ok(reservation)
@@ -327,17 +327,17 @@ class TestReservationTasks:
         mock_task_queuer,
         reservations_container,
     ):
-        from datetime import date
+        from datetime import datetime, timezone, timedelta
 
         # Create two reservations - one succeeds, one fails
         reservation1 = mocker.Mock()
         reservation1.id = 1
-        reservation1.checkout = date.today()
+        reservation1.checkout = datetime.now(tz=timezone.utc) - timedelta(days=1)
         reservation1.room.id = 1
 
         reservation2 = mocker.Mock()
         reservation2.id = 2
-        reservation2.checkout = date.today()
+        reservation2.checkout = datetime.now(tz=timezone.utc) - timedelta(days=1)
         reservation2.room.id = 2
 
         mock_reservation_repository.fetch_all_active.return_value = Result.Ok([
@@ -581,11 +581,13 @@ class TestReservationTasks:
         mock_task_queuer,
         reservations_container,
     ):
-        from datetime import date, timedelta
+        from datetime import datetime, timezone, timedelta
 
         # Reservation with future checkout
         future_reservation = mocker.Mock()
-        future_reservation.checkout = date.today() + timedelta(days=1)  # Future date
+        future_reservation.checkout = datetime.now(tz=timezone.utc) + timedelta(
+            days=1
+        )  # Future date
 
         mock_reservation_repository.fetch_all_active.return_value = Result.Ok([
             future_reservation
@@ -610,11 +612,11 @@ class TestReservationTasks:
         mock_task_queuer,
         reservations_container,
     ):
-        from datetime import date
+        from datetime import datetime, timezone, timedelta
 
         reservation = mocker.Mock()
         reservation.id = 1
-        reservation.checkout = date.today()
+        reservation.checkout = datetime.now(tz=timezone.utc) - timedelta(days=1)
         reservation.room.id = None  # Room has no ID
 
         mock_reservation_repository.fetch_all_active.return_value = Result.Ok([reservation])
@@ -640,11 +642,11 @@ class TestReservationTasks:
         mock_task_queuer,
         reservations_container,
     ):
-        from datetime import date
+        from datetime import datetime, timezone, timedelta
 
         reservation = mocker.Mock()
         reservation.id = 1
-        reservation.checkout = date.today()
+        reservation.checkout = datetime.now(tz=timezone.utc) - timedelta(days=1)
         reservation.room.id = 1
 
         mock_reservation_repository.fetch_all_active.return_value = Result.Ok([reservation])
@@ -672,11 +674,11 @@ class TestReservationTasks:
         mock_task_queuer,
         reservations_container,
     ):
-        from datetime import date
+        from datetime import datetime, timezone, timedelta
 
         reservation = mocker.Mock()
         reservation.id = 1
-        reservation.checkout = date.today()
+        reservation.checkout = datetime.now(tz=timezone.utc) - timedelta(days=1)
         reservation.room.id = 1
 
         room = mocker.Mock()

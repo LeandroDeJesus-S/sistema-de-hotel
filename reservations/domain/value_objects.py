@@ -1,9 +1,9 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from typing import Annotated
 
-from pydantic import BeforeValidator, Field, StringConstraints
+from pydantic import AwareDatetime, BeforeValidator, Field, StringConstraints
 
 from utils.decorators import ensure_result
 
@@ -108,31 +108,47 @@ ReservationObservations = Annotated[
 ]
 
 
-def cast_date(d: date | str) -> date:
+def cast_aware_datetime(d: date | datetime | str) -> datetime:
     if isinstance(d, str):
-        conv_d = convert_date(d)
+        conv_d = convert_datetime(d)
         if conv_d.is_err():
             raise ValueError(conv_d.unwrap_err().msg)
         return conv_d.unwrap()  # type: ignore
-    return d
+    elif isinstance(d, date) and not isinstance(d, datetime):
+        # Convert date to datetime at midnight UTC
+        return datetime.combine(d, datetime.min.time(), tzinfo=timezone.utc)
+    elif isinstance(d, datetime):
+        if d.tzinfo is None:
+            raise ValueError('Datetime must be timezone-aware')
+        return d
+    else:
+        raise ValueError(f'Cannot convert {type(d)} to timezone-aware datetime')
 
 
 CheckInOut = Annotated[
-    date,
-    BeforeValidator(cast_date),
-    'represents a check-in/out date',
+    AwareDatetime,
+    BeforeValidator(cast_aware_datetime),
+    'represents a timezone-aware check-in/out datetime',
 ]
 
 
 @ensure_result
-def convert_date(value: str) -> date:
-    """Converts a date string to `datetime.date`. If the date format is invalid and
-    raises a ValueError, returns the date 1-1-1.
+def convert_datetime(value: str) -> datetime:
+    """Converts a datetime string to `datetime.datetime`. Supports both date and
+    datetime formats.
 
     Args:
-        value (str): Date as a string.
+        value (str): Date/datetime as a string.
 
     Returns:
-        datetime.date: `datetime.date` instance of the formatted date.
+        datetime.datetime: `datetime.datetime` instance of the formatted date/datetime.
     """
-    return datetime.strptime(value, '%Y-%m-%d').date()
+    try:
+        # Try parsing as datetime first
+        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        # Ensure the result is timezone-aware
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except ValueError:
+        # Fall back to date parsing and convert to datetime
+        date_obj = datetime.strptime(value, '%Y-%m-%d').date()
+        return datetime.combine(date_obj, datetime.min.time(), tzinfo=timezone.utc)

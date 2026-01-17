@@ -1,14 +1,14 @@
 import io
+import os
 
+from django.conf import settings
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
 from base.ports.pdf import AbsPDFGenerator
 from exc import Result
-from home.models import Hotel as HotelModel
+from home.domain.entities import Hotel
 from payments.domain.entities import Payment
-from payments.models import Payment as PaymentModel
-from utils.support import entity_to_model
 
 
 class ReportLabPDFReceiptGenerator(AbsPDFGenerator):
@@ -23,18 +23,16 @@ class ReportLabPDFReceiptGenerator(AbsPDFGenerator):
         Returns:
             The generated PDF as bytes.
         """
-        entity_result = entity_to_model(payment, PaymentModel)
-        if entity_result.is_err():
-            return Result.Err(
-                msg='Failed to convert payment entity to model',
-                src_error=entity_result.unwrap_err(),
-            )
-        payment_model = entity_result.unwrap()
+        # entity_result = entity_to_model(payment, PaymentModel)
+        # if entity_result.is_err():
+        #     return Result.Err(
+        #         msg='Failed to convert payment entity to model',
+        #         src_error=entity_result.unwrap_err(),
+        #     )
+        # payment_model = entity_result.unwrap()
 
         try:
-            hotel = (
-                payment_model.reservation.room.hotel
-            )  # XXX: it may be a good idea add hotel to payment model to avoid nested queries
+            hotel = payment.reservation.room.hotel
 
             buffer = io.BytesIO()
             y = A4[1] * 0.5
@@ -44,7 +42,7 @@ class ReportLabPDFReceiptGenerator(AbsPDFGenerator):
             pdf_canvas = canvas.Canvas(buffer, pagesize=pagesize)
 
             self._draw_header(pdf_canvas, hotel, w, h)
-            self._draw_body(pdf_canvas, payment_model, h)
+            self._draw_body(pdf_canvas, payment, h)
 
             pdf_canvas.save()
             buffer.seek(0)
@@ -53,11 +51,13 @@ class ReportLabPDFReceiptGenerator(AbsPDFGenerator):
             return Result.Err(msg='Failed to generate PDF', src_error=e)
 
     def _draw_header(  # noqa: PLR6301
-        self, pdf_canvas: canvas.Canvas, hotel: HotelModel, w: int, h: int
+        self, pdf_canvas: canvas.Canvas, hotel: Hotel, w: int, h: int
     ) -> None:
         """draw the logo, hotel name, and title of the pdf"""
         if hotel.logo:
-            pdf_canvas.drawInlineImage(str(hotel.logo.path), 30, h - 40)
+            pdf_canvas.drawInlineImage(
+                os.path.join(settings.MEDIA_URL, hotel.logo), 30, h - 40
+            )
 
         pdf_canvas.setFontSize(30)
         pdf_canvas.drawString(65, h - 38, hotel.name)
@@ -72,7 +72,7 @@ class ReportLabPDFReceiptGenerator(AbsPDFGenerator):
 
         pdf_canvas.line(30, h - 50, w - 30, h - 50)
 
-    def _draw_body(self, pdf_canvas: canvas.Canvas, payment: PaymentModel, h: float) -> None:
+    def _draw_body(self, pdf_canvas: canvas.Canvas, payment: Payment, h: float) -> None:
         """draw the payment information into the body of the pdf"""
         pdf_canvas.setFontSize(15)
         initial_offset = 85.0
@@ -81,17 +81,20 @@ class ReportLabPDFReceiptGenerator(AbsPDFGenerator):
             pdf_canvas.drawString(70, h - offset_y, row)
             offset_y += initial_offset * 0.5
 
-    def _rows_list(self, payment: PaymentModel) -> list[str]:  # noqa: PLR6301
+    def _rows_list(self, payment: Payment) -> list[str]:  # noqa: PLR6301
         """return all the rows of the pdf in list format"""
         rows = [
             f'Data de emissão: {payment.created_at.strftime("%h:%M:%S %d/%m/%Y")}',
             f'Status: {payment.status}',
-            f'Pagador: {payment.reservation.client.complete_name}',
+            (
+                f'Pagador: {payment.reservation.client.first_name}'
+                f'{payment.reservation.client.last_name}'
+            ),
             'Recebedor: HOTEL',
-            f'Check-in: {payment.reservation.checkin.strftime("%d/%m/%Y")}',
-            f'Check-out: {payment.reservation.checkout.strftime("%d/%m/%Y")}',
+            f'Check-in: {payment.reservation.checkin.strftime("%d/%b/%Y %H:%M")}',
+            f'Check-out: {payment.reservation.checkout.strftime("%d/%b/%Y %H:%M")}',
             f'Classe: {payment.reservation.room.room_class}',
             f'Quarto: Nº{payment.reservation.room.number}',
-            f'Total: {payment.reservation.formatted_price()}',
+            f'Total: ${payment.reservation.amount:.2f}',
         ]
         return rows

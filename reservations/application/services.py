@@ -87,7 +87,9 @@ class ReservationService:
                 RedirectResultDTO(
                     url='reserve',
                     args=(cmd.room_pk,),
-                    messages=[MessageDTO(typ='error', msg=err.msg)],
+                    messages=[
+                        MessageDTO(typ='error', msg=str(err.msg))
+                    ],  # cast to str due it can be a lazy obj
                 )
             )
 

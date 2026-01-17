@@ -56,7 +56,7 @@ def signin_post_presenter(
         return Result.Ok(render(request, res.template_name, res.context))
     return Result.Ok(
         redirect(
-            reverse(res.url, args=res.args),
+            reverse(res.url, args=res.args) if '/' not in res.url else res.url,
             permanent=res.code == HTTPStatus.PERMANENT_REDIRECT,
         )
     )

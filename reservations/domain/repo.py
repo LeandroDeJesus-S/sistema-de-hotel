@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from datetime import date
+from datetime import datetime
 from typing import Protocol
 
 from exc import Result
@@ -24,11 +24,11 @@ class AbsReservationRepository(Protocol):
     def has_overlapping_reservation(
         self,
         room_id: int,
-        check_in: date,
-        check_out: date,
+        check_in: datetime,
+        check_out: datetime,
     ) -> Result[bool]:
-        """Checks if there are any active or scheduled reservations for a given room and date
-        range."""
+        """Checks if there are any active or scheduled reservations for a given room and
+        datetime range."""
         ...
 
     @abstractmethod
@@ -62,9 +62,9 @@ class AbsReservationRepository(Protocol):
 
     @abstractmethod
     def fetch_pending(
-        self, client_id: int, room_id: int, check_in: date, check_out: date
+        self, client_id: int, room_id: int, check_in: datetime, check_out: datetime
     ) -> Result[entities.Reservation]:
-        """Fetches a pending reservation for a client, room and date range."""
+        """Fetches a pending reservation for a client, room and datetime range."""
         ...
 
     @abstractmethod

@@ -381,6 +381,7 @@ def send_scheduling_email_task(
             body=client_html_message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to_emails=[reservation.client.email],
+            is_html=True,
         )
     except Exception as e:
         raise Result.Err('Failed to send scheduling email', src_error=e).unwrap_err()
@@ -419,7 +420,7 @@ def check_reservation_dates_task(
 
         failures = []
         for reservation in active_reservations:
-            if reservation.checkout > now().date():
+            if reservation.checkout > now():
                 continue
 
             # Update reservation status

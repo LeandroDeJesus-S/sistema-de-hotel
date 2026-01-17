@@ -204,16 +204,16 @@ def reservation_model_instance_factory(db, client_model_instance, room_model_ins
     Fixture to create Reservation instances via a factory.
     """
 
-    def f(client=None, room=None, status='I'):
-        checkin = date.today() + timedelta(days=10)
-        checkout = checkin + timedelta(days=15)  # Example: 5 days reservation
+    def f(client=None, room=None, status='I', **kwargs):
+        kwargs.setdefault('checkin', date.today() + timedelta(days=10))
+        kwargs.setdefault('checkout', kwargs['checkin'] + timedelta(days=15))  # Example: 5 days reservation
+
         reservation = G(
             Reservation,
             client=client if client else client_model_instance,
             room=room if room else room_model_instance,
-            checkin=checkin,
-            checkout=checkout,
             status=status,
+            **kwargs
         )
         # Calculate and set the amount
         reservation.amount = reservation.calc_reservation_value()

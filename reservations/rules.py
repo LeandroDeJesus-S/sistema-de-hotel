@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 class BenefitRules:
@@ -53,7 +53,7 @@ class ReserveRules:
 
     @classmethod
     def checkin_anticipation_offset(cls):
-        return (datetime.now() + timedelta(weeks=4 * cls.ANTICIPATED_MONTHS_CHECKIN)).date()
+        return datetime.now(timezone.utc) + timedelta(weeks=4 * cls.ANTICIPATED_MONTHS_CHECKIN)
 
 
 class ReserveSupport:

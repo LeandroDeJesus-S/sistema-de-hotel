@@ -45,7 +45,9 @@ def send_payment_confirmation_email_task(
         payment = payment_result.unwrap()
         res = usecase(payment)
         if res.is_err():
-            raise Result.Err(res.unwrap_err().msg).unwrap_err()
+            raise Result.Err(
+                res.unwrap_err().msg, src_error=res.unwrap_err().src_error
+            ).unwrap_err()
     except Exception as e:
         raise Result.Err('Failed to send payment confirmation email', src_error=e).unwrap_err()
 
