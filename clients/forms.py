@@ -49,3 +49,16 @@ class UpdatePerfilForm(forms.ModelForm):
                 'style': 'background-color: var(--realce-color)',
             }),
         }
+
+
+class EmailForm(forms.Form):
+    email = forms.EmailField(
+        widget=forms.EmailInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your email',
+                'style': 'background-color: var(--realce-color)',
+            }
+        ),
+        label='Email',
+    )

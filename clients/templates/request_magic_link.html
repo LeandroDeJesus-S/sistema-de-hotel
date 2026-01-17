@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% block css %}
+    <link rel="stylesheet" href="{% static "reserva/css/reserve.css" %}">
+{% endblock css %}
+{% block title %}{% trans "Request Password Reset" %}{% endblock title %}
+{% block content %}
+
+<div class="container d-flex justify-content-center align-items-center text-light p-5">
+    <form id="form" action="{% url 'request_password_change' %}" class="reserve-form" method="post">{% csrf_token %}
+        {% include "partials/_messages.html" %}
+        {% if form %}
+        <div class="row p-3">
+            <div class="col-md-12 mb-3">
+                <p>{% trans "Enter your email address to receive a link to change your password." %}</p>
+            </div>
+            <div class="form-group col-md-12 mb-2">
+                <label for="email">{% trans "Email" %}</label>
+                {{ form.email }}
+            </div>
+            <div class="col-md-12 d-flex justify-content-center mt-3">
+                <input class="btn btn-outline-info" type="submit" value="{% trans "Send Link" %}">
+            </div>
+        </div>
+        {% else %}
+        <div class="row p-3">
+            <div class="col-md-12 mb-3">
+                <a href="{% url 'perfil' request.user.pk %}" class="btn btn-outline-info">{% trans "Get back to profile" %}</a>
+            </div>
+        </div>
+        {% endif %}
+    </form>
+</div>
+{% endblock content %}

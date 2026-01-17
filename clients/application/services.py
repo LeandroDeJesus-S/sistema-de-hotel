@@ -2,6 +2,9 @@ import logging
 from typing import Union
 
 from base.dtos import MessageDTO, RedirectResultDTO, TemplateRenderResultDTO
+from base.ports.queue import TaskQueuer
+from base.ports.rate_limiter import AbsRateLimiter
+from clients import feedback_messages
 from clients.application.dtos import ChangePasswordInput, SignInInput, SignUpInput
 from clients.application.usecases import (
     # AuthenticateUserUseCase,
@@ -15,26 +18,118 @@ from clients.domain.ports import (
     AbsClientRepository,
     AbsPasswordManager,
     AbsSessionManager,
+    AbsTokenManager,
 )
 from clients.feedback_messages import ChangePassword, SignUp
 from exc import Result
 
 
 class ClientService:
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         repo: AbsClientRepository,
         password_manager: AbsPasswordManager,
         session_manager: AbsSessionManager,
         captcha_service: AbsCaptchaVerifier,
+        task_queuer: TaskQueuer,
         logger: logging.Logger,
+        token_manager: AbsTokenManager,
+        rate_limiter: AbsRateLimiter,
     ):
         self.create_user = CreateUserUseCase(repo, password_manager, logger)
         self.change_pw = ChangePasswordUseCase(repo, password_manager, session_manager)
         self.captcha = VerifyCaptchaUseCase(captcha_service)
         self.session_manager = session_manager
+        self.task_queuer = task_queuer
+        self.token_manager = token_manager
+        self.rate_limiter = rate_limiter
         self._repo = repo
         self.logger = logger
+
+    def request_magic_link(
+        self, email: str, domain: str, cooldown_seconds=60
+    ) -> Result[TemplateRenderResultDTO]:
+        """
+        Request a magic link for password change.
+
+        Args:
+            email: The email to send the link to.
+            domain: The domain of the site.
+
+        Returns:
+            Result with TemplateRenderResultDTO
+        """
+        from clients.infra.tasks import send_password_change_email_task  # noqa: PLC0415
+
+        # 1. Check Rate Limit (Cooldown)
+        # Key is unique per email to prevent spamming a single user.
+        rate_limit_key = f'magic_link_cooldown_{email}'
+
+        rate_limit_result = self.rate_limiter.check_cooldown(rate_limit_key, cooldown_seconds)
+        if rate_limit_result.is_err():
+            return Result.Ok(
+                TemplateRenderResultDTO(
+                    template_name='request_magic_link.html',
+                    context={},
+                    messages=[
+                        MessageDTO(
+                            typ='error',
+                            msg=str(
+                                feedback_messages.EMAIL_CONFIRMATION_TOKEN_RATE_LIMIT_EXCEEDED
+                            ),
+                        )
+                    ],
+                )
+            )
+
+        client_result = self._repo.get_by_email(email)
+        if client_result.is_err():
+            # generic message to avoid enumeration
+            return Result.Ok(
+                TemplateRenderResultDTO(
+                    template_name='request_magic_link.html',
+                    context={},
+                    messages=[
+                        MessageDTO(
+                            typ='success',
+                            msg='If the email is registered, you will receive a link shortly.',
+                        )
+                    ],
+                )
+            )
+
+        client = client_result.unwrap()
+        token = self.token_manager.make_token(client)
+
+        self.task_queuer.queue_task(
+            send_password_change_email_task,  # type: ignore
+            (client.id, token, domain),
+            name=f'send_password_change_email_{client.id}',
+        )
+
+        return Result.Ok(
+            TemplateRenderResultDTO(
+                template_name='request_magic_link.html',
+                context={},
+                messages=[
+                    MessageDTO(
+                        typ='success',
+                        msg='If the email is registered, you will receive a link shortly.',
+                    )
+                ],
+            )
+        )
+
+    def validate_magic_link_token(self, user_id: int, token: str) -> bool:
+        """
+        Validates the password change token.
+        """
+        client_result = self._repo.get_by_id(user_id)
+        if client_result.is_err():
+            return False
+
+        client = client_result.unwrap()
+        return self.token_manager.check_token(client, token)
 
     def signup_user(
         self, form_data: dict, request
@@ -150,6 +245,10 @@ class ClientService:
         # Validate input data with DTO
         signin_input_result = SignInInput.safe_validate(credentials)
         if signin_input_result.is_err():
+            self.logger.error(
+                f'SignInInput.safe_validate failed: {signin_input_result.unwrap_err().msg}',
+                exc_info=signin_input_result.unwrap_err(),
+            )
             return Result.Ok(
                 TemplateRenderResultDTO(
                     template_name='signin.html',
@@ -169,6 +268,10 @@ class ClientService:
             password=validated_credentials.password,
         )
         if user_result.is_err():
+            self.logger.error(
+                f'authenticate failed: {user_result.unwrap_err().msg}',
+                exc_info=user_result.unwrap_err(),
+            )
             return Result.Ok(
                 TemplateRenderResultDTO(
                     template_name='signin.html',
@@ -180,6 +283,10 @@ class ClientService:
         # Log user in
         login_result = self.session_manager.login(request, user_result.unwrap())
         if login_result.is_err():
+            self.logger.error(
+                f'login failed: {login_result.unwrap_err().msg}',
+                exc_info=login_result.unwrap_err(),
+            )
             return Result.Ok(
                 TemplateRenderResultDTO(
                     template_name='signin.html',
@@ -205,17 +312,33 @@ class ClientService:
         Returns:
             Result with RedirectResultDTO on success or failure
         """
+        from clients.infra.validators import PasswordValidator  # noqa: PLC0415
+
         data = {
             'user_id': user_id,
             'password': form_data.get('new_password', '').strip(),
             'password_repeat': form_data.get('password_repeat', '').strip(),
         }
 
+        # 1. Strict Password Validation (Complexity, etc.)
+        password_validator = PasswordValidator([])
+        validation_res = password_validator.validate(data['password'])
+        if validation_res.is_err():
+            return Result.Ok(
+                RedirectResultDTO(
+                    url='update_perfil_password',
+                    messages=[
+                        MessageDTO(typ='error', msg=str(validation_res.unwrap_err().msg))
+                    ],
+                    args=(user_id,),
+                )
+            )
+
         inp_result = ChangePasswordInput.safe_validate(data)
         if inp_result.is_err():
             return Result.Ok(
                 RedirectResultDTO(
-                    url='perfil',
+                    url='update_perfil_password',
                     messages=[MessageDTO(typ='error', msg=str(inp_result.unwrap_err().msg))],
                     args=(user_id,),
                 )
@@ -225,7 +348,7 @@ class ClientService:
         if change_pw_result.is_err():
             return Result.Ok(
                 RedirectResultDTO(
-                    url='perfil',
+                    url='update_perfil_password',
                     messages=[
                         MessageDTO(typ='error', msg=str(change_pw_result.unwrap_err().msg))
                     ],

@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import Any
+from typing import Any, cast
 
 import requests
 from django.contrib.auth import authenticate as django_authenticate
@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth.tokens import default_token_generator
 
 from clients.domain.entities import Client
 from exc import Result
@@ -146,3 +147,23 @@ class DjangoSessionManager:
             return Result.Ok(None)
         except Exception as e:
             return Result.Err('Failed to logout user', e)
+
+
+class DjangoTokenManager:
+    """Manages password reset tokens using Django's default generator."""
+
+    def __init__(self):
+        self._usermodel = get_user_model()
+
+    def make_token(self, client: Client) -> str:
+        """Generates a token for the given client."""
+        user = self._usermodel.objects.get(id=client.id)
+        return cast(str, default_token_generator.make_token(user))
+
+    def check_token(self, client: Client, token: str) -> bool:
+        """Checks if the token is valid for the given client."""
+        try:
+            user = self._usermodel.objects.get(id=client.id)
+            return cast(bool, default_token_generator.check_token(user, token))
+        except self._usermodel.DoesNotExist:
+            return False

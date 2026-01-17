@@ -280,7 +280,7 @@ def test_perfil_change_password_get_renders_form(authenticated_client):
 def test_perfil_change_password_post_success(authenticated_client, mock_recaptcha):
     """Test successful password change."""
     client, user = authenticated_client
-    new_password = 'newpassword123'
+    new_password = 'Newpassword@123'
 
     response = client.post(
         reverse('update_perfil_password', kwargs={'pk': user.pk}),

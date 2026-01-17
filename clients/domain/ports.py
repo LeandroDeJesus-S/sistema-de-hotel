@@ -121,3 +121,19 @@ class AbsSessionManager(Protocol):
     def logout(self, request: Any) -> Result[None]:
         """Logs the user out and clears their session."""
         ...
+
+
+class AbsTokenManager(Protocol):
+    """
+    A port for managing tokens, such as password reset tokens.
+    """
+
+    @abstractmethod
+    def make_token(self, client: Client) -> str:
+        """Generates a token for the given client."""
+        ...
+
+    @abstractmethod
+    def check_token(self, client: Client, token: str) -> bool:
+        """Checks if the token is valid for the given client."""
+        ...

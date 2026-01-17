@@ -1,5 +1,9 @@
 from django.utils.translation import gettext_lazy as _
 
+EMAIL_CONFIRMATION_TOKEN_RATE_LIMIT_EXCEEDED = _(
+    'Wait a few minutes before requesting a new password change link.'
+)
+
 
 class Generic:
     UNEXPECTED_ERROR = _('An unexpected error occurred. Please try again later.')

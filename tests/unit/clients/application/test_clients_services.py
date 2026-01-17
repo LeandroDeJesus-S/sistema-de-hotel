@@ -19,26 +19,34 @@ class TestClientService:
         mock_password_manager,
         mock_session_manager,
         mock_captcha_verifier,
+        mock_task_queuer,
         logger_mock,
+        mock_token_manager,
+        mock_rate_limiter,
     ):
         return ClientService(
             mock_client_repository,
             mock_password_manager,
             mock_session_manager,
             mock_captcha_verifier,
+            mock_task_queuer,
             logger_mock,
+            mock_token_manager,
+            mock_rate_limiter,
         )
 
     # --- Signup User Tests ---
 
     def test_signup_user_success(
         self,
-        service,
         mock_client_repository,
         mock_password_manager,
         mock_session_manager,
         mock_captcha_verifier,
+        mock_task_queuer,
         logger_mock,
+        mock_token_manager,
+        mock_rate_limiter,
         valid_client_data_factory,
     ):
         """Should successfully sign up a user and redirect to rooms."""
@@ -62,7 +70,10 @@ class TestClientService:
             mock_password_manager,
             mock_session_manager,
             mock_captcha_verifier,
+            mock_task_queuer,
             logger_mock,
+            mock_token_manager,
+            mock_rate_limiter,
         )
         # Act
         result = service.signup_user(form_data, request)
@@ -80,7 +91,10 @@ class TestClientService:
         mock_session_manager,
         mock_captcha_verifier,
         logger_mock,
-):
+        mock_task_queuer,
+        mock_token_manager,
+        mock_rate_limiter,
+    ):
         """Should return error when required fields are missing."""
         # Arrange
         form_data = {'username': ''}  # Missing everything else
@@ -90,7 +104,10 @@ class TestClientService:
             mock_password_manager,
             mock_session_manager,
             mock_captcha_verifier,
+            mock_task_queuer,
             logger_mock,
+            mock_token_manager,
+            mock_rate_limiter,
         )
 
         # Act
@@ -109,14 +126,17 @@ class TestClientService:
         mock_password_manager,
         mock_session_manager,
         mock_captcha_verifier,
+        mock_task_queuer,
         logger_mock,
+        mock_token_manager,
+        mock_rate_limiter,
         mocker,
     ):
         """Should return error when SignUpInput DTO validation fails."""
         # Arrange
         form_data = {
             'username': 'validUser',
-            'password': 'StrongPassword123!',
+            'password': 'StrongPassword123@',
             'nome': 'John',
             'sobrenome': 'Doe',
             'telefone': '1234567890',
@@ -135,7 +155,10 @@ class TestClientService:
             mock_password_manager,
             mock_session_manager,
             mock_captcha_verifier,
+            mock_task_queuer,
             logger_mock,
+            mock_token_manager,
+            mock_rate_limiter,
         )
 
         # Act
@@ -153,12 +176,15 @@ class TestClientService:
         mock_session_manager,
         mock_captcha_verifier,
         logger_mock,
-):
+        mock_task_queuer,
+        mock_token_manager,
+        mock_rate_limiter,
+    ):
         """Should return error when input validation fails (e.g. invalid email)."""
         # Arrange
         form_data = {
             'username': 'validUser',
-            'password': 'StrongPassword123!',
+            'password': 'StrongPassword123@',
             'nome': 'John',
             'sobrenome': 'Doe',
             'telefone': '1234567890',
@@ -172,7 +198,10 @@ class TestClientService:
             mock_password_manager,
             mock_session_manager,
             mock_captcha_verifier,
+            mock_task_queuer,
             logger_mock,
+            mock_token_manager,
+            mock_rate_limiter,
         )
         # Act
         result = service.signup_user(form_data, request)
@@ -189,7 +218,10 @@ class TestClientService:
         mock_password_manager,
         mock_session_manager,
         mock_captcha_verifier,
+        mock_task_queuer,
         logger_mock,
+        mock_token_manager,
+        mock_rate_limiter,
         valid_client_data_factory,
     ):
         """Should return error when user creation fails (e.g. duplicate user)."""
@@ -210,7 +242,10 @@ class TestClientService:
             mock_password_manager,
             mock_session_manager,
             mock_captcha_verifier,
+            mock_task_queuer,
             logger_mock,
+            mock_token_manager,
+            mock_rate_limiter,
         )
         # Act
         result = service.signup_user(form_data, request)
@@ -228,7 +263,10 @@ class TestClientService:
         mock_password_manager,
         mock_session_manager,
         mock_captcha_verifier,
+        mock_task_queuer,
         logger_mock,
+        mock_token_manager,
+        mock_rate_limiter,
         valid_client_data_factory,
     ):
         """Should return error when automatic login fails after creation."""
@@ -252,7 +290,10 @@ class TestClientService:
             mock_password_manager,
             mock_session_manager,
             mock_captcha_verifier,
+            mock_task_queuer,
             logger_mock,
+            mock_token_manager,
+            mock_rate_limiter,
         )
 
         # Act
@@ -272,7 +313,10 @@ class TestClientService:
         mock_session_manager,
         mock_captcha_verifier,
         logger_mock,
-):
+        mock_task_queuer,
+        mock_token_manager,
+        mock_rate_limiter,
+    ):
         """Should successfully sign in a user and redirect to next_url."""
         # Arrange
         credentials = {'username': 'user', 'password': 'password'}
@@ -287,7 +331,10 @@ class TestClientService:
             mock_password_manager,
             mock_session_manager,
             mock_captcha_verifier,
+            mock_task_queuer,
             logger_mock,
+            mock_token_manager,
+            mock_rate_limiter,
         )
         # Act
         result = service.signin_user(credentials, request)
@@ -304,7 +351,10 @@ class TestClientService:
         mock_session_manager,
         mock_captcha_verifier,
         logger_mock,
-):
+        mock_task_queuer,
+        mock_token_manager,
+        mock_rate_limiter,
+    ):
         """Should return error when credentials are invalid."""
         # Arrange
         credentials = {'username': '', 'password': ''}  # Invalid
@@ -315,7 +365,10 @@ class TestClientService:
             mock_password_manager,
             mock_session_manager,
             mock_captcha_verifier,
+            mock_task_queuer,
             logger_mock,
+            mock_token_manager,
+            mock_rate_limiter,
         )
         # Act
         result = service.signin_user(credentials, request)
@@ -333,7 +386,10 @@ class TestClientService:
         mock_session_manager,
         mock_captcha_verifier,
         logger_mock,
-):
+        mock_task_queuer,
+        mock_token_manager,
+        mock_rate_limiter,
+    ):
         """Should return error when authentication fails."""
         # Arrange
         credentials = {'username': 'user', 'password': 'password'}
@@ -346,7 +402,10 @@ class TestClientService:
             mock_password_manager,
             mock_session_manager,
             mock_captcha_verifier,
+            mock_task_queuer,
             logger_mock,
+            mock_token_manager,
+            mock_rate_limiter,
         )
         # Act
         result = service.signin_user(credentials, request)
@@ -363,7 +422,10 @@ class TestClientService:
         mock_session_manager,
         mock_captcha_verifier,
         logger_mock,
-):
+        mock_task_queuer,
+        mock_token_manager,
+        mock_rate_limiter,
+    ):
         """Should return error when login process fails."""
         # Arrange
         credentials = {'username': 'user', 'password': 'password'}
@@ -378,7 +440,10 @@ class TestClientService:
             mock_password_manager,
             mock_session_manager,
             mock_captcha_verifier,
+            mock_task_queuer,
             logger_mock,
+            mock_token_manager,
+            mock_rate_limiter,
         )
         # Act
         result = service.signin_user(credentials, request)
@@ -397,12 +462,15 @@ class TestClientService:
         mock_password_manager,
         mock_session_manager,
         mock_captcha_verifier,
+        mock_task_queuer,
         logger_mock,
+        mock_token_manager,
+        mock_rate_limiter,
 
     ):
         """Should successfully change password."""
         # Arrange
-        form_data = {'new_password': 'NewPassword123!', 'password_repeat': 'NewPassword123!'}
+        form_data = {'new_password': 'NewPassword123@', 'password_repeat': 'NewPassword123@'}
         user_id = 1
 
         mock_client_repository.get_by_id.return_value = Result.Ok(Mock(spec=Client))
@@ -414,7 +482,10 @@ class TestClientService:
             mock_password_manager,
             mock_session_manager,
             mock_captcha_verifier,
+            mock_task_queuer,
             logger_mock,
+            mock_token_manager,
+            mock_rate_limiter,
         )
         # Act
         result = service.process_password_change(form_data, user_id)
@@ -432,10 +503,13 @@ class TestClientService:
         mock_session_manager,
         mock_captcha_verifier,
         logger_mock,
-):
+        mock_task_queuer,
+        mock_token_manager,
+        mock_rate_limiter,
+    ):
         """Should return error when passwords do not match."""
         # Arrange
-        form_data = {'new_password': 'NewPassword123!', 'password_repeat': 'DifferentPassword'}
+        form_data = {'new_password': 'NewPassword123@', 'password_repeat': 'DifferentPassword'}
         user_id = 1
 
         service = ClientService(
@@ -443,7 +517,10 @@ class TestClientService:
             mock_password_manager,
             mock_session_manager,
             mock_captcha_verifier,
+            mock_task_queuer,
             logger_mock,
+            mock_token_manager,
+            mock_rate_limiter,
         )
         # Act
         result = service.process_password_change(form_data, user_id)
@@ -461,10 +538,13 @@ class TestClientService:
         mock_session_manager,
         mock_captcha_verifier,
         logger_mock,
-):
+        mock_task_queuer,
+        mock_token_manager,
+        mock_rate_limiter,
+    ):
         """Should return error when usecase fails (e.g. user not found)."""
         # Arrange
-        form_data = {'new_password': 'NewPassword123!', 'password_repeat': 'NewPassword123!'}
+        form_data = {'new_password': 'NewPassword123@', 'password_repeat': 'NewPassword123@'}
         user_id = 1
 
         mock_client_repository.get_by_id.return_value = Result.Err('User not found')
@@ -474,7 +554,10 @@ class TestClientService:
             mock_password_manager,
             mock_session_manager,
             mock_captcha_verifier,
+            mock_task_queuer,
             logger_mock,
+            mock_token_manager,
+            mock_rate_limiter,
         )
         # Act
         result = service.process_password_change(form_data, user_id)
