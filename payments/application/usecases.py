@@ -170,7 +170,7 @@ class SendPaymentConfirmationUseCase:
         self._pdf_generator = pdf_generator
 
     def __call__(self, payment: Payment) -> Result[None]:
-        pdf_bytes = self._pdf_generator.generate(payment)
+        pdf_bytes = self._pdf_generator.generate(payment, payment.reservation.client.language)
         if pdf_bytes.is_err():
             return Result.Err(
                 'Failed to generate PDF',

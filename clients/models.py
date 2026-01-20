@@ -170,6 +170,16 @@ class Client(AbstractUser):
         help_text=gtl('Your CPF without punctuation (maximum %(max)s characters)')
         % {'max': ClientRules.CPF_MAX_LEN},
     )
+    language = models.CharField(
+        gtl('Language'),
+        max_length=10,
+        choices=[
+            ('en', gtl('English')),
+            ('pt-br', gtl('Portuguese')),
+        ],
+        default='en',
+        help_text=gtl('User preferred language'),
+    )
 
     def __str__(self) -> str:
         return str(self.username)

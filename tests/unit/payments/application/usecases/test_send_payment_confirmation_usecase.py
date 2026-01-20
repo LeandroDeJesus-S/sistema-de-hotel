@@ -23,7 +23,7 @@ class TestSendPaymentConfirmationUseCase:
 
         # Assert
         assert result.is_ok()
-        mock_pdf_generator.generate.assert_called_once_with(payment_model_instance)
+        mock_pdf_generator.generate.assert_called_once_with(payment_model_instance, 'en')
         mock_email_sender.send_single_mail.assert_called_once()
         call_args = mock_email_sender.send_single_mail.call_args[1]
         assert call_args['subject'] == 'Reservation payment receipt'
@@ -49,7 +49,7 @@ class TestSendPaymentConfirmationUseCase:
         # Assert
         assert result.is_err()
         assert 'Failed to generate PDF' in result.unwrap_err().msg
-        mock_pdf_generator.generate.assert_called_once_with(payment_model_instance)
+        mock_pdf_generator.generate.assert_called_once_with(payment_model_instance, 'en')
         mock_email_sender.send_single_mail.assert_not_called()
 
     def test_send_fails_when_email_send_fails(
@@ -71,5 +71,5 @@ class TestSendPaymentConfirmationUseCase:
         # Assert
         assert result.is_err()
         assert 'Failed to send email' in result.unwrap_err().msg
-        mock_pdf_generator.generate.assert_called_once_with(payment_model_instance)
+        mock_pdf_generator.generate.assert_called_once_with(payment_model_instance, 'en')
         mock_email_sender.send_single_mail.assert_called_once()

@@ -233,6 +233,7 @@ class TestReportLabPDFReceiptGenerator:
         client = mocker.Mock()
         client.first_name = 'John'
         client.last_name = 'Doe'
+        client.language = 'en'
         reservation.client = client
 
         # Mock room
@@ -253,7 +254,7 @@ class TestReportLabPDFReceiptGenerator:
         mock_canvas = mocker.Mock()
         mocker.patch('utils.adapters.pdf.canvas.Canvas', return_value=mock_canvas)
 
-        result = generator.generate(payment_entity)
+        result = generator.generate(payment_entity, 'en')
 
         assert result.is_ok()
         mock_canvas.save.assert_called_once()
@@ -277,6 +278,7 @@ class TestReportLabPDFReceiptGenerator:
         client = mocker.Mock()
         client.first_name = 'John'
         client.last_name = 'Doe'
+        client.language = 'en'
         reservation.client = client
 
         # Mock room
@@ -293,10 +295,11 @@ class TestReportLabPDFReceiptGenerator:
 
         payment_entity.reservation = reservation
 
+        # Mock canvas
         mock_canvas = mocker.Mock()
         mocker.patch('utils.adapters.pdf.canvas.Canvas', return_value=mock_canvas)
 
-        result = generator.generate(payment_entity)
+        result = generator.generate(payment_entity, 'en')
         assert result.is_ok()
         mock_canvas.drawInlineImage.assert_called_once()
 
@@ -307,7 +310,7 @@ class TestReportLabPDFReceiptGenerator:
         # Mock incomplete entity structure to cause access error
         payment_entity.reservation = None
 
-        result = generator.generate(payment_entity)
+        result = generator.generate(payment_entity, 'en')
         assert result.is_err()
         assert 'Failed to generate PDF' in result.unwrap_err().msg
 
@@ -322,6 +325,52 @@ class TestReportLabPDFReceiptGenerator:
         type(mock_room).hotel = mocker.PropertyMock(side_effect=Exception('DB Error'))
         payment_model.reservation.room = mock_room
 
-        result = generator.generate(payment_entity)
+        result = generator.generate(payment_entity, 'en')
         assert result.is_err()
         assert 'Failed to generate PDF' in result.unwrap_err().msg
+
+    def test_generate_with_locale(self, mocker):
+        """Test PDF generation with different locales"""
+        generator = ReportLabPDFReceiptGenerator()
+
+        # Create proper payment entity mock
+        payment_entity = mocker.Mock(spec=Payment)
+        payment_entity.status = PaymentStatus.COMPLETED
+        payment_entity.created_at = datetime.now(timezone.utc)
+
+        # Mock reservation
+        reservation = mocker.Mock()
+        reservation.amount = Decimal('200.00')
+        reservation.checkin = datetime.now(timezone.utc)
+        reservation.checkout = datetime.now(timezone.utc) + timedelta(days=1)
+
+        # Mock client with Portuguese language
+        client = mocker.Mock()
+        client.first_name = 'João'
+        client.last_name = 'Silva'
+        client.language = 'pt-br'
+        reservation.client = client
+
+        # Mock room
+        room = mocker.Mock()
+        room.room_class = 'Standard'
+        room.number = '101'
+        reservation.room = room
+
+        # Mock hotel
+        hotel = mocker.Mock(spec=Hotel)
+        hotel.name = 'Hotel Test'
+        hotel.logo = None  # No logo for simplicity
+        room.hotel = hotel
+
+        payment_entity.reservation = reservation
+
+        # Mock canvas
+        mock_canvas = mocker.Mock()
+        mocker.patch('utils.adapters.pdf.canvas.Canvas', return_value=mock_canvas)
+
+        # Test with Portuguese locale
+        result = generator.generate(payment_entity, 'pt-br')
+
+        assert result.is_ok()
+        mock_canvas.save.assert_called_once()

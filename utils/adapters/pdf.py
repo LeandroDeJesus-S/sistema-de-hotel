@@ -2,6 +2,8 @@ import io
 import os
 
 from django.conf import settings
+from django.utils.translation import activate
+from django.utils.translation import gettext as _
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
@@ -14,24 +16,19 @@ from payments.domain.entities import Payment
 class ReportLabPDFReceiptGenerator(AbsPDFGenerator):
     """A PDF generator adapter that uses the ReportLab library."""
 
-    def generate(self, payment: Payment) -> Result[bytes]:
+    def generate(self, payment: Payment, locale: str = 'en') -> Result[bytes]:
         """Generates a payment receipt PDF using ReportLab.
 
         Args:
             payment: The payment object containing the data for the receipt.
+            locale: The locale code for PDF content translation.
 
         Returns:
             The generated PDF as bytes.
         """
-        # entity_result = entity_to_model(payment, PaymentModel)
-        # if entity_result.is_err():
-        #     return Result.Err(
-        #         msg='Failed to convert payment entity to model',
-        #         src_error=entity_result.unwrap_err(),
-        #     )
-        # payment_model = entity_result.unwrap()
 
         try:
+            activate(locale)
             hotel = payment.reservation.room.hotel
 
             buffer = io.BytesIO()
@@ -66,7 +63,7 @@ class ReportLabPDFReceiptGenerator(AbsPDFGenerator):
         pdf_canvas.drawString(
             w - 350,
             h - 40,
-            'COMPROVANTE DE PAGAMENTO',
+            _('Payment Receipt'),
             wordSpace=0.5,
         )
 
@@ -84,17 +81,17 @@ class ReportLabPDFReceiptGenerator(AbsPDFGenerator):
     def _rows_list(self, payment: Payment) -> list[str]:  # noqa: PLR6301
         """return all the rows of the pdf in list format"""
         rows = [
-            f'Data de emissão: {payment.created_at.strftime("%h:%M:%S %d/%m/%Y")}',
-            f'Status: {payment.status}',
+            f'{_("Issue Date")}: {payment.created_at.strftime("%h:%M:%S %d/%m/%Y")}',
+            f'{_("Status")}: {payment.status}',
             (
-                f'Pagador: {payment.reservation.client.first_name}'
+                f'{_("Payer")}: {payment.reservation.client.first_name} '
                 f'{payment.reservation.client.last_name}'
             ),
-            'Recebedor: HOTEL',
-            f'Check-in: {payment.reservation.checkin.strftime("%d/%b/%Y %H:%M")}',
-            f'Check-out: {payment.reservation.checkout.strftime("%d/%b/%Y %H:%M")}',
-            f'Classe: {payment.reservation.room.room_class}',
-            f'Quarto: Nº{payment.reservation.room.number}',
-            f'Total: ${payment.reservation.amount:.2f}',
+            f'{_("Receiver")}: {_("HOTEL")}',
+            f'{_("Check-in")}: {payment.reservation.checkin.strftime("%d/%b/%Y %H:%M")}',
+            f'{_("Check-out")}: {payment.reservation.checkout.strftime("%d/%b/%Y %H:%M")}',
+            f'{_("Class")}: {payment.reservation.room.room_class}',
+            f'{_("Room")}: Nº{payment.reservation.room.number}',
+            f'{_("Total")}: ${payment.reservation.amount:.2f}',
         ]
         return rows

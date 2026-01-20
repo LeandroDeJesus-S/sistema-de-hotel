@@ -72,6 +72,7 @@ class Client(BaseEntity):
     phone: PhoneNumber
     cpf: CPF
     password: Password
+    language: str = 'en'
     id: int | None = None
 
     def __str__(self) -> str:
