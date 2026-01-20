@@ -3,7 +3,7 @@ from typing import Self
 from pydantic import model_validator
 
 from base.entity import BaseEntity
-from clients.domain.value_objects import Email, Password, Username
+from clients.domain.value_objects import CPF, Email, Password, Username
 
 from ..feedback_messages import ChangePassword, SignIn, SignUp
 
@@ -48,7 +48,7 @@ class SignUpInput(BaseEntity):
     phone: str
     email: str  # Use basic str to let domain entity handle Email validation
     birthdate: str
-    cpf: str
+    cpf: CPF
 
 
 class SignInInput(BaseEntity):

@@ -209,12 +209,13 @@ class TestCPF:
     validator = TypeAdapter(CPF)
 
     def test_valid_cpf_formatted(self):
-        """Should accept formatted CPF numbers."""
+        """Should accept formatted CPF numbers and sanitize them."""
         # Arrange
         cpf = "123.456.789-00"
+        expected = "12345678900"
 
         # Act & Assert
-        assert self.validator.validate_python(cpf) == cpf
+        assert self.validator.validate_python(cpf) == expected
 
     def test_valid_cpf_unformatted(self):
         """Should accept unformatted CPF numbers."""
