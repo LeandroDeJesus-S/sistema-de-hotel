@@ -1,9 +1,10 @@
 import logging
 import re
-from datetime import date, timedelta
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
+from django.utils import timezone
 from ddf import G
 from faker import Faker
 
@@ -204,8 +205,8 @@ def reservation_model_instance(db, client_model_instance, room_model_instance):
     """
     Fixture to create a Reservation instance.
     """
-    checkin = date.today() + timedelta(days=10)
-    checkout = checkin + timedelta(days=15)  # Example: 5 days reservation
+    checkin = timezone.now() + timedelta(days=10)
+    checkout = timezone.now() + timedelta(days=25)  # Example: 5 days reservation
     reservation = G(
         Reservation,
         client=client_model_instance,
@@ -227,9 +228,9 @@ def reservation_model_instance_factory(db, client_model_instance, room_model_ins
     """
 
     def f(client=None, room=None, status='I', **kwargs):
-        kwargs.setdefault('checkin', date.today() + timedelta(days=10))
+        kwargs.setdefault('checkin', timezone.now() + timedelta(days=10))
         kwargs.setdefault(
-            'checkout', kwargs['checkin'] + timedelta(days=15)
+            'checkout', timezone.now() + timedelta(days=25)
         )  # Example: 5 days reservation
 
         reservation = G(

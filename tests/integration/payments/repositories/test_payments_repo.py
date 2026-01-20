@@ -34,7 +34,7 @@ class TestPaymentRepository:
             password='password123',
         )
         room = G('reservations.Room', number='101', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
@@ -119,7 +119,7 @@ class TestPaymentRepository:
             password='password123',
         )
         room = G('reservations.Room', number='101', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
@@ -182,7 +182,7 @@ class TestPaymentRepository:
             password='password123',
         )
         room = G('reservations.Room', number='101', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
@@ -247,7 +247,7 @@ class TestPaymentRepository:
             password='password123',
         )
         room = G('reservations.Room', number='101', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
@@ -306,7 +306,7 @@ class TestPaymentRepository:
             password='password123',
         )
         room = G('reservations.Room', number='102', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
@@ -362,7 +362,7 @@ class TestPaymentRepository:
         client.cpf = '12345678904'
         client.save()
         room = G('reservations.Room', number='104', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
@@ -400,7 +400,7 @@ class TestPaymentRepository:
         client.cpf = '12345678904'
         client.save()
         room = G('reservations.Room', number='104', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
@@ -445,7 +445,7 @@ class TestPaymentRepository:
             password='password123',
         )
         room = G('reservations.Room', number='106', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
@@ -530,7 +530,7 @@ class TestPaymentRepository:
             password='password123',
         )
         room = G('reservations.Room', number='105', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
@@ -614,7 +614,7 @@ class TestPaymentRepository:
             password='password123',
         )
         room = G('reservations.Room', number='108', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
@@ -689,7 +689,7 @@ class TestPaymentRepository:
             password='password123',
         )
         room = G('reservations.Room', number='111', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
@@ -745,7 +745,7 @@ class TestPaymentRepository:
             password='password123',
         )
         room = G('reservations.Room', number='111', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
@@ -799,7 +799,7 @@ class TestPaymentRepository:
             password='password123',
         )
         room = G('reservations.Room', number='107', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
@@ -873,7 +873,7 @@ class TestPaymentRepository:
             password='password123',
         )
         room = G('reservations.Room', number='109', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
@@ -924,7 +924,7 @@ class TestPaymentRepository:
             password='password123',
         )
         room = G('reservations.Room', number='110', size=20.0, daily_price=Decimal('200.00'))
-        checkin = date.today() + timedelta(days=1)
+        checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
             client=client,
