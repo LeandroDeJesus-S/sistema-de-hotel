@@ -5,6 +5,7 @@ from pydantic import AfterValidator, EmailStr, PastDate, StringConstraints
 
 import exc
 from clients.rules import ClientRules
+from utils.string_utils import sanitize_digits
 
 from ..feedback_messages import ClientErrorMessages
 
@@ -49,6 +50,14 @@ PhoneNumber = Annotated[
     'Represents a phone number value object.',
 ]
 
+
+def __cpf_validate(value: str) -> str:
+    sanitized = sanitize_digits(value)
+    if len(sanitized) != ClientRules.CPF_MAX_LEN:
+        raise exc.Error(ClientErrorMessages.INVALID_CPF)
+    return sanitized
+
+
 CPF = Annotated[
     str,
     StringConstraints(
@@ -57,6 +66,7 @@ CPF = Annotated[
         max_length=ClientRules.CPF_MAX_SIZE,
         strip_whitespace=True,
     ),
+    AfterValidator(__cpf_validate),
     'Represents a CPF value object.',
 ]
 
