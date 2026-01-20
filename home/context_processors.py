@@ -1,13 +1,13 @@
 from django.conf import settings
 from dotenv import load_dotenv
 
-from .models import Contact, Hotel
+from .models import ContactChannel, Hotel
 
 
 def hotel(*args, **kwargs):
     _hotel = Hotel.objects.first()
-    contact = Contact.objects.filter(hotel=_hotel).first()
-    return {'hotel': _hotel, 'hotel_contact': contact}
+    contact_channels = ContactChannel.objects.filter(hotel=_hotel, active=True)
+    return {'hotel': _hotel, 'contact_channels': contact_channels}
 
 
 def recaptcha(*args, **kwargs):

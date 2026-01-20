@@ -14,7 +14,7 @@ from base.ports.unit_of_work import AbsUnitOfWork
 from clients.domain.ports import AbsClientRepository
 from clients.models import Client
 from clients.rules import ClientRules
-from home.models import Contact, Hotel
+from home.models import ContactChannel, Hotel
 from payments.domain.ports import AbsPaymentsRepository
 from payments.models import Payment
 from reservations.domain.repo import AbsReservationRepository, AbsRoomRepository
@@ -121,11 +121,32 @@ def hotel_model_instance(db):
 
 
 @pytest.fixture
-def contact_model_instance(db, hotel_model_instance):
+def contact_channels_fixture(db, hotel_model_instance):
     """
-    Fixture to create a Contact instance.
+    Fixture to create ContactChannel instances for testing.
     """
-    return G(Contact, hotel=hotel_model_instance)
+    from home.models import ContactChannel
+
+    # Create some sample contact channels
+    ContactChannel.objects.create(
+        name='email',
+        display_name='Email',
+        html_icon='fa-regular fa-envelope',
+        value='test@example.com',
+        display_value='test@example.com',
+        hotel=hotel_model_instance,
+        active=True,
+    )
+    ContactChannel.objects.create(
+        name='phone',
+        display_name='Phone',
+        html_icon='fa-solid fa-phone',
+        value=None,
+        display_value='(11) 99999-9999',
+        hotel=hotel_model_instance,
+        active=True,
+    )
+    return ContactChannel.objects.filter(hotel=hotel_model_instance)
 
 
 @pytest.fixture
@@ -158,6 +179,7 @@ def room_model_instance(
     Set a daily_price that ensures reservation amount is valid.
     """
     import string
+
     room = G(
         Room,
         number=faker.bothify('###') + faker.random_element(string.ascii_uppercase),
@@ -206,14 +228,16 @@ def reservation_model_instance_factory(db, client_model_instance, room_model_ins
 
     def f(client=None, room=None, status='I', **kwargs):
         kwargs.setdefault('checkin', date.today() + timedelta(days=10))
-        kwargs.setdefault('checkout', kwargs['checkin'] + timedelta(days=15))  # Example: 5 days reservation
+        kwargs.setdefault(
+            'checkout', kwargs['checkin'] + timedelta(days=15)
+        )  # Example: 5 days reservation
 
         reservation = G(
             Reservation,
             client=client if client else client_model_instance,
             room=room if room else room_model_instance,
             status=status,
-            **kwargs
+            **kwargs,
         )
         # Calculate and set the amount
         reservation.amount = reservation.calc_reservation_value()

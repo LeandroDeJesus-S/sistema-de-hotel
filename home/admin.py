@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Contact, Hotel
+from .models import ContactChannel, Hotel
 
 
 class HotelAdmin(admin.ModelAdmin):
@@ -9,17 +9,18 @@ class HotelAdmin(admin.ModelAdmin):
     search_fields = ['name']
 
 
-class ContactAdmin(admin.ModelAdmin):
-    model = Contact
+class ContactChannelAdmin(admin.ModelAdmin):
+    model = ContactChannel
     exclude = ()
     list_display = [
         'hotel',
-        'email',
-        'phone',
+        'display_name',
+        'display_value',
+        'active',
     ]
-    list_filter = ['hotel']
-    search_fields = ['hotel', 'email', 'telefone']
+    list_filter = ['hotel', 'active']
+    search_fields = ['hotel__name', 'display_name', 'display_value']
 
 
 admin.site.register(Hotel, HotelAdmin)
-admin.site.register(Contact, ContactAdmin)
+admin.site.register(ContactChannel, ContactChannelAdmin)

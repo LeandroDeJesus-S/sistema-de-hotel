@@ -6,9 +6,11 @@
         </div>
 
         <div class="col-md-12 d-flex justify-content-center">
-            <a class="nav-item nav-link" href="{{hotel_contact.whatsapp}}"><i class="fa-brands fa-whatsapp"></i> Whatsapp</a>
-            <a class="nav-item nav-link" href="mailto:{{hotel_contact.email}}"><i class="fa-regular fa-envelope"></i> {% trans "Email" %}</a>
-            <a class="nav-item nav-link" href="#"><i class="fa-solid fa-phone"></i> {{hotel_contact.phone}}</a>
+            {% for channel in contact_channels %}
+                <a class="nav-item nav-link" href="{% if channel.name == 'email' %}mailto:{% endif %}{{channel.value}}">
+                    <i class="{{channel.html_icon}}"></i> {{channel.display_name}}
+                </a>
+            {% endfor %}
         </div>
     </div>
 </nav>

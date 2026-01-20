@@ -1,8 +1,7 @@
-from django.core.validators import validate_email
 from django.db import models
 from django.utils.translation import gettext_lazy as gtl
 
-from .rules import ContactRules, HotelRules
+from .rules import HotelRules
 
 
 class Hotel(models.Model):
@@ -50,65 +49,62 @@ class Hotel(models.Model):
         verbose_name_plural = 'Hotels'
 
 
-class Contact(models.Model):
-    """Represents the contact details of a hotel"""
+class ContactChannel(models.Model):
+    """Represents a contact channel for a hotel (email, phone, social media, etc.)"""
 
-    email = models.EmailField(
-        gtl('Email'),
-        max_length=ContactRules.EMAIL_MAX_LEN,
+    name = models.CharField(
+        gtl('Name'),
+        max_length=45,
         unique=True,
-        blank=False,
-        null=False,
-        validators=[validate_email],
-        help_text=gtl('Hotel contact email (maximum %(max)s characters)')
-        % {'max': ContactRules.EMAIL_MAX_LEN},
-    )
-    phone = models.CharField(
-        gtl('Phone'),
-        max_length=ContactRules.PHONE_MAX_LEN,
         null=False,
         blank=False,
-        unique=True,
-        help_text=gtl('Hotel landline phone'),
+        help_text=gtl('Short identifier name for the contact channel'),
     )
-    whatsapp = models.CharField(
-        gtl('Whatsapp'),
-        max_length=ContactRules.SOCIAL_MEDIA_MAX_LEN,
+    display_name = models.CharField(
+        gtl('Display name'),
+        max_length=45,
+        unique=True,
         null=False,
         blank=False,
+        help_text=gtl('Name displayed to users'),
+    )
+    html_icon = models.CharField(
+        gtl('HTML icon'),
+        max_length=20,
+        null=True,
+        blank=True,
+        help_text=gtl('HTML class name for the icon (e.g., fa-whatsapp)'),
+    )
+    value = models.TextField(
+        gtl('Value'),
+        null=True,
+        blank=True,
+        help_text=gtl('The actual URL or contact value'),
+    )
+    display_value = models.CharField(
+        gtl('Display value'),
+        max_length=45,
         unique=True,
-        help_text=gtl('WhatsApp number for customer service (maximum %(max)s characters)')
-        % {'max': ContactRules.SOCIAL_MEDIA_MAX_LEN},
+        null=False,
+        blank=False,
+        help_text=gtl('User-friendly display value (e.g., phone number, @username)'),
     )
-    instagram = models.CharField(
-        gtl('Instagram'),
-        max_length=ContactRules.SOCIAL_MEDIA_MAX_LEN,
-        help_text=gtl('Instagram username (without @, maximum %(max)s characters)')
-        % {'max': ContactRules.SOCIAL_MEDIA_MAX_LEN},
-    )
-    facebook = models.CharField(
-        gtl('Facebook'),
-        max_length=ContactRules.SOCIAL_MEDIA_MAX_LEN,
-        help_text=gtl('Facebook page URL or name'),
-    )
-    twitter = models.CharField(
-        gtl('Twitter'),
-        max_length=ContactRules.SOCIAL_MEDIA_MAX_LEN,
-        help_text=gtl('Twitter username (without @, maximum %(max)s characters)')
-        % {'max': ContactRules.SOCIAL_MEDIA_MAX_LEN},
-    )
-    hotel = models.OneToOneField(
+    hotel = models.ForeignKey(
         Hotel,
         on_delete=models.CASCADE,
-        related_name='hotel_contacts',
-        related_query_name='hotel_contact',
-        verbose_name='Hotel',
-        help_text=gtl('Hotel to which these contacts belong'),
+        related_name='contact_channels',
+        verbose_name=gtl('Hotel'),
+        help_text=gtl('Hotel to which this contact channel belongs'),
+    )
+    active = models.BooleanField(
+        gtl('Active'),
+        default=False,
+        help_text=gtl('Whether this contact channel is available and displayed'),
     )
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__} {self.pk}'
+        return f'{self.display_name} ({self.hotel.name})'
 
     class Meta:
-        verbose_name = 'Contact'
-        verbose_name_plural = 'Contacts'
+        verbose_name = gtl('Contact channel')
+        verbose_name_plural = gtl('Contact channels')
