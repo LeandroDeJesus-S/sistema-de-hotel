@@ -1,0 +1,40 @@
+{% load i18n %}
+<div id="language-selector" class="language-selector">
+    <div class="language-selector-toggle">
+        {% for lang in languages %}
+            {% if lang.code == current_language %}
+                <i class="{{ lang.flag_class }} language-flag"></i>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="language-selector-expanded">
+        {% for lang in languages %}
+            {% if lang.code == current_language %}
+                <i class="{{ lang.flag_class }} language-flag"></i>
+                <span class="language-name">{{ lang.name }}</span>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="language-selector-dropdown">
+        <form id="language-form" method="post" action="{% url 'language_switch' %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            {% for lang in languages %}
+                <button type="submit"
+                        name="language"
+                        value="{{ lang.code }}"
+                        class="language-option {% if lang.code == current_language %}active{% endif %}"
+                        {% if lang.code == current_language %}disabled{% endif %}>
+                    <i class="{{ lang.flag_class }} language-flag"></i>
+                    <span class="language-name">{{ lang.name }}</span>
+                </button>
+            {% endfor %}
+        </form>
+    </div>
+
+    <div id="language-loading" class="language-loading" style="display: none;">
+        <i class="fas fa-spinner fa-spin"></i>
+    </div>
+</div>

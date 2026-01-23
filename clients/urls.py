@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    LanguageSwitchView,
     Perfil,
     PerfilChangePassword,
     PerfilChangePasswordConfirm,
@@ -34,4 +35,5 @@ urlpatterns = [
         name='update_perfil_password_confirm',
     ),
     path('<int:pk>/perfil/delete/', PerfilDelete.as_view(), name='delete_perfil'),
+    path('language/switch/', LanguageSwitchView.as_view(), name='language_switch'),
 ]

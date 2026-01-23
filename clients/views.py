@@ -2,12 +2,14 @@ import logging
 from typing import Any
 
 from dependency_injector.wiring import Provide, inject
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.http import HttpRequest
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
+from django.utils.translation import activate
 from django.utils.translation import gettext as _
 from django.views import View
 from django.views.generic.detail import DetailView
@@ -15,7 +17,6 @@ from django.views.generic.edit import DeleteView, UpdateView
 
 from clients.application.services import ClientService
 from clients.models import Client
-from HOTEL import settings
 from reservations.mixins import LoginRequired
 from utils import support
 
@@ -285,3 +286,32 @@ class PerfilDelete(LoginRequired, DeleteView):
 
     def get_context_data(self, **kwargs):
         return {**super().get_context_data(**kwargs)}
+
+
+class LanguageSwitchView(View):
+    """View responsible for switching user language preference"""
+
+    def post(self, request: HttpRequest) -> HttpRequest:
+        """Handle language switching POST request"""
+        language_code = request.POST.get('language', 'en')
+
+        # Validate language code
+        valid_languages = ['en', 'pt-br']
+        if language_code not in valid_languages:
+            language_code = 'en'
+
+        # Set language in Django's i18n system
+        activate(language_code)
+        request.session[settings.LANGUAGE_COOKIE_NAME] = language_code
+
+        # Update user's language preference if authenticated
+        if request.user.is_authenticated and hasattr(request.user, 'language'):
+            request.user.language = language_code
+            request.user.save(update_fields=['language'])
+
+        # Get the next URL or default to home
+        next_url = request.POST.get('next', request.GET.get('next', '/'))
+        if not next_url:
+            next_url = '/'
+
+        return redirect(next_url)
