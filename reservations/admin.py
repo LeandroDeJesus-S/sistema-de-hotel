@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Benefit, Class, Reservation, Room
+from .models import Benefit, Class, Price, Reservation, Room
 
 
 class BenefitAdmin(admin.ModelAdmin):
@@ -26,7 +26,6 @@ class RoomAdmin(admin.ModelAdmin):
         'number',
         'adults_capacity',
         'children_capacity',
-        'daily_price_formatted',
         'available',
         'image',
     ]
@@ -49,7 +48,13 @@ class ReservationAdmin(admin.ModelAdmin):
     ]
 
 
+class PriceAdmin(admin.ModelAdmin):
+    list_display = ['currency', 'value', 'active']
+    list_filter = ['currency', 'active']
+
+
 admin.site.register(Benefit, BenefitAdmin)
 admin.site.register(Class, ClassAdmin)
 admin.site.register(Room, RoomAdmin)
 admin.site.register(Reservation, ReservationAdmin)
+admin.site.register(Price, PriceAdmin)

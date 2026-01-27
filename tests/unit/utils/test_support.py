@@ -220,7 +220,10 @@ class TestUpdateChangedFields:
         )
         # Mock getattr
         mocker.patch(
-            'utils.support.getattr', side_effect=lambda obj, attr: getattr(mock_model, attr)
+            'utils.support.getattr',
+            side_effect=lambda obj, attr: {'field1': 'old_value', 'field2': 'same_value'}[
+                attr
+            ],
         )
 
         update_data = {'field1': 'new_value', 'field2': 'same_value'}
@@ -323,6 +326,7 @@ class TestModelToEntity:
         mock_field = Mock()
         mock_field.name = 'field1'
         mock_field.get_internal_type.return_value = 'CharField'
+        mock_field.null = False  # Added this line
         mock_meta.concrete_fields = [mock_field]
         mock_meta.many_to_many = []
         mock_model._meta = mock_meta
@@ -630,17 +634,19 @@ class TestGetAvailableDatesMessage:
     def test_reservations_with_gaps(self):
         """Should return message with available date ranges when there are gaps."""
         reservation1 = Mock(spec=ReservationEntity)
-        reservation1.checkout = datetime(
-            2023, 1, 5, 12, tzinfo=timezone.utc
-        )
+        reservation1.checkout = datetime(2023, 1, 5, 12, tzinfo=timezone.utc)
 
         reservation2 = Mock(spec=ReservationEntity)
         reservation2.checkin = datetime(2023, 1, 9, tzinfo=timezone.utc)
         reservation2.checkout = datetime(2023, 1, 15, tzinfo=timezone.utc)
 
-        expected_from = (reservation1.checkout + settings.CLEAN_TIME).strftime('%d %b %Y %H:%M')
+        expected_from = (reservation1.checkout + settings.CLEAN_TIME).strftime(
+            '%d %b %Y %H:%M'
+        )
         expected_to = (reservation2.checkin - settings.CLEAN_TIME).strftime('%d %b %Y %H:%M')
-        expected_onwards = (reservation2.checkout + settings.CLEAN_TIME).strftime('%d %b %Y %H:%M')
+        expected_onwards = (reservation2.checkout + settings.CLEAN_TIME).strftime(
+            '%d %b %Y %H:%M'
+        )
 
         reservations = [reservation1, reservation2]
 

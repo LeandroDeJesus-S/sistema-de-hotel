@@ -9,6 +9,14 @@ from utils.decorators import ensure_result
 
 from .. import rules
 
+
+class Currency(str, Enum):
+    """Centralized currency definitions."""
+
+    USD = 'usd'
+    BRL = 'brl'
+
+
 RoomNumber = Annotated[
     str,
     StringConstraints(
@@ -105,6 +113,13 @@ ReservationObservations = Annotated[
         pattern=rules.ReserveRules.OBSERVATIONS_PATTERN,
     ),
     'represents observations made by the customer during the reservation',
+]
+
+
+PriceValue = Annotated[
+    int,
+    Field(ge=0),
+    'price value in cents',
 ]
 
 

@@ -19,6 +19,7 @@ from home.models import ContactChannel, Hotel
 from payments.domain.ports import AbsPaymentsRepository
 from payments.models import Payment
 from reservations.domain.repo import AbsReservationRepository, AbsRoomRepository
+from reservations.models import Price, Room
 from reservations.models import Benefit, Class, Reservation, Room
 from reservations.rules import RoomRules
 from services.models import Service
@@ -186,9 +187,9 @@ def room_model_instance(
         number=faker.bothify('###') + faker.random_element(string.ascii_uppercase),
         room_class=room_class_model_instance,
         hotel=hotel_model_instance,
-        daily_price=Decimal('200.00'),
         size=faker.pyint(min_value=RoomRules.MIN_SIZE + 1, max_value=RoomRules.MAX_SIZE - 1),
         short_desc=faker.sentence(nb_words=5),
+        long_desc='A standard long description for a room.',  # Ensure it's never None
         adults_capacity=faker.pyint(
             min_value=RoomRules.MIN_ADULTS, max_value=RoomRules.MAX_ADULTS
         ),
@@ -196,6 +197,14 @@ def room_model_instance(
             min_value=RoomRules.MIN_CHILDREN, max_value=RoomRules.MAX_CHILDREN
         ),
     )
+    # Create a default USD price
+    price = G(
+        Price,
+        currency='usd',
+        value=20000,  # 200.00 in cents
+        active=True,
+    )
+    room.prices.add(price)
     room.benefits.add(benefit_model_instance)
     return room
 
@@ -214,10 +223,12 @@ def reservation_model_instance(db, client_model_instance, room_model_instance):
         checkin=checkin,
         checkout=checkout,
         status='I',
+        currency='usd',
+        price=30000,
     )
-    # Calculate and set the amount
-    reservation.amount = reservation.calc_reservation_value()
-    reservation.save()  # Save after setting amount
+    # Calculate and set the amount if needed, but we set it above
+    # reservation.amount = reservation.calc_reservation_value()
+    # reservation.save()  # Save after setting amount
     return reservation
 
 
@@ -238,11 +249,13 @@ def reservation_model_instance_factory(db, client_model_instance, room_model_ins
             client=client if client else client_model_instance,
             room=room if room else room_model_instance,
             status=status,
+            currency='usd',
+            price=30000,
             **kwargs,
         )
-        # Calculate and set the amount
-        reservation.amount = reservation.calc_reservation_value()
-        reservation.save()  # Save after setting amount
+        # Calculate and set the amount if needed
+        # reservation.amount = reservation.calc_reservation_value()
+        # reservation.save()  # Save after setting amount
         return reservation
 
     return f
@@ -257,7 +270,8 @@ def payment_model_instance(db, reservation_model_instance):
         Payment,
         reservation=reservation_model_instance,
         status=Payment.Status.PENDING,
-        amount=reservation_model_instance.amount,
+        currency=reservation_model_instance.currency,
+        price=reservation_model_instance.price,
         client=reservation_model_instance.client,
         payment_gateway=Payment.Gateway.STRIPE,
     )

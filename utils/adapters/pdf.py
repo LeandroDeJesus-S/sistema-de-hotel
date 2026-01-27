@@ -92,6 +92,6 @@ class ReportLabPDFReceiptGenerator(AbsPDFGenerator):
             f'{_("Check-out")}: {payment.reservation.checkout.strftime("%d/%b/%Y %H:%M")}',
             f'{_("Class")}: {payment.reservation.room.room_class}',
             f'{_("Room")}: Nº{payment.reservation.room.number}',
-            f'{_("Total")}: ${payment.reservation.amount:.2f}',
+            f'{_("Total")}: ${(payment.reservation.price / 100):.2f}',
         ]
         return rows

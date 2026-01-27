@@ -128,7 +128,8 @@ def process_refund(
 
     # Update payment record with refund information
     payment.status = PaymentStatus.REFUNDED
-    payment.refunded_amount = refund_amount_cents / 100  # Convert cents to dollars
+    payment.refunded_currency = payment.currency
+    payment.refunded_price = refund_amount_cents
     payment.refunded_at = timezone.now()
     payment.refund_reason = reason
 

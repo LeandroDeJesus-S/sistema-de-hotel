@@ -48,31 +48,56 @@ class RoomRepository(AbsRoomRepository):
     def find_by_id(self, id: int) -> Result[entities.Room]:
         room = (
             self._modelclass.objects.select_related('room_class', 'hotel')
+            .prefetch_related('prices')
             .filter(id=id)
             .first()
         )
         if room is None:
             return Result.Err('Room not found')
 
-        return model_to_entity(room, self._room_entity_class)
+        room_entity_result = model_to_entity(room, self._room_entity_class)
+        if room_entity_result.is_err():
+            return room_entity_result
+
+        room_entity = room_entity_result.unwrap()
+        prices_result = models_to_entities(room.prices.all(), entities.Price)
+        if prices_result.is_err():
+            return Result.Err(
+                msg='Could not fetch prices for room',
+                src_error=prices_result.unwrap_err(),
+            )
+        room_entity.prices = prices_result.unwrap()
+
+        return Result.Ok(room_entity)
 
     def fetch_all(self, with_benefits: bool = False) -> Result[list[entities.Room]]:
         try:
-            rooms_qs = self._modelclass.objects.select_related('room_class', 'hotel').all()
+            rooms_qs = self._modelclass.objects.select_related(
+                'room_class', 'hotel'
+            ).all()  # Original logic restored
             if with_benefits:
                 rooms_qs = rooms_qs.prefetch_related('benefits')
+            rooms_qs = rooms_qs.prefetch_related('prices')
 
-            rooms = rooms_qs.order_by('-daily_price')
+            rooms = rooms_qs.order_by('number')
             room_entities = []
             for r in rooms:
                 result = model_to_entity(r, self._room_entity_class)
                 if result.is_err():
                     return Result.Err(
-                        msg='Could not fetch rooms',
+                        msg='Could not fetch rooms (conversion failed)',
                         src_error=result.unwrap_err(),
                     )
 
                 e = result.unwrap()
+                prices_result = models_to_entities(r.prices.all(), entities.Price)
+                if prices_result.is_err():
+                    return Result.Err(
+                        msg='Could not fetch prices for room',
+                        src_error=prices_result.unwrap_err(),
+                    )
+                e.prices = prices_result.unwrap()
+
                 if with_benefits:
                     benefits_result = models_to_entities(
                         r.benefits.all(), self._benefit_entity_class
@@ -112,10 +137,7 @@ class RoomRepository(AbsRoomRepository):
 
         model_instance_result = entity_to_model(room, self._modelclass)
         if model_instance_result.is_err():
-            return Result.Err(
-                msg='Failed to convert room entity to model',
-                src_error=model_instance_result.unwrap_err(),
-            )
+            return model_instance_result
 
         model_instance = model_instance_result.unwrap()
         if not model_instance:
@@ -198,7 +220,7 @@ class ReservationRepository(AbsReservationRepository):
 
         try:
             reservations = self._modelclass.objects.filter(
-                client_id=client_id, status__in=statuses
+                client_id=client_id,
             ).order_by('-id')
 
             return models_to_entities(reservations, self._entityclass)
@@ -235,14 +257,12 @@ class ReservationRepository(AbsReservationRepository):
             client__id=client_id,
         ).first()
         if reservation is None:
-            return Result.Err(msg=f'Reservation not found {reservation_id=} {client_id=}')
+            return Result.Err(msg=f'Reservation not found {reservation_id} {client_id}')
 
         return model_to_entity(reservation, self._entityclass)
 
     def find_by_id(self, id: int) -> Result[entities.Reservation]:
-        reservation = (
-            self._modelclass.objects.select_related('client', 'room').filter(id=id).first()
-        )
+        reservation = self._modelclass.objects.filter(id=id).first()
         if not reservation:
             return Result.Err('Reservation not found')
 

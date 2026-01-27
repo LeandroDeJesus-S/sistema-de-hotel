@@ -33,7 +33,8 @@ class TestReservationRepository:
             client=client_entity,
             room=room_entity,
             observations='Integration test',
-            amount=Decimal('1000.00'),
+            currency='usd',  # Added
+            price=int(Decimal('1000.00') * 100),  # Added
             status=ReservationStatusEnum.INITIALIZED,
         ).unwrap()
 
@@ -44,13 +45,27 @@ class TestReservationRepository:
         assert saved_res.id is not None
         assert ReservationModel.objects.filter(id=saved_res.id).exists()
 
-    @pytest.mark.parametrize('existing_checkin,existing_checkout,new_checkin,new_checkout', (
+    @pytest.mark.parametrize(
+        'existing_checkin,existing_checkout,new_checkin,new_checkout',
         (
-            datetime.now(timezone.utc)+timedelta(days=1), datetime.now(timezone.utc)+timedelta(days=2),
-            datetime.now(timezone.utc)+timedelta(days=5), datetime.now(timezone.utc)+timedelta(days=6),
+            (
+                datetime.now(timezone.utc) + timedelta(days=1),
+                datetime.now(timezone.utc) + timedelta(days=2),
+                datetime.now(timezone.utc) + timedelta(days=5),
+                datetime.now(timezone.utc) + timedelta(days=6),
+            ),
         ),
-    ))
-    def test_has_overlapping_reservation_without_overlap(self, repo, client_model_instance_factory, reservation_model_instance_factory, existing_checkin, existing_checkout, new_checkin, new_checkout):
+    )
+    def test_has_overlapping_reservation_without_overlap(
+        self,
+        repo,
+        client_model_instance_factory,
+        reservation_model_instance_factory,
+        existing_checkin,
+        existing_checkout,
+        new_checkin,
+        new_checkout,
+    ):
         """Should return True if there is an overlapping reservation for the given room and dates."""
 
         # existing reservation
@@ -77,14 +92,29 @@ class TestReservationRepository:
             is False
         )
 
-    @pytest.mark.parametrize('case,existing_checkin,existing_checkout,new_checkin,new_checkout', (
+    @pytest.mark.parametrize(
+        'case,existing_checkin,existing_checkout,new_checkin,new_checkout',
         (
-            'new checkin starting exactly at existing checkout',
-            datetime.now(timezone.utc)+timedelta(days=1), datetime.now(timezone.utc)+timedelta(days=3),
-            datetime.now(timezone.utc)+timedelta(days=3), datetime.now(timezone.utc)+timedelta(days=6),
+            (
+                'new checkin starting exactly at existing checkout',
+                datetime.now(timezone.utc) + timedelta(days=1),
+                datetime.now(timezone.utc) + timedelta(days=3),
+                datetime.now(timezone.utc) + timedelta(days=3),
+                datetime.now(timezone.utc) + timedelta(days=6),
+            ),
         ),
-    ))
-    def test_has_overlapping_reservation_with_overlap(self, repo, client_model_instance_factory, reservation_model_instance_factory, existing_checkin, existing_checkout, new_checkin, new_checkout, case):
+    )
+    def test_has_overlapping_reservation_with_overlap(
+        self,
+        repo,
+        client_model_instance_factory,
+        reservation_model_instance_factory,
+        existing_checkin,
+        existing_checkout,
+        new_checkin,
+        new_checkout,
+        case,
+    ):
         """Should return True if there is an overlapping reservation for the given room and dates."""
 
         # existing reservation
@@ -232,7 +262,8 @@ class TestReservationRepository:
             client=client_entity,
             room=room_entity,
             observations='',
-            amount=Decimal('100'),
+            currency='usd',  # Added
+            price=int(Decimal('100') * 100),  # Added
             status='I',
         ).unwrap()
 
@@ -242,6 +273,7 @@ class TestReservationRepository:
         )
         result = repo.save(reservation_entity)
         assert result.is_err()
+        assert result.unwrap_err().msg == 'Conversion error'
 
     def test_save_validation_error(
         self, repo, client_model_instance, room_model_instance, mocker
@@ -260,7 +292,8 @@ class TestReservationRepository:
             client=client_entity,
             room=room_entity,
             observations='',
-            amount=Decimal('100'),
+            currency='usd',  # Added
+            price=int(Decimal('100') * 100),  # Added
             status='I',
         ).unwrap()
 
@@ -288,7 +321,8 @@ class TestReservationRepository:
             client=client_entity,
             room=room_entity,
             observations='',
-            amount=Decimal('100'),
+            currency='usd',  # Added
+            price=int(Decimal('100') * 100),  # Added
             status='I',
         ).unwrap()
 
@@ -306,7 +340,9 @@ class TestReservationRepository:
         mocker.patch.object(
             ReservationModel.objects, 'filter', side_effect=Exception('DB Error')
         )
-        result = repo.has_overlapping_reservation(1, datetime.now(timezone.utc), datetime.now(timezone.utc))
+        result = repo.has_overlapping_reservation(
+            1, datetime.now(timezone.utc), datetime.now(timezone.utc)
+        )
         assert result.is_err()
         assert result.unwrap_err().msg == 'Could not check for overlapping reservations'
 
@@ -345,7 +381,9 @@ class TestReservationRepository:
         assert result.unwrap_err().msg == 'Reservation not found'
 
     def test_fetch_pending_not_found(self, repo):
-        result = repo.fetch_pending(999, 999, datetime.now(timezone.utc), datetime.now(timezone.utc))
+        result = repo.fetch_pending(
+            999, 999, datetime.now(timezone.utc), datetime.now(timezone.utc)
+        )
         assert result.is_err()
         assert result.unwrap_err().msg == 'Reservation not found'
 
@@ -368,7 +406,8 @@ class TestReservationRepository:
             status=ReservationStatusEnum.ACTIVE.value,
             checkin=datetime.now(timezone.utc) + timedelta(days=20),
             checkout=datetime.now(timezone.utc) + timedelta(days=25),
-            amount=Decimal('500.00'),
+            currency='usd',  # Added
+            price=int(Decimal('500.00') * 100),  # Added
         )
 
         # Create a non-ACTIVE reservation that should NOT be returned
@@ -379,7 +418,8 @@ class TestReservationRepository:
             status=ReservationStatusEnum.INITIALIZED.value,  # Not ACTIVE
             checkin=datetime.now(timezone.utc) + timedelta(days=30),
             checkout=datetime.now(timezone.utc) + timedelta(days=35),
-            amount=Decimal('300.00'),
+            currency='usd',  # Added
+            price=int(Decimal('300.00') * 100),  # Added
         )
 
         result = repo.fetch_all_active()

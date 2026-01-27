@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
 
 from pydantic import Field, model_validator
 
@@ -12,7 +11,8 @@ from reservations.domain.value_objects import (
     BenefitName,
     BenefitShortDesc,
     ChildrenCapacity,
-    DailyPrice,
+    Currency,
+    PriceValue,
     ReservationObservations,
     ReservationStatus,
     RoomClassName,
@@ -62,6 +62,21 @@ class Benefit(BaseEntity):
         return self.name
 
 
+class Price(BaseEntity):
+    """Represents a price for a room in a specific currency.
+
+    Attributes:
+        currency: Currency
+        value: PriceValue
+        active: bool
+    """
+
+    currency: Currency
+    value: PriceValue
+    active: bool
+    id: int | None = None
+
+
 class RoomClass(BaseEntity):
     """Represents a room class from the hotel.
 
@@ -90,7 +105,7 @@ class Room(BaseEntity):
         adults_capacity: int
         children_capacity: int
         size: int
-        daily_price: int
+        prices: list[Price]
         available: bool
         image: str
         short_desc: str
@@ -113,10 +128,6 @@ class Room(BaseEntity):
             'greater_than_equal': RoomErrorMessages.SIZE_INSUFFICIENT,
             'less_than_equal': RoomErrorMessages.SIZE_EXCEEDED,
         },
-        'daily_price': {
-            'greater_than_equal': RoomErrorMessages.PRICE_INSUFFICIENT,
-            'less_than_equal': RoomErrorMessages.PRICE_EXCEEDED,
-        },
         'image': {
             'value_error': RoomErrorMessages.IMAGE_INVALID_NAME,
         },
@@ -128,7 +139,7 @@ class Room(BaseEntity):
     adults_capacity: AdultsCapacity
     children_capacity: ChildrenCapacity
     size: RoomSize
-    daily_price: DailyPrice
+    prices: list[Price] = []
     available: bool = True
     image: str = ''
     short_desc: RoomShortDesc
@@ -152,7 +163,8 @@ class Reservation(BaseEntity):
         client: Client
         room: Room
         observations: str
-        amount: Decimal
+        currency: Currency
+        price: PriceValue
         status: ReservationStatus
         created_at: datetime
     """
@@ -173,7 +185,8 @@ class Reservation(BaseEntity):
     client: Client
     room: Room
     observations: ReservationObservations
-    amount: Decimal
+    currency: Currency
+    price: PriceValue
     status: ReservationStatus = ReservationStatusEnum.INITIALIZED
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     id: int | None = None

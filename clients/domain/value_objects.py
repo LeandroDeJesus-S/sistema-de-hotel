@@ -1,4 +1,5 @@
 from datetime import date
+from enum import Enum
 from typing import Annotated
 
 from pydantic import AfterValidator, EmailStr, PastDate, StringConstraints
@@ -102,3 +103,10 @@ LastName = Annotated[
     ),
     'Represents a last name value object.',
 ]
+
+
+class Language(str, Enum):
+    """Enumerates the supported languages."""
+
+    EN = 'en'
+    PT_BR = 'pt-br'

@@ -6,6 +6,7 @@ from .value_objects import (
     Birthdate,
     Email,
     FirstName,
+    Language,
     LastName,
     Password,
     PhoneNumber,
@@ -72,7 +73,7 @@ class Client(BaseEntity):
     phone: PhoneNumber
     cpf: CPF
     password: Password
-    language: str = 'en'
+    language: Language = Language.EN
     id: int | None = None
 
     def __str__(self) -> str:

@@ -1,10 +1,18 @@
 import pytest
-from datetime import date
+from datetime import date, datetime, timezone  # Added datetime, timezone
 from unittest.mock import Mock
 from exc import Result
 from reservations.infra.repo import RoomRepository, ReservationRepository
-from reservations.models import Reservation as ReservationModel, Room as RoomModel, Benefit as BenefitModel
-from reservations.domain.entities import Room as RoomEntity, Reservation as ReservationEntity
+from reservations.models import (
+    Reservation as ReservationModel,
+    Room as RoomModel,
+    Benefit as BenefitModel,
+)
+from reservations.domain.entities import (
+    Room as RoomEntity,
+    Reservation as ReservationEntity,
+)  # Added these imports
+
 
 @pytest.mark.django_db
 class TestRepoUncovered:
@@ -12,7 +20,7 @@ class TestRepoUncovered:
         repo = RoomRepository()
         # Mocking the manager's all method
         mock_manager = Mock()
-        mock_manager.all.side_effect = Exception("DB Error")
+        mock_manager.all.side_effect = Exception('DB Error')
         mocker.patch.object(BenefitModel, 'objects', mock_manager)
 
         result = repo.fetch_all_benefits()
@@ -40,18 +48,20 @@ class TestRepoUncovered:
     def test_has_overlapping_reservation_exception(self, mocker):
         repo = ReservationRepository()
         mock_manager = mocker.Mock()
-        mock_manager.filter.side_effect = Exception("DB Error")
+        mock_manager.filter.side_effect = Exception('DB Error')
         # Ensure we patch where the code looks for it
         mocker.patch.object(repo, '_modelclass', mocker.Mock(objects=mock_manager))
 
-        result = repo.has_overlapping_reservation(1, date.today(), date.today())
+        result = repo.has_overlapping_reservation(
+            1, datetime.now(timezone.utc), datetime.now(timezone.utc)
+        )
         assert result.is_err()
         assert result.unwrap_err().msg == 'Could not check for overlapping reservations'
 
     def test_fetch_active_reservations_exception(self, mocker):
         repo = ReservationRepository()
         mock_manager = mocker.Mock()
-        mock_manager.filter.side_effect = Exception("DB Error")
+        mock_manager.filter.side_effect = Exception('DB Error')
         mocker.patch.object(repo, '_modelclass', mocker.Mock(objects=mock_manager))
 
         result = repo.fetch_active_reservations(1)
@@ -64,12 +74,15 @@ class TestRepoUncovered:
         mock_manager.filter.return_value.first.return_value = mocker.Mock()
         repo._modelclass = mocker.Mock(objects=mock_manager)
 
-        mocker.patch('reservations.infra.repo.model_to_entity', return_value=Result.Err("Conversion error"))
+        mocker.patch(
+            'reservations.infra.repo.model_to_entity',
+            return_value=Result.Err('Conversion error'),
+        )
 
         result = repo.fetch_for_history_detail(1, 1)
         # It just returns the result of model_to_entity
         assert result.is_err()
-        assert result.unwrap_err().msg == "Conversion error"
+        assert result.unwrap_err().msg == 'Conversion error'
 
     def test_room_fetch_all_with_benefits_conversion_error(self, mocker):
         repo = RoomRepository()
@@ -87,7 +100,13 @@ class TestRepoUncovered:
         mocker.patch.object(RoomModel, 'objects', mock_qs)
 
         mocker.patch('reservations.infra.repo.model_to_entity', return_value=Result.Ok(Mock()))
-        mocker.patch('reservations.infra.repo.models_to_entities', return_value=Result.Err("Benefit Error"))
+        mocker.patch(
+            'reservations.infra.repo.models_to_entities',
+            side_effect=[
+                Result.Ok([]),  # For prices.all()
+                Result.Err('Benefit Error'),  # For benefits.all()
+            ],
+        )
 
         result = repo.fetch_all(with_benefits=True)
         assert result.is_err()
@@ -95,7 +114,9 @@ class TestRepoUncovered:
 
     def test_has_active_reservation_false(self, mocker):
         repo = ReservationRepository()
-        mocker.patch.object(ReservationModel.objects, 'filter', return_value=mocker.Mock(exists=lambda: False))
+        mocker.patch.object(
+            ReservationModel.objects, 'filter', return_value=mocker.Mock(exists=lambda: False)
+        )
 
         result = repo.has_active_reservation(1, False)
         assert result.is_ok()
@@ -104,8 +125,14 @@ class TestRepoUncovered:
     def test_from_room_success(self, mocker):
         repo = ReservationRepository()
         mock_res = Mock()
-        mocker.patch.object(ReservationModel.objects, 'filter', return_value=mocker.Mock(count=lambda: 1, __iter__=lambda x: iter([mock_res])))
-        mocker.patch('reservations.infra.repo.models_to_entities', return_value=Result.Ok([Mock()]))
+        mocker.patch.object(
+            ReservationModel.objects,
+            'filter',
+            return_value=mocker.Mock(count=lambda: 1, __iter__=lambda x: iter([mock_res])),
+        )
+        mocker.patch(
+            'reservations.infra.repo.models_to_entities', return_value=Result.Ok([Mock()])
+        )
 
         result = repo.from_room(1)
         assert result.is_ok()
@@ -114,8 +141,14 @@ class TestRepoUncovered:
     def test_from_room_occupied_only(self, mocker):
         repo = ReservationRepository()
         mock_res = Mock()
-        mock_filter = mocker.patch.object(ReservationModel.objects, 'filter', return_value=mocker.Mock(count=lambda: 1, __iter__=lambda x: iter([mock_res])))
-        mocker.patch('reservations.infra.repo.models_to_entities', return_value=Result.Ok([Mock()]))
+        mock_filter = mocker.patch.object(
+            ReservationModel.objects,
+            'filter',
+            return_value=mocker.Mock(count=lambda: 1, __iter__=lambda x: iter([mock_res])),
+        )
+        mocker.patch(
+            'reservations.infra.repo.models_to_entities', return_value=Result.Ok([Mock()])
+        )
 
         result = repo.from_room(1, occuped_only=True)
         assert result.is_ok()

@@ -3,6 +3,7 @@ from django.urls import reverse
 from reservations.models import Reservation
 from datetime import datetime, timezone, timedelta
 
+
 @pytest.mark.django_db
 def test_rooms_list_view(client, room_model_instance):
     """Test that rooms list view renders correctly."""
@@ -11,6 +12,7 @@ def test_rooms_list_view(client, room_model_instance):
     assert 'rooms.html' in [t.name for t in response.templates]
     # Compare IDs as objects might be different instances
     assert any(r.id == room_model_instance.id for r in response.context['rooms'])
+
 
 @pytest.mark.django_db
 def test_room_detail_view(client, room_model_instance):
@@ -21,11 +23,13 @@ def test_room_detail_view(client, room_model_instance):
     # room_model_instance might be different instance, check PK
     assert response.context['room'].id == room_model_instance.id
 
+
 @pytest.mark.django_db
 def test_room_detail_view_404(client):
     """Test that room detail view returns 404 for invalid room."""
     response = client.get(reverse('room', kwargs={'pk': 99999}))
     assert response.status_code == 404
+
 
 @pytest.mark.django_db
 def test_reserve_view_redirect_if_not_authenticated(client, room_model_instance):
@@ -33,6 +37,7 @@ def test_reserve_view_redirect_if_not_authenticated(client, room_model_instance)
     response = client.get(reverse('reserve', kwargs={'room_pk': room_model_instance.pk}))
     assert response.status_code == 302
     assert 'signin' in response.url
+
 
 @pytest.mark.django_db
 def test_reserve_view_get_success(authenticated_client, room_model_instance):
@@ -45,13 +50,14 @@ def test_reserve_view_get_success(authenticated_client, room_model_instance):
     assert response.status_code == 200
     assert 'reserve.html' in [t.name for t in response.templates]
 
+
 @pytest.mark.django_db
 def test_reserve_view_post_success(
     authenticated_client,
     room_model_instance,
     mock_recaptcha,
     reservations_container,
-    mock_unit_of_work
+    mock_unit_of_work,
 ):
     """Test successful reservation creation."""
     client, user = authenticated_client
@@ -68,13 +74,14 @@ def test_reserve_view_post_success(
                 'checkin': checkin.strftime('%Y-%m-%d'),
                 'checkout': checkout.strftime('%Y-%m-%d'),
                 'obs': 'Test reservation',
-                'g-recaptcha-response': 'mocked_response'
-            }
+                'g-recaptcha-response': 'mocked_response',
+            },
         )
     # Expect redirect to confirmation or payment
     assert response.status_code == 302
     # Verify reservation was created
     assert Reservation.objects.filter(client=user, room=room_model_instance).exists()
+
 
 @pytest.mark.django_db
 def test_reservations_history_view(authenticated_client, reservation_model_instance):
@@ -89,6 +96,7 @@ def test_reservations_history_view(authenticated_client, reservation_model_insta
     assert 'reservations_history.html' in [t.name for t in response.templates]
     assert any(r.id == reservation_model_instance.id for r in response.context['reservations'])
 
+
 @pytest.mark.django_db
 def test_reservation_history_detail_view(authenticated_client, reservation_model_instance):
     """Test reservation detail view (history)."""
@@ -97,7 +105,9 @@ def test_reservation_history_detail_view(authenticated_client, reservation_model
     reservation_model_instance.client = user
     reservation_model_instance.save()
 
-    response = client.get(reverse('reservation_history', kwargs={'pk': reservation_model_instance.pk}))
+    response = client.get(
+        reverse('reservation_history', kwargs={'pk': reservation_model_instance.pk})
+    )
     assert response.status_code == 200
     assert 'reservation_history.html' in [t.name for t in response.templates]
 
@@ -105,8 +115,11 @@ def test_reservation_history_detail_view(authenticated_client, reservation_model
     dto = response.context['reservation']
     assert dto.id == reservation_model_instance.id
 
+
 @pytest.mark.django_db
-def test_reservation_history_detail_other_user_404(authenticated_client, reservation_model_instance, client_model_instance_factory):
+def test_reservation_history_detail_other_user_404(
+    authenticated_client, reservation_model_instance, client_model_instance_factory
+):
     """Test that viewing another user's reservation returns 404."""
     client, user = authenticated_client
     other_user = client_model_instance_factory()
@@ -115,20 +128,26 @@ def test_reservation_history_detail_other_user_404(authenticated_client, reserva
     reservation_model_instance.client = other_user
     reservation_model_instance.save()
 
-    response = client.get(reverse('reservation_history', kwargs={'pk': reservation_model_instance.pk}))
+    response = client.get(
+        reverse('reservation_history', kwargs={'pk': reservation_model_instance.pk})
+    )
     assert response.status_code == 404
+
 
 @pytest.mark.django_db
 def test_cancel_reservation_view_get(authenticated_client, reservation_model_instance):
     """Test cancel reservation confirmation page."""
     client, user = authenticated_client
     reservation_model_instance.client = user
-    reservation_model_instance.status = 'A' # ACTIVE
+    reservation_model_instance.status = 'A'  # ACTIVE
     reservation_model_instance.save()
 
-    response = client.get(reverse('cancel_reservation', kwargs={'pk': reservation_model_instance.pk}))
+    response = client.get(
+        reverse('cancel_reservation', kwargs={'pk': reservation_model_instance.pk})
+    )
     assert response.status_code == 200
     assert 'cancel_reservation.html' in [t.name for t in response.templates]
+
 
 @pytest.mark.django_db
 def test_cancel_reservation_view_post_success(
@@ -136,31 +155,30 @@ def test_cancel_reservation_view_post_success(
     reservation_model_instance,
     mock_recaptcha,
     reservations_container,
-    mock_unit_of_work
+    mock_unit_of_work,
 ):
     """Test successful reservation cancellation."""
     client, user = authenticated_client
     reservation_model_instance.client = user
-    reservation_model_instance.status = 'S' # SCHEDULED (allows cancellation)
+    reservation_model_instance.status = 'S'  # SCHEDULED (allows cancellation)
     reservation_model_instance.save()
 
     with reservations_container.unit_of_work.override(mock_unit_of_work):
         response = client.post(
             reverse('cancel_reservation', kwargs={'pk': reservation_model_instance.pk}),
-            {
-                'reason': 'Changed plans',
-                'g-recaptcha-response': 'mocked_response'
-            }
+            {'reason': 'Changed plans', 'g-recaptcha-response': 'mocked_response'},
         )
     assert response.status_code == 302
     # Verify status changed to Cancelled ('C')
     reservation_model_instance.refresh_from_db()
     assert reservation_model_instance.status == 'C'
 
+
 @pytest.mark.django_db
 def test_rooms_list_view_error(client, reservations_container, mocker):
     """Test rooms list view handles repository error."""
     from exc import Result
+
     mock_repo = mocker.Mock()
     mock_repo.fetch_all.return_value = Result.Err('Database error')
 
@@ -174,8 +192,11 @@ def test_rooms_list_view_error(client, reservations_container, mocker):
     messages = list(response.context['messages'])
     assert any('Could not load rooms.' in str(m) for m in messages)
 
+
 @pytest.mark.django_db
-def test_reserve_view_setup_error(authenticated_client, room_model_instance, reservations_container, mocker):
+def test_reserve_view_setup_error(
+    authenticated_client, room_model_instance, reservations_container, mocker
+):
     """Test reserve view handles setup error."""
     client, user = authenticated_client
     # Ensure user has no active reservations
@@ -207,6 +228,7 @@ def test_reserve_view_setup_error(authenticated_client, room_model_instance, res
     messages = list(response.context['messages'])
     assert any('Could not load room classes.' in str(m) for m in messages)
 
+
 @pytest.mark.django_db
 def test_reservations_history_view_error(authenticated_client, reservations_container, mocker):
     """Test reservations history view handles service error."""
@@ -217,7 +239,9 @@ def test_reservations_history_view_error(authenticated_client, reservations_cont
     # Mock the service method fetch_client_reservation_history
     # We can mock the service itself on the container
     mock_service = mocker.Mock()
-    mock_service.fetch_client_reservation_history.return_value = Result.Err('History load error')
+    mock_service.fetch_client_reservation_history.return_value = Result.Err(
+        'History load error'
+    )
     # We also need get_reservations_with_cancellation_info and can_client_create_reservation for context data
     mock_service.get_reservations_with_cancellation_info.return_value = []
     mock_service.can_client_create_reservation.return_value = Result.Ok(False)

@@ -46,10 +46,20 @@ class Payment(models.Model):
         related_name='payments',
         help_text=gtl('Reserva associada ao pagamento'),
     )
-    amount = models.DecimalField(
-        max_digits=PaymentRules.AMOUNT_MAX_DIGITS,
-        decimal_places=PaymentRules.AMOUNT_DECIMAL_PLACES,
-        help_text=gtl('Valor total do pagamento em reais'),
+    currency = models.CharField(
+        gtl('Currency'),
+        max_length=10,
+        choices=[('usd', gtl('USD')), ('brl', gtl('BRL'))],
+        default='usd',
+        null=True,
+        blank=True,
+        help_text=gtl('Currency for the payment'),
+    )
+    price = models.PositiveIntegerField(
+        gtl('Price'),
+        null=True,
+        blank=True,
+        help_text=gtl('Payment amount in cents'),
     )
     status = models.CharField(
         max_length=10,
@@ -115,18 +125,20 @@ class Payment(models.Model):
     updated_at = models.DateTimeField(
         auto_now=True, help_text=gtl('Última atualização do status do pagamento')
     )
-    refunded_amount = models.DecimalField(
-        max_digits=PaymentRules.REFUND_AMOUNT_MAX_DIGITS,
-        decimal_places=PaymentRules.REFUND_AMOUNT_DECIMAL_PLACES,
+    refunded_currency = models.CharField(
+        gtl('Refunded Currency'),
+        max_length=10,
+        choices=[('usd', gtl('USD')), ('brl', gtl('BRL'))],
         null=True,
         blank=True,
-        help_text=gtl(
-            'Valor reembolsado, se aplicável (%(digits)s dígitos, %(places)s casas decimais)'
-        )
-        % {
-            'digits': PaymentRules.REFUND_AMOUNT_MAX_DIGITS,
-            'places': PaymentRules.REFUND_AMOUNT_DECIMAL_PLACES,
-        },
+        default=None,
+        help_text=gtl('Currency of the refund'),
+    )
+    refunded_price = models.PositiveIntegerField(
+        gtl('Refunded Price'),
+        null=True,
+        blank=True,
+        help_text=gtl('Refunded amount in cents'),
     )
     refunded_at = models.DateTimeField(
         null=True, blank=True, help_text=gtl('Data e hora do reembolso')

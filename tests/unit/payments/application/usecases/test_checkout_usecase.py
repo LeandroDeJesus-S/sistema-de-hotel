@@ -5,6 +5,7 @@ from payments.application.dtos import CheckoutUseCaseInputDTO
 from payments.application.usecases import CheckoutUseCase
 from payments.domain.dtos import CheckoutResultDTO, CheckoutSessionInputDTO
 from payments.domain.entities import PaymentGateway, PaymentStatus
+from reservations.domain.value_objects import Currency
 
 # For tests, remove the need for safe_create by using direct instantiation if possible, but since it's BaseEntity, use safe_create
 
@@ -34,8 +35,10 @@ class TestCheckoutUseCase:
         mock_client_repository.get_by_id.return_value = Result.Ok(client_model_instance)
         mock_reservation = mocker.Mock()
         mock_reservation.reservation_days.return_value = Result.Ok(5)
-        mock_reservation.room.daily_price = 200.00
-        mock_reservation.amount = 1000.00
+        mock_reservation.room.daily_price = 20000  # In cents
+        mock_reservation.amount = 100000  # In cents
+        mock_reservation.price = mock_reservation.amount  # Added
+        mock_reservation.currency = Currency.USD  # Added
         mock_reservation.id = reservation_model_instance.id
         mock_reservation_repository.find_by_id.return_value = Result.Ok(mock_reservation)
         session_result = CheckoutResultDTO.safe_create(
@@ -229,8 +232,10 @@ class TestCheckoutUseCase:
         mock_client_repository.get_by_id.return_value = Result.Ok(client_model_instance)
         mock_reservation = mocker.Mock()
         mock_reservation.reservation_days.return_value = Result.Ok(5)
-        mock_reservation.room.daily_price = 200.00
-        mock_reservation.amount = 1000.00
+        mock_reservation.room.daily_price = 20000  # In cents
+        mock_reservation.amount = 100000  # In cents
+        mock_reservation.price = mock_reservation.amount  # Added
+        mock_reservation.currency = Currency.USD  # Added
         mock_reservation.id = reservation_model_instance.id
         mock_reservation_repository.find_by_id.return_value = Result.Ok(mock_reservation)
         mock_payment = mocker.Mock()
@@ -328,8 +333,10 @@ class TestCheckoutUseCase:
 
         mock_reservation = mocker.Mock()
         mock_reservation.reservation_days.return_value = Result.Ok(5)
-        mock_reservation.room.daily_price = 200.00
-        mock_reservation.amount = 1000.00
+        mock_reservation.room.daily_price = 20000  # In cents
+        mock_reservation.amount = 100000  # In cents
+        mock_reservation.price = mock_reservation.amount  # Added
+        mock_reservation.currency = Currency.USD  # Added
         mock_reservation.id = reservation_model_instance.id
         mock_reservation.room.number = '101'
         mock_reservation.room.room_class.name = 'Standard'
@@ -381,8 +388,10 @@ class TestCheckoutUseCase:
 
         mock_reservation = mocker.Mock()
         mock_reservation.reservation_days.return_value = Result.Ok(5)
-        mock_reservation.room.daily_price = 200.00
-        mock_reservation.amount = 1000.00
+        mock_reservation.room.daily_price = 20000  # In cents
+        mock_reservation.amount = 100000  # In cents
+        mock_reservation.price = mock_reservation.amount  # Added
+        mock_reservation.currency = Currency.USD  # Added
         mock_reservation.id = reservation_model_instance.id
         mock_reservation_repository.find_by_id.return_value = Result.Ok(mock_reservation)
 
@@ -439,8 +448,10 @@ class TestCheckoutUseCase:
 
         mock_reservation = mocker.Mock()
         mock_reservation.reservation_days.return_value = Result.Ok(5)
-        mock_reservation.room.daily_price = 200.00
-        mock_reservation.amount = 1000.00
+        mock_reservation.room.daily_price = 20000  # In cents
+        mock_reservation.amount = 100000  # In cents
+        mock_reservation.price = mock_reservation.amount  # Added
+        mock_reservation.currency = Currency.USD  # Added
         mock_reservation.id = reservation_model_instance.id
         mock_reservation_repository.find_by_id.return_value = Result.Ok(mock_reservation)
 
@@ -456,7 +467,9 @@ class TestCheckoutUseCase:
         session_result = CheckoutResultDTO.safe_create(
             client_id='client_123', session_id='session_123', session_url='http://checkout.com'
         ).unwrap()
-        mock_session_based_payment.create_checkout_session.return_value = Result.Ok(session_result)
+        mock_session_based_payment.create_checkout_session.return_value = Result.Ok(
+            session_result
+        )
 
         # Update fails
         mock_payments_repository.update.return_value = Result.Err('Update failed')

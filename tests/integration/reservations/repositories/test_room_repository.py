@@ -4,6 +4,7 @@ from reservations.domain.entities import Room, RoomClass
 from reservations.models import Room as RoomModel
 from decimal import Decimal
 
+
 @pytest.mark.django_db
 class TestRoomRepository:
     @pytest.fixture
@@ -69,28 +70,35 @@ class TestRoomRepository:
         """Should successfully save a new Room entity to the database."""
         # We need a domain entity to save
         from home.domain.entities import Hotel as HotelEntity
+
         hotel_entity = HotelEntity.safe_create(
             id=hotel_model_instance.id,
             name=hotel_model_instance.name,
             slogan=hotel_model_instance.slogan,
-            presentation_text=hotel_model_instance.presentation_text
+            presentation_text=hotel_model_instance.presentation_text,
         ).unwrap()
 
         room_class_entity = RoomClass.safe_create(
-            id=room_class_model_instance.id,
-            name=room_class_model_instance.name
+            id=room_class_model_instance.id, name=room_class_model_instance.name
+        ).unwrap()
+
+        from reservations.domain.entities import Price
+        from reservations.domain.value_objects import Currency
+
+        price_entity = Price.safe_create(
+            currency=Currency.USD, value=25000, active=True
         ).unwrap()
 
         new_room = Room.safe_create(
-            number="888",
+            number='888',
             adults_capacity=2,
             children_capacity=1,
             size=30,
-            daily_price=Decimal("250.00"),
-            short_desc="New room",
-            long_desc="Long description",
+            prices=[price_entity],
+            short_desc='New room',
+            long_desc='Long description',
             room_class=room_class_entity,
-            hotel=hotel_entity
+            hotel=hotel_entity,
         ).unwrap()
 
         result = repo.save(new_room)
@@ -101,88 +109,166 @@ class TestRoomRepository:
         assert RoomModel.objects.filter(id=saved_room.id).exists()
 
     def test_fetch_all_exception(self, repo, mocker):
-        mocker.patch.object(RoomModel.objects, 'select_related', side_effect=Exception("DB Error"))
+        mocker.patch.object(
+            RoomModel.objects, 'select_related', side_effect=Exception('DB Error')
+        )
         result = repo.fetch_all()
         assert result.is_err()
         assert result.unwrap_err().msg == 'Could not fetch rooms'
 
     def test_fetch_all_conversion_error(self, repo, room_model_instance, mocker):
         from exc import Result
-        mocker.patch('reservations.infra.repo.model_to_entity', return_value=Result.Err("Conversion error"))
+
+        mocker.patch(
+            'reservations.infra.repo.model_to_entity',
+            return_value=Result.Err('Conversion error'),
+        )
         result = repo.fetch_all()
         assert result.is_err()
-        assert result.unwrap_err().msg == 'Could not fetch rooms'
+        assert result.unwrap_err().msg == 'Could not fetch rooms (conversion failed)'
 
     def test_fetch_all_benefits_exception(self, repo, mocker):
         from reservations.models import Benefit
-        mocker.patch.object(Benefit.objects, 'all', side_effect=Exception("DB Error"))
+
+        mocker.patch.object(Benefit.objects, 'all', side_effect=Exception('DB Error'))
         result = repo.fetch_all_benefits()
         assert result.is_err()
         assert result.unwrap_err().msg == 'Could not fetch benefits'
 
     def test_fetch_all_classes_exception(self, repo, mocker):
         from reservations.models import Class
-        mocker.patch.object(Class.objects, 'all', side_effect=Exception("DB Error"))
+
+        mocker.patch.object(Class.objects, 'all', side_effect=Exception('DB Error'))
         result = repo.fetch_all_classes()
         assert result.is_err()
         assert result.unwrap_err().msg == 'Could not fetch room classes'
 
-    def test_save_conversion_error(self, repo, hotel_model_instance, room_class_model_instance, mocker):
+    def test_save_conversion_error(
+        self, repo, hotel_model_instance, room_class_model_instance, mocker
+    ):
         from home.domain.entities import Hotel as HotelEntity
         from exc import Result
 
         hotel_entity = HotelEntity.safe_create(
-            id=hotel_model_instance.id, name=hotel_model_instance.name, slogan=hotel_model_instance.slogan,
-            presentation_text=hotel_model_instance.presentation_text).unwrap()
-        room_class_entity = RoomClass.safe_create(id=room_class_model_instance.id, name=room_class_model_instance.name).unwrap()
-        new_room = Room.safe_create(
-            number="999", adults_capacity=2, children_capacity=1, size=30, daily_price=Decimal("250.00"),
-            short_desc="New", long_desc="Long", room_class=room_class_entity, hotel=hotel_entity
+            id=hotel_model_instance.id,
+            name=hotel_model_instance.name,
+            slogan=hotel_model_instance.slogan,
+            presentation_text=hotel_model_instance.presentation_text,
+        ).unwrap()
+        room_class_entity = RoomClass.safe_create(
+            id=room_class_model_instance.id, name=room_class_model_instance.name
+        ).unwrap()
+        from reservations.domain.entities import Price
+        from reservations.domain.value_objects import Currency
+
+        price_entity = Price.safe_create(
+            currency=Currency.USD, value=25000, active=True
         ).unwrap()
 
-        mocker.patch('reservations.infra.repo.entity_to_model', return_value=Result.Err("Conversion error"))
+        new_room = Room.safe_create(
+            number='999',
+            adults_capacity=2,
+            children_capacity=1,
+            size=30,
+            prices=[price_entity],
+            short_desc='New',
+            long_desc='Long',
+            room_class=room_class_entity,
+            hotel=hotel_entity,
+        ).unwrap()
+
+        mocker.patch(
+            'reservations.infra.repo.entity_to_model',
+            return_value=Result.Err('Conversion error'),
+        )
         result = repo.save(new_room)
         assert result.is_err()
-        assert result.unwrap_err().msg == 'Failed to convert room entity to model'
+        assert result.unwrap_err().msg == 'Conversion error'
 
-    def test_save_validation_error(self, repo, hotel_model_instance, room_class_model_instance, mocker):
+    def test_save_validation_error(
+        self, repo, hotel_model_instance, room_class_model_instance, mocker
+    ):
         from home.domain.entities import Hotel as HotelEntity
         from exc import Result
         from django.core.exceptions import ValidationError
 
         hotel_entity = HotelEntity.safe_create(
-            id=hotel_model_instance.id, name=hotel_model_instance.name, slogan=hotel_model_instance.slogan,
-            presentation_text=hotel_model_instance.presentation_text).unwrap()
-        room_class_entity = RoomClass.safe_create(id=room_class_model_instance.id, name=room_class_model_instance.name).unwrap()
+            id=hotel_model_instance.id,
+            name=hotel_model_instance.name,
+            slogan=hotel_model_instance.slogan,
+            presentation_text=hotel_model_instance.presentation_text,
+        ).unwrap()
+        room_class_entity = RoomClass.safe_create(
+            id=room_class_model_instance.id, name=room_class_model_instance.name
+        ).unwrap()
+        from reservations.domain.entities import Price
+        from reservations.domain.value_objects import Currency
+
+        price_entity = Price.safe_create(
+            currency=Currency.USD, value=25000, active=True
+        ).unwrap()
+
         new_room = Room.safe_create(
-            number="999", adults_capacity=2, children_capacity=1, size=30, daily_price=Decimal("250.00"),
-            short_desc="New", long_desc="Long", room_class=room_class_entity, hotel=hotel_entity
+            number='999',
+            adults_capacity=2,
+            children_capacity=1,
+            size=30,
+            prices=[price_entity],
+            short_desc='New',
+            long_desc='Long',
+            room_class=room_class_entity,
+            hotel=hotel_entity,
         ).unwrap()
 
         mock_model = mocker.Mock()
-        mock_model.full_clean.side_effect = ValidationError("Invalid")
-        mocker.patch('reservations.infra.repo.entity_to_model', return_value=Result.Ok(mock_model))
+        mock_model.full_clean.side_effect = ValidationError('Invalid')
+        mocker.patch(
+            'reservations.infra.repo.entity_to_model', return_value=Result.Ok(mock_model)
+        )
 
         result = repo.save(new_room)
         assert result.is_err()
         assert result.unwrap_err().msg == 'Invalid room'
 
-    def test_save_db_error(self, repo, hotel_model_instance, room_class_model_instance, mocker):
+    def test_save_db_error(
+        self, repo, hotel_model_instance, room_class_model_instance, mocker
+    ):
         from home.domain.entities import Hotel as HotelEntity
         from exc import Result
 
         hotel_entity = HotelEntity.safe_create(
-            id=hotel_model_instance.id, name=hotel_model_instance.name, slogan=hotel_model_instance.slogan,
-            presentation_text=hotel_model_instance.presentation_text).unwrap()
-        room_class_entity = RoomClass.safe_create(id=room_class_model_instance.id, name=room_class_model_instance.name).unwrap()
+            id=hotel_model_instance.id,
+            name=hotel_model_instance.name,
+            slogan=hotel_model_instance.slogan,
+            presentation_text=hotel_model_instance.presentation_text,
+        ).unwrap()
+        room_class_entity = RoomClass.safe_create(
+            id=room_class_model_instance.id, name=room_class_model_instance.name
+        ).unwrap()
+        from reservations.domain.entities import Price
+        from reservations.domain.value_objects import Currency
+
+        price_entity = Price.safe_create(
+            currency=Currency.USD, value=25000, active=True
+        ).unwrap()
+
         new_room = Room.safe_create(
-            number="999", adults_capacity=2, children_capacity=1, size=30, daily_price=Decimal("250.00"),
-            short_desc="New", long_desc="Long", room_class=room_class_entity, hotel=hotel_entity
+            number='999',
+            adults_capacity=2,
+            children_capacity=1,
+            size=30,
+            prices=[price_entity],
+            short_desc='New',
+            long_desc='Long',
+            room_class=room_class_entity,
+            hotel=hotel_entity,
         ).unwrap()
 
         mock_model = mocker.Mock()
-        mock_model.save.side_effect = Exception("DB Error")
-        mocker.patch('reservations.infra.repo.entity_to_model', return_value=Result.Ok(mock_model))
+        mock_model.save.side_effect = Exception('DB Error')
+        mocker.patch(
+            'reservations.infra.repo.entity_to_model', return_value=Result.Ok(mock_model)
+        )
 
         result = repo.save(new_room)
         assert result.is_err()

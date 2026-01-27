@@ -75,7 +75,7 @@ class CheckoutUseCase:
                 reservation_days = reservation.reservation_days().unwrap()
 
                 session_input_result = CheckoutSessionInputDTO.safe_create(
-                    currency='brl',  # TODO: make it dynamic
+                    currency=reservation.currency,
                     expires_at=timezone.now()
                     + timedelta(minutes=PaymentRules.CHECKOUT_SESSION_EXPIRES_MIN),
                     success_url=dto.success_url,
@@ -87,7 +87,7 @@ class CheckoutUseCase:
                                 'number': reservation.room.number,
                                 'class': reservation.room.room_class.name,
                             },
-                            unit_price_cents=int(reservation.room.daily_price * 100),
+                            unit_price_cents=int(reservation.price / reservation_days),
                             quantity=reservation_days,
                         ).unwrap()
                     ],
@@ -103,7 +103,8 @@ class CheckoutUseCase:
                 new_payment_result = Payment.safe_create(
                     client=client.unwrap(),
                     reservation=reservation,
-                    amount=reservation.amount,
+                    currency=reservation.currency,
+                    price=reservation.price,
                     status=PaymentStatus.PENDING,
                     created_at=datetime.now(timezone.utc),
                     updated_at=datetime.now(timezone.utc),

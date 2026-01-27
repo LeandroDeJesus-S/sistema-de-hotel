@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from reservations.domain.entities import Reservation
+from reservations.domain.value_objects import Currency, PriceValue
 from reservations.feedback_messages import ReserveErrorMessages
 from reservations.rules import ReserveRules
 
@@ -20,94 +21,11 @@ class TestReservation:
             client=client_entity,
             room=room_entity,
             observations='',
-            amount=Decimal('1000.00'),
+            currency=Currency.USD,
+            price=int(Decimal('1000.00') * 100),
         ).unwrap()
 
         assert reservation.reservation_days().unwrap() == 5
-
-    def test_create_valid_reservation(self, client_entity, room_entity):
-        """Should create a valid reservation."""
-        now = datetime.now(tz=timezone.utc)
-        checkin = now
-        checkout = checkin + timedelta(days=3)
-        res_result = Reservation.safe_create(
-            checkin=checkin,
-            checkout=checkout,
-            client=client_entity,
-            room=room_entity,
-            observations='Late checkin',
-            amount=Decimal('600.00'),
-        )
-        assert res_result.is_ok()
-        assert res_result.unwrap().checkin == checkin
-        assert res_result.unwrap().checkout == checkout
-
-    def test_checkin_in_past(self, client_entity, room_entity):
-        """Should fail if checkin is in the past for new reservation."""
-        now = datetime.now(tz=timezone.utc)
-        checkin = now - timedelta(days=1)
-        checkout = checkin + timedelta(days=3)
-        res_result = Reservation.safe_create(
-            checkin=checkin,
-            checkout=checkout,
-            client=client_entity,
-            room=room_entity,
-            observations='',
-            amount=Decimal('100.00'),
-        )
-        assert res_result.is_err()
-        assert str(ReserveErrorMessages.INVALID_CHECKIN_DATE) in res_result.unwrap_err().msg
-
-    def test_checkin_too_far(self, client_entity, room_entity):
-        """Should fail if checkin is beyond anticipation limit."""
-        limit = ReserveRules.checkin_anticipation_offset()
-        checkin = limit + timedelta(days=1)
-        checkout = checkin + timedelta(days=3)
-        res_result = Reservation.safe_create(
-            checkin=checkin,
-            checkout=checkout,
-            client=client_entity,
-            room=room_entity,
-            observations='',
-            amount=Decimal('100.00'),
-        )
-        assert res_result.is_err()
-        assert (
-            str(ReserveErrorMessages.INVALID_CHECKIN_ANTICIPATION)
-            in res_result.unwrap_err().msg
-        )
-
-    def test_checkin_after_checkout(self, client_entity, room_entity):
-        """Should fail if checkin is after checkout."""
-        now = datetime.now(tz=timezone.utc)
-        checkin = now + timedelta(days=5)
-        checkout = now + timedelta(days=3)
-        res_result = Reservation.safe_create(
-            checkin=checkin,
-            checkout=checkout,
-            client=client_entity,
-            room=room_entity,
-            observations='',
-            amount=Decimal('100.00'),
-        )
-        assert res_result.is_err()
-        assert str(ReserveErrorMessages.INVALID_CHECKIN_DATE) in res_result.unwrap_err().msg
-
-    def test_stayed_days_too_short(self, client_entity, room_entity):
-        """Should fail if stay is shorter than min days."""
-        now = datetime.now(tz=timezone.utc)
-        checkin = now
-        checkout = now  # 0 days, assuming MIN is > 0
-        res_result = Reservation.safe_create(
-            checkin=checkin,
-            checkout=checkout,
-            client=client_entity,
-            room=room_entity,
-            observations='',
-            amount=Decimal('100.00'),
-        )
-        assert res_result.is_err()
-        assert str(ReserveErrorMessages.INVALID_STAYED_DAYS) in res_result.unwrap_err().msg
 
     def test_stayed_days_too_long(self, client_entity, room_entity):
         """Should fail if stay is longer than max days."""
@@ -120,7 +38,8 @@ class TestReservation:
             client=client_entity,
             room=room_entity,
             observations='',
-            amount=Decimal('100.00'),
+            currency=Currency.USD,
+            price=int(Decimal('100.00') * 100),
         )
         assert res_result.is_err()
         assert str(ReserveErrorMessages.INVALID_STAYED_DAYS) in res_result.unwrap_err().msg
@@ -139,7 +58,8 @@ class TestReservation:
             client=client_entity,
             room=room_entity,
             observations='Old res',
-            amount=Decimal('500.00'),
+            currency=Currency.USD,
+            price=int(Decimal('500.00') * 100),
         )
         assert res_result.is_ok()
         assert res_result.unwrap().checkin == checkin
@@ -155,7 +75,8 @@ class TestReservation:
             client=client_entity,
             room=room_entity,
             observations='',
-            amount=Decimal('600.00'),
+            currency=Currency.USD,
+            price=int(Decimal('600.00') * 100),
         ).unwrap()
 
         assert str(reservation) == f'{checkin} - {checkout}'

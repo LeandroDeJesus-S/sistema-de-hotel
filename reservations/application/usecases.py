@@ -13,6 +13,7 @@ from payments.domain.ports import AbsPaymentsRepository
 from reservations import feedback_messages
 from reservations.domain.entities import Reservation
 from reservations.domain.value_objects import ReservationStatusEnum
+from utils.currency import get_default_currency
 from utils.support import get_available_dates_message
 
 from ..domain.repo import AbsReservationRepository, AbsRoomRepository
@@ -49,7 +50,9 @@ class InitializeReservationUseCase:
         client_result = self.client_repo.get_by_id(command.client_id)
         if client_result.is_err():
             return Result.Err(msg='client not found', src_error=client_result.unwrap_err())
-        return Result.Ok({'command': command, 'client': client_result.unwrap()})
+        client = client_result.unwrap()
+        currency = get_default_currency(client.language)
+        return Result.Ok({'command': command, 'client': client, 'currency': currency})
 
     def _find_room(self, data: Dict) -> Result[Dict]:
         command = data['command']
@@ -79,6 +82,21 @@ class InitializeReservationUseCase:
         command = data['command']
         client = data['client']
         room = data['room']
+        currency = data['currency']
+
+        # Find active price for the inferred currency
+        selected_price = None
+        for price in room.prices:
+            if price.currency == currency and price.active:
+                selected_price = price
+                break
+        if not selected_price:
+            return Result.Err(
+                msg=f'No active price found for currency {currency} in room {room.number}'
+            )
+
+        stayed_days = (command.check_out - command.check_in).days
+        reservation_price = selected_price.value * stayed_days
 
         result = Reservation.safe_create(
             client=client,
@@ -86,9 +104,8 @@ class InitializeReservationUseCase:
             checkin=command.check_in,
             checkout=command.check_out,
             observations=command.observations,
-            amount=Decimal(
-                '0'
-            ),  # bypass to be sure that checkin/checkout are valid validates at first
+            currency=currency,
+            price=reservation_price,
             status=ReservationStatusEnum.INITIALIZED,
         )
         if result.is_err():
@@ -99,12 +116,11 @@ class InitializeReservationUseCase:
             )
 
         reservation = result.unwrap()
-        stayed_days = Decimal(str((command.check_out - command.check_in).days))
-        reservation.amount = room.daily_price * stayed_days
         return Result.Ok(reservation)
 
     def _save_reservation(self, reservation_entity: Reservation) -> Result[Reservation]:
         self.logger.info('Saving reservation')
+
         with self.unit_of_work as uow:
             saved_reservation_result = self.reservation_repo.save(reservation_entity)
             if saved_reservation_result.is_err() or not saved_reservation_result.unwrap():

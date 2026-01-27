@@ -276,8 +276,11 @@ def send_cancellation_client_email_task(
         refund_info = None
         if payment_result.is_ok():
             payment = payment_result.unwrap()
-            if payment.refunded_amount:
-                refund_info = {'amount': payment.refunded_amount, 'date': payment.refunded_at}
+            if payment.refunded_price:
+                refund_info = {
+                    'amount': payment.refunded_price / 100,
+                    'date': payment.refunded_at,
+                }
 
         # Send email to client
         client_subject = gtl('Reservation Cancellation Confirmation')
@@ -324,8 +327,11 @@ def send_cancellation_admin_email_task(
         refund_info = None
         if payment_result.is_ok():
             payment = payment_result.unwrap()
-            if payment.refunded_amount:
-                refund_info = {'amount': payment.refunded_amount, 'date': payment.refunded_at}
+            if payment.refunded_price:
+                refund_info = {
+                    'amount': payment.refunded_price / 100,
+                    'date': payment.refunded_at,
+                }
 
         # Send email to admins
         admin_subject = gtl('Reservation Cancelled - %s') % reservation.id

@@ -33,7 +33,11 @@ class TestPaymentRepository:
             email='test@example.com',
             password='password123',
         )
-        room = G('reservations.Room', number='101', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='101', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -41,7 +45,8 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
@@ -57,7 +62,8 @@ class TestPaymentRepository:
             id=None,
             client=client_entity,
             reservation=reservation_entity,
-            amount=reservation.amount,
+            price=reservation.price,
+            currency=reservation.currency,
             status=PaymentStatus.PENDING,
             payment_gateway=PaymentGateway.STRIPE,
             created_at=datetime.now(timezone.utc),
@@ -78,7 +84,8 @@ class TestPaymentRepository:
             id=None,
             client=client_entity,
             reservation=reservation_entity,
-            amount=reservation.amount,
+            price=reservation.price,
+            currency=reservation.currency,
             status=PaymentStatus.PENDING,
             payment_gateway=PaymentGateway.STRIPE,
             created_at=datetime.now(timezone.utc),
@@ -118,7 +125,11 @@ class TestPaymentRepository:
             email='test@example.com',
             password='password123',
         )
-        room = G('reservations.Room', number='101', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='101', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -126,7 +137,8 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
@@ -142,7 +154,8 @@ class TestPaymentRepository:
             id=None,
             client=client_entity,
             reservation=reservation_entity,
-            amount=reservation.amount,
+            price=reservation.price,
+            currency=reservation.currency,
             status=PaymentStatus.PENDING,
             payment_gateway=PaymentGateway.STRIPE,
             created_at=datetime.now(timezone.utc),
@@ -181,7 +194,11 @@ class TestPaymentRepository:
             email='test@example.com',
             password='password123',
         )
-        room = G('reservations.Room', number='101', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='101', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -189,7 +206,8 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
@@ -205,7 +223,8 @@ class TestPaymentRepository:
             id=None,
             client=client_entity,
             reservation=reservation_entity,
-            amount=reservation.amount,
+            price=reservation.price,
+            currency=reservation.currency,
             status=PaymentStatus.PENDING,
             payment_gateway=PaymentGateway.STRIPE,
             created_at=datetime.now(timezone.utc),
@@ -246,7 +265,11 @@ class TestPaymentRepository:
             email='test@example.com',
             password='password123',
         )
-        room = G('reservations.Room', number='101', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='101', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -254,7 +277,8 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
@@ -270,7 +294,8 @@ class TestPaymentRepository:
             id=None,
             client=client_entity,
             reservation=reservation_entity,
-            amount=reservation.amount,
+            price=reservation.price,
+            currency=reservation.currency,
             status=PaymentStatus.PENDING,
             payment_gateway=PaymentGateway.STRIPE,
             created_at=datetime.now(timezone.utc),
@@ -279,9 +304,9 @@ class TestPaymentRepository:
             gateway_payment_intent_id=None,
         )
 
-        mock_model = mocker.Mock()
-        mocker.patch('payments.infra.repo.entity_to_model', return_value=Result.Ok(mock_model))
-        mock_model.save.side_effect = Exception('DB error')
+        mocker.patch.object(
+            PaymentModel, 'save', side_effect=Exception('DB error')
+        )  # Corrected mock
 
         # Act
         result = repo.create(payment_entity)
@@ -305,7 +330,11 @@ class TestPaymentRepository:
             cpf='12345678902',
             password='password123',
         )
-        room = G('reservations.Room', number='102', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='102', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -313,7 +342,8 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
@@ -361,7 +391,11 @@ class TestPaymentRepository:
         client.phone = '123456789015'
         client.cpf = '12345678904'
         client.save()
-        room = G('reservations.Room', number='104', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='104', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -369,7 +403,8 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
@@ -399,7 +434,11 @@ class TestPaymentRepository:
         client.phone = '123456789015'
         client.cpf = '12345678904'
         client.save()
-        room = G('reservations.Room', number='104', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='104', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -407,7 +446,8 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
@@ -444,7 +484,11 @@ class TestPaymentRepository:
             email='test6@example.com',
             password='password123',
         )
-        room = G('reservations.Room', number='106', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='106', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -452,14 +496,16 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
         reservation.save()
         payment = PaymentModel.objects.create(
             reservation=reservation,
-            amount=reservation.amount,
+            price=reservation.price,
+            currency=reservation.currency,
             client=client,
             payment_gateway=PaymentModel.Gateway.STRIPE,
             status=PaymentModel.Status.PENDING,
@@ -495,10 +541,14 @@ class TestPaymentRepository:
     def test_get_by_gateway_session_id_conversion_error(self, mocker):
         """Should return error when model_to_entity fails."""
         repo = PaymentRepository()
-        mocker.patch('payments.infra.repo.model_to_entity', return_value=Result.Err('Conversion error'))
+        mocker.patch(
+            'payments.infra.repo.model_to_entity', return_value=Result.Err('Conversion error')
+        )
         # We need a model to exist
         mock_model = mocker.Mock()
-        mocker.patch.object(PaymentModel.objects, 'filter', return_value=mocker.Mock(first=lambda: mock_model))
+        mocker.patch.object(
+            PaymentModel.objects, 'filter', return_value=mocker.Mock(first=lambda: mock_model)
+        )
 
         result = repo.get_by_gateway_session_id('sess_123')
         assert result.is_err()
@@ -529,7 +579,11 @@ class TestPaymentRepository:
             email='test5@example.com',
             password='password123',
         )
-        room = G('reservations.Room', number='105', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='105', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -537,14 +591,16 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
         reservation.save()
         payment = PaymentModel.objects.create(
             reservation=reservation,
-            amount=reservation.amount,
+            price=reservation.price,
+            currency=reservation.currency,
             client=client,
             payment_gateway=PaymentModel.Gateway.STRIPE,
             status=PaymentModel.Status.PENDING,
@@ -580,9 +636,13 @@ class TestPaymentRepository:
     def test_get_by_gateway_payment_intent_id_conversion_error(self, mocker):
         """Should return error when model_to_entity fails."""
         repo = PaymentRepository()
-        mocker.patch('payments.infra.repo.model_to_entity', return_value=Result.Err('Conversion error'))
+        mocker.patch(
+            'payments.infra.repo.model_to_entity', return_value=Result.Err('Conversion error')
+        )
         mock_model = mocker.Mock()
-        mocker.patch.object(PaymentModel.objects, 'filter', return_value=mocker.Mock(first=lambda: mock_model))
+        mocker.patch.object(
+            PaymentModel.objects, 'filter', return_value=mocker.Mock(first=lambda: mock_model)
+        )
 
         result = repo.get_by_gateway_payment_intent_id('pi_123')
         assert result.is_err()
@@ -613,7 +673,11 @@ class TestPaymentRepository:
             email='test8@example.com',
             password='password123',
         )
-        room = G('reservations.Room', number='108', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='108', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -621,14 +685,16 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
         reservation.save()
         payment_model = PaymentModel.objects.create(
             reservation=reservation,
-            amount=reservation.amount,
+            price=reservation.price,
+            currency=reservation.currency,
             client=client,
             payment_gateway=PaymentModel.Gateway.STRIPE,
             status=PaymentModel.Status.PENDING,
@@ -652,25 +718,33 @@ class TestPaymentRepository:
         db_payment = PaymentModel.objects.get(id=payment_entity.id)
         assert db_payment.status == PaymentStatus.COMPLETED
 
-    def test_update_conversion_error_after_save(self, mocker, client_model_instance, reservation_model_instance):
+    def test_update_conversion_error_after_save(
+        self, mocker, client_model_instance, reservation_model_instance
+    ):
         """Should return error when model_to_entity fails after successful save."""
         repo = PaymentRepository()
         pm = PaymentModel.objects.create(
             reservation=reservation_model_instance,
             client=client_model_instance,
-            amount=100,
-            status=PaymentModel.Status.PENDING
+            price=100,
+            currency='usd',
+            status=PaymentModel.Status.PENDING,
         )
 
         from utils.support import model_to_entity
+
         entity = model_to_entity(pm, Payment).unwrap()
 
         # Patch model_to_entity to fail inside repo.update
-        mocker.patch('payments.infra.repo.model_to_entity', return_value=Result.Err('Conversion error'))
+        mocker.patch(
+            'payments.infra.repo.model_to_entity', return_value=Result.Err('Conversion error')
+        )
 
         result = repo.update(entity)
         assert result.is_err()
-        assert 'Failed to convert updated payment model back to entity' in result.unwrap_err().msg
+        assert (
+            'Failed to convert updated payment model back to entity' in result.unwrap_err().msg
+        )
 
     def test_update_entity_to_model_error(self, mocker):
         """Should return error when entity_to_model fails for update."""
@@ -688,7 +762,11 @@ class TestPaymentRepository:
             email='test11@example.com',
             password='password123',
         )
-        room = G('reservations.Room', number='111', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='111', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -696,14 +774,16 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
         reservation.save()
         payment_model = PaymentModel.objects.create(
             reservation=reservation,
-            amount=reservation.amount,
+            price=reservation.price,
+            currency=reservation.currency,
             client=client,
             payment_gateway=PaymentModel.Gateway.STRIPE,
             status=PaymentModel.Status.PENDING,
@@ -744,7 +824,11 @@ class TestPaymentRepository:
             email='test11@example.com',
             password='password123',
         )
-        room = G('reservations.Room', number='111', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='111', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -752,14 +836,16 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
         reservation.save()
         payment_model = PaymentModel.objects.create(
             reservation=reservation,
-            amount=reservation.amount,
+            price=reservation.price,
+            currency=reservation.currency,
             client=client,
             payment_gateway=PaymentModel.Gateway.STRIPE,
             status=PaymentModel.Status.PENDING,
@@ -771,9 +857,9 @@ class TestPaymentRepository:
         assert entity_result.is_ok()
         payment_entity = entity_result.unwrap()
 
-        mock_model = mocker.Mock()
-        mocker.patch('payments.infra.repo.entity_to_model', return_value=Result.Ok(mock_model))
-        mock_model.save.side_effect = Exception('DB error')
+        mocker.patch.object(
+            PaymentModel, 'save', side_effect=Exception('DB error')
+        )  # Corrected mock
 
         # Act
         result = repo.update(payment_entity)
@@ -798,7 +884,11 @@ class TestPaymentRepository:
             email='test7@example.com',
             password='password123',
         )
-        room = G('reservations.Room', number='107', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='107', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -806,14 +896,16 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
         reservation.save()
         payment = PaymentModel.objects.create(
             reservation=reservation,
-            amount=reservation.amount,
+            price=reservation.price,
+            currency=reservation.currency,
             client=client,
             payment_gateway=PaymentModel.Gateway.STRIPE,
             status=PaymentModel.Status.PENDING,
@@ -848,9 +940,13 @@ class TestPaymentRepository:
     def test_get_by_id_conversion_error(self, mocker):
         """Should return error if model_to_entity fails."""
         repo = PaymentRepository()
-        mocker.patch('payments.infra.repo.model_to_entity', return_value=Result.Err('Conversion error'))
+        mocker.patch(
+            'payments.infra.repo.model_to_entity', return_value=Result.Err('Conversion error')
+        )
         mock_model = mocker.Mock()
-        mocker.patch.object(PaymentModel.objects, 'filter', return_value=mocker.Mock(first=lambda: mock_model))
+        mocker.patch.object(
+            PaymentModel.objects, 'filter', return_value=mocker.Mock(first=lambda: mock_model)
+        )
 
         result = repo.get_by_id(1)
         assert result.is_err()
@@ -872,7 +968,11 @@ class TestPaymentRepository:
             email='test9@example.com',
             password='password123',
         )
-        room = G('reservations.Room', number='109', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='109', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -880,14 +980,16 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
         reservation.save()
         payment = PaymentModel.objects.create(
             reservation=reservation,
-            amount=reservation.amount,
+            price=reservation.price,
+            currency=reservation.currency,
             client=client,
             payment_gateway=PaymentModel.Gateway.STRIPE,
             status=PaymentModel.Status.PENDING,
@@ -923,7 +1025,11 @@ class TestPaymentRepository:
             email='test10@example.com',
             password='password123',
         )
-        room = G('reservations.Room', number='110', size=20.0, daily_price=Decimal('200.00'))
+        room = G(
+            'reservations.Room', number='110', size=20.0, long_desc='Test long description'
+        )
+        price = G('reservations.Price', currency='usd', value=20000, active=True)
+        room.prices.add(price)
         checkin = timezone.now() + timedelta(days=1)
         checkout = checkin + timedelta(days=5)
         reservation = Reservation.objects.create(
@@ -931,14 +1037,16 @@ class TestPaymentRepository:
             room=room,
             checkin=checkin,
             checkout=checkout,
-            amount=Decimal('0.00'),
+            currency='usd',
+            price=0,
             status='I',
         )
         reservation.amount = reservation.calc_reservation_value()
         reservation.save()
         PaymentModel.objects.create(
             reservation=reservation,
-            amount=reservation.amount,
+            price=reservation.price,
+            currency=reservation.currency,
             client=client,
             payment_gateway=PaymentModel.Gateway.STRIPE,
             status=PaymentModel.Status.COMPLETED,  # Not pending

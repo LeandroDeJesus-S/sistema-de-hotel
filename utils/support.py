@@ -146,13 +146,21 @@ def model_to_entity(model: M, entity_cls: Type[T]) -> Result[T]:
         data = {}
         for f in opts.concrete_fields + opts.many_to_many:
             value = getattr(instance, f.name)
+            # Convert empty CharField to None if field allows null
+            if isinstance(f, models.CharField) and f.null and not value:
+                value = None
             if isinstance(f, models.ManyToManyField):
+                # Ensure the related models are converted to dictionaries
                 data[f.name] = [to_dict(related) for related in value.all()]
             elif isinstance(f, models.ForeignKey):
                 data[f.name] = to_dict(value)
             elif isinstance(value, ImageFieldFile):
                 data[f.name] = value.name if value else ''
-            elif value is None and f.get_internal_type() in {'CharField', 'TextField'}:
+            elif (
+                value is None
+                and f.get_internal_type() in {'CharField', 'TextField'}
+                and not f.null
+            ):
                 data[f.name] = ''
             else:
                 data[f.name] = value

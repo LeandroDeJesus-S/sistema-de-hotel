@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from decimal import Decimal
 from enum import Enum
 
 from pydantic import Field
@@ -7,6 +6,7 @@ from pydantic import Field
 from base.entity import BaseEntity
 from clients.domain.entities import Client
 from reservations.domain.entities import Reservation
+from reservations.domain.value_objects import Currency, PriceValue
 
 
 class PaymentStatus(str, Enum):
@@ -44,7 +44,8 @@ class Payment(BaseEntity):
 
     client: Client
     reservation: Reservation
-    amount: Decimal = Field(..., max_digits=10, decimal_places=2)
+    currency: Currency
+    price: PriceValue
     status: PaymentStatus = PaymentStatus.PENDING
     payment_method_type: PaymentMethodType = PaymentMethodType.UNKNOWN
 
@@ -58,6 +59,7 @@ class Payment(BaseEntity):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    refunded_amount: float | None = None
+    refunded_currency: Currency | None = None
+    refunded_price: PriceValue | None = None
     refunded_at: datetime | None = None
     refund_reason: str = ''

@@ -428,6 +428,7 @@ class TestReservationTasks:
         mock_reservation_repository.find_by_id.return_value = Result.Ok(reservation)
 
         payment = mocker.Mock()
+        payment.refunded_price = 10000  # Example: 100.00 in cents
         payment.refunded_amount = 100.0
         payment.refunded_at = datetime.now(timezone.utc)
         mock_payments_repository.get_by_reservation_id.return_value = Result.Ok(payment)
@@ -475,6 +476,7 @@ class TestReservationTasks:
         mock_reservation_repository.find_by_id.return_value = Result.Ok(reservation)
 
         payment = mocker.Mock()
+        payment.refunded_price = 10000  # Example: 100.00 in cents
         payment.refunded_amount = 100.0
         payment.refunded_at = datetime.now(timezone.utc)
         mock_payments_repository.get_by_reservation_id.return_value = Result.Ok(payment)

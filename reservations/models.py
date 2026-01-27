@@ -1,5 +1,4 @@
 import re
-from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.core.validators import (
@@ -75,6 +74,39 @@ class Benefit(models.Model):
 
     def __str__(self) -> str:
         return str(self.name)
+
+
+class Price(models.Model):
+    """Represents a price for a room in a specific currency."""
+
+    currency = models.CharField(
+        gtl('Currency'),
+        max_length=3,
+        blank=False,
+        null=False,
+        validators=[RegexValidator(r'^[a-z]{3}$', 'Currency must be 3 lowercase letters')],
+        help_text=gtl('Currency code in lowercase ISO 4217 format (e.g., usd, eur)'),
+    )
+    value = models.PositiveIntegerField(
+        gtl('Value'),
+        blank=False,
+        null=False,
+        help_text=gtl('Price value in cents'),
+    )
+    active = models.BooleanField(
+        gtl('Active'),
+        default=True,
+        null=False,
+        blank=False,
+        help_text=gtl('Whether this price is available for use'),
+    )
+
+    class Meta:
+        verbose_name = 'Price'
+        verbose_name_plural = 'Prices'
+
+    def __str__(self) -> str:
+        return f'{self.currency.upper()} {self.value / 100:.2f}'
 
 
 class Class(models.Model):
@@ -169,18 +201,11 @@ class Room(models.Model):
         help_text=gtl('Room size in square meters (between %(min)s and %(max)s)')
         % {'min': RoomRules.MIN_SIZE, 'max': RoomRules.MAX_SIZE},
     )
-    daily_price = models.DecimalField(
-        gtl('Daily rate'),
-        max_digits=RoomRules.DAILY_PRICE_MAX_DIGITS,
-        decimal_places=RoomRules.DAILY_PRICE_DECIMAL_PLACES,
-        blank=False,
-        null=False,
-        validators=[
-            MinValueValidator(RoomRules.MIN_DAILY_PRICE, RoomErrorMessages.PRICE_INSUFFICIENT),
-            MaxValueValidator(RoomRules.MAX_DAILY_PRICE, RoomErrorMessages.PRICE_EXCEEDED),
-        ],
-        help_text=gtl('Daily rate price in dollars (between %(min)s and %(max)s)')
-        % {'min': RoomRules.MIN_DAILY_PRICE, 'max': RoomRules.MAX_DAILY_PRICE},
+    prices = models.ManyToManyField(
+        Price,
+        related_name='room_prices',
+        blank=True,
+        help_text=gtl('Prices for this room in different currencies'),
     )
     benefits = models.ManyToManyField(
         Benefit,
@@ -247,12 +272,6 @@ class Room(models.Model):
 
     def __str__(self) -> str:
         return f'Nº{self.number} {self.room_class}'
-
-    def daily_price_formatted(self):
-        """Room daily rate value in $xn.xx format"""
-        return f'${self.daily_price:.2f}'
-
-    daily_price_formatted.short_description = 'Daily rate'  # type: ignore[attr-defined]
 
 
 class Reservation(models.Model):
@@ -324,16 +343,20 @@ class Reservation(models.Model):
         )
         % {'max': ReserveRules.OBSERVATIONS_MAX_LEN},
     )
-    amount = models.DecimalField(
-        gtl('Total reservation amount'),
-        max_digits=ReserveRules.AMOUNT_MAX_DIGITS,
-        decimal_places=ReserveRules.AMOUNT_DECIMAL_PLACES,
-        blank=True,
+    currency = models.CharField(
+        gtl('Currency'),
+        max_length=10,
+        choices=[('usd', gtl('USD')), ('brl', gtl('BRL'))],
+        default='usd',
         null=True,
-        validators=[
-            MinValueValidator(RoomRules.MIN_DAILY_PRICE),
-        ],
-        help_text=gtl('Total calculated reservation amount in dollars'),
+        blank=True,
+        help_text=gtl('Currency for the reservation'),
+    )
+    price = models.PositiveIntegerField(
+        gtl('Price'),
+        null=True,
+        blank=True,
+        help_text=gtl('Total reservation price in cents'),
     )
 
     class Status(models.TextChoices):
@@ -376,21 +399,18 @@ class Reservation(models.Model):
         return f'<{self.__class__.__name__}: {self.pk}>'
 
     def formatted_price(self) -> str:
-        """Total reservation value in $xn.xx format
+        """Total reservation value in CUR X.XX format"""
+        if self.price is not None:
+            return f'{self.currency.upper()} {self.price / 100:.2f}'
+        return 'Price not calculated'
 
-        Raises:
-            AttributeError: if called before `amount` is persisted
-        """
-        if isinstance(self.amount, int | float | Decimal):
-            return f'${self.amount:.2f}'
-        raise AttributeError('Cost was not persisted.')
-
-    def calc_reservation_value(self) -> Decimal:
-        """Calculates the reservation value, assigning it to the model and returning the value
-        in cents."""
-        days = Decimal(str((self.checkout - self.checkin).days))
-        value = self.room.daily_price * days
-        return Decimal(value)
+    def calc_reservation_value(self) -> int:
+        """Calculates the reservation value based on room price and duration."""
+        days = (self.checkout - self.checkin).days
+        room_price = self.room.prices.filter(currency=self.currency, active=True).first()
+        if room_price:
+            return int(room_price.value * days)
+        return 0
 
     def clean(self) -> None:
         super().clean()

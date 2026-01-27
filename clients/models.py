@@ -19,6 +19,7 @@ from clients.infra.validators import (
     UsernameValidator,
 )
 
+from .domain.value_objects import Language
 from .feedback_messages import ClientErrorMessages, ContactErrorMessages
 from .rules import ClientRules
 
@@ -177,7 +178,7 @@ class Client(AbstractUser):
             ('en', gtl('English')),
             ('pt-br', gtl('Portuguese')),
         ],
-        default='en',
+        default=Language.EN.value,
         help_text=gtl('User preferred language'),
     )
 

@@ -225,6 +225,8 @@ class TestReportLabPDFReceiptGenerator:
         # Mock reservation
         reservation = mocker.Mock()
         reservation.amount = Decimal('200.00')
+        reservation.price = int(reservation.amount * 100)
+        reservation.price = int(reservation.amount * 100)
         reservation.formatted_price.return_value = 'R$ 200,00'
         reservation.checkin = datetime.now(timezone.utc)
         reservation.checkout = datetime.now(timezone.utc) + timedelta(days=1)
@@ -270,6 +272,8 @@ class TestReportLabPDFReceiptGenerator:
         # Mock reservation
         reservation = mocker.Mock()
         reservation.amount = Decimal('200.00')
+        reservation.price = int(reservation.amount * 100)
+        reservation.price = int(reservation.amount * 100)
         reservation.formatted_price.return_value = 'R$ 200,00'
         reservation.checkin = datetime.now(timezone.utc)
         reservation.checkout = datetime.now(timezone.utc) + timedelta(days=4)
@@ -341,6 +345,7 @@ class TestReportLabPDFReceiptGenerator:
         # Mock reservation
         reservation = mocker.Mock()
         reservation.amount = Decimal('200.00')
+        reservation.price = int(reservation.amount * 100)
         reservation.checkin = datetime.now(timezone.utc)
         reservation.checkout = datetime.now(timezone.utc) + timedelta(days=1)
 
