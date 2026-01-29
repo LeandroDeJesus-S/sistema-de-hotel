@@ -72,7 +72,10 @@ class PaymentService:
             success_url=success_url,
             cancel_url=cancel_url,
         )
-        return self._checkout_usecase(dto.unwrap())
+        res = self._checkout_usecase(dto.unwrap())
+        if res.is_err():
+            self._logger.error('failed to handle checkout', exc_info=res.unwrap_err())
+        return res
 
     def handle_webhook(self, data: dict[str, Any], *target_events) -> Result[WebhookResultDTO]:
         """Handles a webhook event dispatching by its identifier. It never returns an error.

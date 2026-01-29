@@ -72,6 +72,33 @@ class CheckoutUseCase:
                     )
 
                 reservation = reservation_result.unwrap()
+
+                assert dto.reservation_id is not None  # nosec
+                new_payment_result = Payment.safe_create(
+                    client=client.unwrap(),
+                    reservation=reservation,
+                    currency=reservation.currency,
+                    price=reservation.price,
+                    status=PaymentStatus.PENDING,
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
+                    payment_gateway=PaymentGateway.STRIPE,
+                ).then(self._payment_repo.create)
+
+                if new_payment_result.is_err():
+                    self._logger.error(
+                        'Failed to create payment', exc_info=new_payment_result.unwrap_err()
+                    )
+                    w.rollback()
+                    return Result.Err(
+                        'Failed to create payment',
+                        src_error=new_payment_result.unwrap_err(),
+                    )
+
+                payment = new_payment_result.unwrap()
+
+            if not payment.gateway_payment_session_id:
+                reservation = payment.reservation
                 reservation_days = reservation.reservation_days().unwrap()
 
                 session_input_result = CheckoutSessionInputDTO.safe_create(
@@ -99,32 +126,8 @@ class CheckoutUseCase:
                     )
                 session = session_input_result.unwrap()
 
-                assert dto.reservation_id is not None  # nosec
-                new_payment_result = Payment.safe_create(
-                    client=client.unwrap(),
-                    reservation=reservation,
-                    currency=reservation.currency,
-                    price=reservation.price,
-                    status=PaymentStatus.PENDING,
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
-                    payment_gateway=PaymentGateway.STRIPE,
-                ).then(self._payment_repo.create)
-
-                if new_payment_result.is_err():
-                    self._logger.error(
-                        'Failed to create payment', exc_info=new_payment_result.unwrap_err()
-                    )
-                    w.rollback()
-                    return Result.Err(
-                        'Failed to create payment',
-                        src_error=new_payment_result.unwrap_err(),
-                    )
-
-                new_payment = new_payment_result.unwrap()
-
                 metadata = session.metadata or {}
-                metadata['internal_payment_id'] = new_payment.id
+                metadata['internal_payment_id'] = payment.id
                 session.metadata = metadata
 
                 session_result = self._payment_gateway.create_checkout_session(session)
@@ -138,20 +141,18 @@ class CheckoutUseCase:
                         'Failed to create payment session',
                         src_error=session_result.unwrap_err(),
                     )
-                new_payment.gateway_payment_session_id = session_result.unwrap().session_id
-                res = self._payment_repo.update(new_payment)
+
+                payment.gateway_payment_session_id = session_result.unwrap().session_id
+                res = self._payment_repo.update(payment)
                 if res.is_err():
-                    self._logger.error('Failed to create payment', exc_info=res.unwrap_err())
+                    self._logger.error('Failed to update payment', exc_info=res.unwrap_err())
                     w.rollback()
                     return Result.Err(
-                        'Failed to create payment',
+                        'Failed to update payment',
                         src_error=res.unwrap_err(),
                     )
                 w.commit()
                 return session_result
-
-        if not payment or not payment.gateway_payment_session_id:
-            return Result.Err('Payment is None or payment session ID not found')
 
         return self._payment_gateway.retrieve_checkout_session(
             payment.gateway_payment_session_id
