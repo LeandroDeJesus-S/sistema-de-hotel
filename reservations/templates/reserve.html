@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static i18n currency_tags %}
 
 {% block css %}
     <link rel="stylesheet" href={% static "/reserva/css/reserve.css" %}>
@@ -30,6 +30,25 @@
                         <input required id="checkout" name="checkout" type="datetime-local" class="form-control">
                     </div>
                 </div>
+
+                <div class="col-md-12 mt-3">
+                    <div class="form-group">
+                        <label for="currency" class="form-label">{% trans "Preferred Currency" %}</label>
+                        <select name="currency" id="currency" class="form-select">
+                            {% lang_to_currency LANGUAGE_CODE as lang_currency %}
+                            {% for price in room.prices %}
+                                {% if price.active %}
+                                    <option value="{{ price.currency.value }}"
+                                        {% if  lang_currency == price.currency %}selected
+                                        {% elif forloop.first %}selected{% endif %}>
+                                        {{ price.currency.value|upper }}
+                                    </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
                 <div class="col-md-12 mt-3">
                     <div class="form-group">
                         <label class="form-label text-light" for="obs">{% trans "Observations" %}</label>

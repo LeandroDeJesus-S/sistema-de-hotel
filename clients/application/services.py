@@ -174,7 +174,7 @@ class ClientService:
                     template_name='signup.html',
                     context={},
                     messages=[
-                        MessageDTO(typ='error', msg=str(signup_input_result.unwrap_err().msg))
+                        MessageDTO(typ='error', msg=signup_input_result.unwrap_err().msg)
                     ],
                 )
             )
@@ -198,7 +198,7 @@ class ClientService:
                     template_name='signup.html',
                     context={},
                     messages=[
-                        MessageDTO(typ='error', msg=str(client_entity_result.unwrap_err().msg))
+                        MessageDTO(typ='error', msg=client_entity_result.unwrap_err().msg)
                     ],
                 )
             )
@@ -211,7 +211,7 @@ class ClientService:
                     template_name='signup.html',
                     context={},
                     messages=[
-                        MessageDTO(typ='error', msg=str(created_user_result.unwrap_err().msg))
+                        MessageDTO(typ='error', msg=created_user_result.unwrap_err().msg)
                     ],
                 )
             )
@@ -223,7 +223,7 @@ class ClientService:
                 TemplateRenderResultDTO(
                     template_name='signup.html',
                     context={},
-                    messages=[MessageDTO(typ='error', msg=str(login_result.unwrap_err().msg))],
+                    messages=[MessageDTO(typ='error', msg=login_result.unwrap_err().msg)],
                 )
             )
 
@@ -254,7 +254,7 @@ class ClientService:
                     template_name='signin.html',
                     context={},
                     messages=[
-                        MessageDTO(typ='error', msg=str(signin_input_result.unwrap_err().msg))
+                        MessageDTO(typ='error', msg=signin_input_result.unwrap_err().msg)
                     ],
                 )
             )
@@ -276,7 +276,7 @@ class ClientService:
                 TemplateRenderResultDTO(
                     template_name='signin.html',
                     context={},
-                    messages=[MessageDTO(typ='error', msg=str(user_result.unwrap_err().msg))],
+                    messages=[MessageDTO(typ='error', msg=user_result.unwrap_err().msg)],
                 )
             )
 
@@ -291,7 +291,7 @@ class ClientService:
                 TemplateRenderResultDTO(
                     template_name='signin.html',
                     context={},
-                    messages=[MessageDTO(typ='error', msg=str(login_result.unwrap_err().msg))],
+                    messages=[MessageDTO(typ='error', msg=login_result.unwrap_err().msg)],
                 )
             )
 
@@ -327,9 +327,7 @@ class ClientService:
             return Result.Ok(
                 RedirectResultDTO(
                     url='update_perfil_password',
-                    messages=[
-                        MessageDTO(typ='error', msg=str(validation_res.unwrap_err().msg))
-                    ],
+                    messages=[MessageDTO(typ='error', msg=validation_res.unwrap_err().msg)],
                     args=(user_id,),
                 )
             )
@@ -339,7 +337,7 @@ class ClientService:
             return Result.Ok(
                 RedirectResultDTO(
                     url='update_perfil_password',
-                    messages=[MessageDTO(typ='error', msg=str(inp_result.unwrap_err().msg))],
+                    messages=[MessageDTO(typ='error', msg=inp_result.unwrap_err().msg)],
                     args=(user_id,),
                 )
             )
@@ -349,9 +347,7 @@ class ClientService:
             return Result.Ok(
                 RedirectResultDTO(
                     url='update_perfil_password',
-                    messages=[
-                        MessageDTO(typ='error', msg=str(change_pw_result.unwrap_err().msg))
-                    ],
+                    messages=[MessageDTO(typ='error', msg=change_pw_result.unwrap_err().msg)],
                     args=(user_id,),
                 )
             )

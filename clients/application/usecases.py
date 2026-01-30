@@ -46,7 +46,7 @@ class CreateUserUseCase:
             )
         if duplicate_result.unwrap():  # A duplicate was found
             return Result.Err(
-                msg=ClientErrorMessages.SIGNUP_ERROR,
+                msg=str(ClientErrorMessages.SIGNUP_ERROR),
                 src_error=Error(msg='Duplicate user data'),
             )
 

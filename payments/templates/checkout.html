@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static i18n %}
+{% load static i18n currency_tags %}
 {% load payment_customtags %}
 
 {% block head %}<link rel="stylesheet" href={% static "/payments/css/checkout.css" %}>{% endblock head %}
@@ -28,7 +28,7 @@
                     {{reservation.checkin}} <span class="text-secondary">-</span> {{reservation.checkout}}
                 </p>
                 <p class="card-text text-info fs-2">
-                    {{reservation.amount}}
+                    {% render_localized_price reservation %}
                 </p>
                 <button type="submit" class="btn btn-outline-info">{% trans "Confirm" %}</button>
             </div>

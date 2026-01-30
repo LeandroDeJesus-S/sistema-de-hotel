@@ -1,5 +1,5 @@
 from base.entity import BaseEntity
-from reservations.domain.value_objects import CheckInOut
+from reservations.domain.value_objects import CheckInOut, Currency
 
 
 class CreateReservationInput(BaseEntity):
@@ -10,3 +10,4 @@ class CreateReservationInput(BaseEntity):
     check_in: CheckInOut
     check_out: CheckInOut
     observations: str
+    currency: Currency | None = None

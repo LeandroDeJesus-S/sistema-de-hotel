@@ -15,7 +15,7 @@ from django.utils.translation import gettext_lazy as gtl
 from clients.models import Client
 from home.models import Hotel
 from reservations.domain import entities
-from reservations.domain.value_objects import ReservationStatusEnum
+from reservations.domain.value_objects import Currency, ReservationStatusEnum
 from reservations.feedback_messages import (
     BenefitErrorMessages,
     ClasseErrorMessages,
@@ -82,10 +82,10 @@ class Price(models.Model):
     currency = models.CharField(
         gtl('Currency'),
         max_length=3,
+        choices=[(tag.value, tag.name) for tag in Currency],
         blank=False,
         null=False,
-        validators=[RegexValidator(r'^[a-z]{3}$', 'Currency must be 3 lowercase letters')],
-        help_text=gtl('Currency code in lowercase ISO 4217 format (e.g., usd, eur)'),
+        help_text=gtl('Currency for this price'),
     )
     value = models.PositiveIntegerField(
         gtl('Value'),
@@ -346,8 +346,8 @@ class Reservation(models.Model):
     currency = models.CharField(
         gtl('Currency'),
         max_length=10,
-        choices=[('usd', gtl('USD')), ('brl', gtl('BRL'))],
-        default='usd',
+        choices=[(tag.value, tag.name) for tag in Currency],
+        default=Currency.USD.value,
         null=True,
         blank=True,
         help_text=gtl('Currency for the reservation'),

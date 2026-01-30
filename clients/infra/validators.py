@@ -48,7 +48,7 @@ class UsernameValidator(AbsValidator):
             }
             if self.raise_exc:
                 raise ValidationError(msg)
-            return Result.Err(msg)
+            return Result.Err(str(msg))
 
         return Result.Ok(value)
 
@@ -74,13 +74,13 @@ class PhoneNumberValidator(AbsValidator):
             if not valid:
                 if self.raise_exc:
                     raise ValidationError(ContactErrorMessages.INVALID_PHONE)
-                return Result.Err(ContactErrorMessages.INVALID_PHONE)
+                return Result.Err(str(ContactErrorMessages.INVALID_PHONE))
             return Result.Ok(value)
 
         except phonenumbers.NumberParseException as e:
             if self.raise_exc:
                 raise ValidationError(ContactErrorMessages.INVALID_PHONE)
-            return Result.Err(ContactErrorMessages.INVALID_PHONE, src_error=e)
+            return Result.Err(str(ContactErrorMessages.INVALID_PHONE), src_error=e)
 
 
 class BirthDateValidator(AbsValidator):
@@ -98,7 +98,7 @@ class BirthDateValidator(AbsValidator):
         if not (self._min_age <= age <= self._max_age):
             if self.raise_exc:
                 raise ValidationError(ClientErrorMessages.INVALID_BIRTHDATE)
-            return Result.Err(ClientErrorMessages.INVALID_BIRTHDATE)
+            return Result.Err(str(ClientErrorMessages.INVALID_BIRTHDATE))
 
         return Result.Ok(value)
 
@@ -132,7 +132,7 @@ class PasswordValidator(AbsValidator):
             }
             if self.raise_exc:
                 raise ValidationError(msg)
-            return Result.Err(msg)
+            return Result.Err(str(msg))
 
         for dj_validator in self._dj_extra:
             dj_validator(value)
@@ -220,12 +220,12 @@ class CpfValidator(AbsValidator):  # noqa: PLW1641
         if not self._has_valid_length():
             if self.raise_exc:
                 raise ValidationError(self.message)
-            return Result.Err(self.message)
+            return Result.Err(str(self.message))
 
         if self._is_valid_sequence():
             if self.raise_exc:
                 raise ValidationError(self.message)
-            return Result.Err(self.message)
+            return Result.Err(str(self.message))
 
         _first_digit = self._calculate_first_digit()
         _second_digit = self._calculate_second_digit()
@@ -236,6 +236,6 @@ class CpfValidator(AbsValidator):  # noqa: PLW1641
         if not self._cpf == self._verified_cpf:
             if self.raise_exc:
                 raise ValidationError(self.message)
-            return Result.Err(self.message)
+            return Result.Err(str(self.message))
 
         return Result.Ok(value)

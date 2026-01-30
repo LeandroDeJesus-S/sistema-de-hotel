@@ -49,8 +49,12 @@ class ReservationAdmin(admin.ModelAdmin):
 
 
 class PriceAdmin(admin.ModelAdmin):
-    list_display = ['currency', 'value', 'active']
+    list_display = ['currency', 'fmt_value', 'active']
     list_filter = ['currency', 'active']
+
+    @admin.display(description='Value')
+    def fmt_value(self, obj):
+        return f'{obj.value / 100:.2f}'
 
 
 admin.site.register(Benefit, BenefitAdmin)

@@ -9,13 +9,14 @@ from django.http import HttpRequest
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
-from django.utils.translation import activate
+from django.utils.translation import LANGUAGE_SESSION_KEY, activate
 from django.utils.translation import gettext as _
 from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, UpdateView
 
 from clients.application.services import ClientService
+from clients.domain.value_objects import Language
 from clients.models import Client
 from reservations.mixins import LoginRequired
 from utils import support
@@ -291,27 +292,46 @@ class PerfilDelete(LoginRequired, DeleteView):
 class LanguageSwitchView(View):
     """View responsible for switching user language preference"""
 
-    def post(self, request: HttpRequest) -> HttpRequest:
+    def post(self, request: HttpRequest) -> Any:
         """Handle language switching POST request"""
         language_code = request.POST.get('language', 'en')
+        logging.getLogger('djangoLogger').debug(
+            f'LanguageSwitchView called with code: {language_code}'
+        )
 
         # Validate language code
-        valid_languages = ['en', 'pt-br']
+        valid_languages = [lang.value for lang in Language]
         if language_code not in valid_languages:
-            language_code = 'en'
-
-        # Set language in Django's i18n system
-        activate(language_code)
-        request.session[settings.LANGUAGE_COOKIE_NAME] = language_code
+            language_code = Language.EN.value
 
         # Update user's language preference if authenticated
         if request.user.is_authenticated and hasattr(request.user, 'language'):
             request.user.language = language_code
             request.user.save(update_fields=['language'])
 
+        # Set language in Django's i18n system
+        activate(language_code)
+
         # Get the next URL or default to home
         next_url = request.POST.get('next', request.GET.get('next', '/'))
         if not next_url:
             next_url = '/'
 
-        return redirect(next_url)
+        response = redirect(next_url)
+
+        # Persist choice in session and cookie for LocaleMiddleware
+        if hasattr(request, 'session'):
+            request.session[LANGUAGE_SESSION_KEY] = language_code
+
+        response.set_cookie(
+            settings.LANGUAGE_COOKIE_NAME,
+            language_code,
+            max_age=settings.SESSION_COOKIE_AGE,
+            path=settings.SESSION_COOKIE_PATH,
+            domain=settings.SESSION_COOKIE_DOMAIN,
+            secure=settings.SESSION_COOKIE_SECURE,
+            httponly=settings.SESSION_COOKIE_HTTPONLY,
+            samesite=settings.SESSION_COOKIE_SAMESITE,
+        )
+
+        return response

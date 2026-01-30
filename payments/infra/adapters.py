@@ -1,6 +1,5 @@
 import json
 import logging
-from datetime import datetime, time, timezone
 from typing import Any, Callable, Literal
 
 import stripe
@@ -245,9 +244,7 @@ class CheckoutSucceededEvent(WebhookEvent[str]):
                     src_error=err.unwrap_err(),
                 )
 
-            run_at = datetime.combine(
-                payment.reservation.checkout, time(23, 59), tzinfo=timezone.utc
-            )
+            run_at = payment.reservation.checkout
             # XXX: It might make sense send the the confirmation email even though something went wrong on schedule  # noqa: E501
             if payment.reservation.room.available:
                 self._logger.info(f'Reservation {payment.reservation.id} activation started')

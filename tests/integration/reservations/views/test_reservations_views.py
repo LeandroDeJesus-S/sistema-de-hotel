@@ -203,23 +203,20 @@ def test_reserve_view_setup_error(
     Reservation.objects.filter(client=user).delete()
 
     from exc import Result
-    from reservations.domain.entities import Reservation as ReservationEntity
-
-    # We need to mock room_repo.fetch_all_classes AND reservation_service.can_client_create_reservation
-    # because setup runs first, then get() runs which calls service.
+    from base.dtos import TemplateRenderResultDTO
 
     # Mock room_repo for setup error
     mock_room_repo = mocker.Mock()
     mock_room_repo.fetch_all_classes.return_value = Result.Err('Classes load error')
 
-    # We also need to mock find_by_id because InitializeReservationUseCase might use it if we posted,
-    # but here we are GETting.
-
-    # However, the view uses @inject on setup.
-    # The setup method gets called before get().
-
     with reservations_container.room_repo.override(mock_room_repo):
-        response = client.get(reverse('reserve', kwargs={'room_pk': room_model_instance.pk}))
+        # We also need to mock can_client_create_reservation because it's called in GET
+        mock_service = mocker.Mock()
+        mock_service.can_client_create_reservation.return_value = Result.Ok(
+            TemplateRenderResultDTO(template_name='reserve.html', context={})
+        )
+        with reservations_container.reservation_service.override(mock_service):
+            response = client.get(reverse('reserve', kwargs={'room_pk': room_model_instance.pk}))
 
     assert response.status_code == 200
     assert 'reserve.html' in [t.name for t in response.templates]

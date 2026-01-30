@@ -51,7 +51,12 @@ class InitializeReservationUseCase:
         if client_result.is_err():
             return Result.Err(msg='client not found', src_error=client_result.unwrap_err())
         client = client_result.unwrap()
-        currency = get_default_currency(client.language)
+
+        # Priority: Command currency > Language default currency
+        currency = command.currency
+        if not currency:
+            currency = get_default_currency(client.language)
+
         return Result.Ok({'command': command, 'client': client, 'currency': currency})
 
     def _find_room(self, data: Dict) -> Result[Dict]:
@@ -74,8 +79,10 @@ class InitializeReservationUseCase:
                 get_available_dates_message
             )
             if result.is_err():
-                return Result.Err(msg=feedback_messages.ReservationMessages.UNAVAILABLE_ROOM)
-            return Result.Err(msg=result.unwrap())
+                return Result.Err(
+                    msg=str(feedback_messages.ReservationMessages.UNAVAILABLE_ROOM)
+                )
+            return Result.Err(msg=str(result.unwrap()))
         return Result.Ok(data)
 
     def _create_reservation_entity(self, data: Dict) -> Result[Reservation]:  # noqa: PLR6301
@@ -109,9 +116,12 @@ class InitializeReservationUseCase:
             status=ReservationStatusEnum.INITIALIZED,
         )
         if result.is_err():
+            self.logger.error('failed to create reservation', exc_info=result.unwrap_err())
             return Result.Err(
-                msg=feedback_messages.ReservationMessages.RESERVATION_FAIL
-                % {'reason': result.unwrap_err().msg},
+                msg=str(
+                    feedback_messages.ReservationMessages.RESERVATION_FAIL
+                    % {'reason': result.unwrap_err().msg}
+                ),
                 src_error=result.unwrap_err(),
             )
 
@@ -406,7 +416,7 @@ class CancelReservationUseCase:
         result = self._reservation_repo.find_by_id(reservation_id)
         if result.is_err():
             return Result.Err(
-                msg=feedback_messages.ReservationMessages.RESERVATION_NOT_FOUND,
+                msg=str(feedback_messages.ReservationMessages.RESERVATION_NOT_FOUND),
                 src_error=result.unwrap_err(),
             )
         return Result.Ok(result.unwrap())
@@ -417,7 +427,7 @@ class CancelReservationUseCase:
         def validator(reservation: Reservation) -> Result[Reservation]:
             if reservation.client.id != client_id:
                 return Result.Err(
-                    msg=feedback_messages.ReservationMessages.UNAUTHORIZED_CANCELLATION
+                    msg=str(feedback_messages.ReservationMessages.UNAUTHORIZED_CANCELLATION)
                 )
             return Result.Ok(reservation)
 
@@ -431,7 +441,7 @@ class CancelReservationUseCase:
             ReservationStatusEnum.SCHEDULED,
         }:
             return Result.Err(
-                msg=feedback_messages.ReservationMessages.CANNOT_CANCEL_RESERVATION
+                msg=str(feedback_messages.ReservationMessages.CANNOT_CANCEL_RESERVATION)
             )
 
         # Check 24-hour cancellation policy
@@ -439,7 +449,9 @@ class CancelReservationUseCase:
         checkin_datetime = datetime.combine(reservation.checkin, time.min, tzinfo=now.tzinfo)
 
         if checkin_datetime - now < timedelta(hours=24):
-            return Result.Err(msg=feedback_messages.ReservationMessages.CANCELLATION_TOO_LATE)
+            return Result.Err(
+                msg=str(feedback_messages.ReservationMessages.CANCELLATION_TOO_LATE)
+            )
 
         return Result.Ok(reservation)
 

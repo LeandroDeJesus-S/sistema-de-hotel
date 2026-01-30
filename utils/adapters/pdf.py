@@ -80,6 +80,9 @@ class ReportLabPDFReceiptGenerator(AbsPDFGenerator):
 
     def _rows_list(self, payment: Payment) -> list[str]:  # noqa: PLR6301
         """return all the rows of the pdf in list format"""
+        from utils.currency import get_currency_symbol  # noqa: PLC0415
+
+        symbol = get_currency_symbol(payment.reservation.currency)
         rows = [
             f'{_("Issue Date")}: {payment.created_at.strftime("%h:%M:%S %d/%m/%Y")}',
             f'{_("Status")}: {payment.status}',
@@ -92,6 +95,6 @@ class ReportLabPDFReceiptGenerator(AbsPDFGenerator):
             f'{_("Check-out")}: {payment.reservation.checkout.strftime("%d/%b/%Y %H:%M")}',
             f'{_("Class")}: {payment.reservation.room.room_class}',
             f'{_("Room")}: Nº{payment.reservation.room.number}',
-            f'{_("Total")}: ${(payment.reservation.price / 100):.2f}',
+            f'{_("Total")}: {symbol} {(payment.reservation.price / 100):.2f}',
         ]
         return rows

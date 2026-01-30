@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize i18n %}
+{% load humanize i18n currency_tags %}
 
 {% block title %}{% trans "History" %}{% endblock title %}
 
@@ -24,7 +24,7 @@
                 </div>
                 <div class="row">
                     <div class="col-md-6">
-                        <p>{{reservation.amount}}</p>
+                        <p>{% render_localized_price reservation %}</p>
                     </div>
                     <div class="col-md-6 text-end d-flex align-items-center justify-content-end">
                         {% if reservation.status == 'I' and can_create_reservation %}

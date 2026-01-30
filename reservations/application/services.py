@@ -62,6 +62,14 @@ class ReservationService:
         if command.is_err():
             err = command.unwrap_err()
             self.logger.error(f'invalid reservation data: {err.msg}', exc_info=err.src_error)
+            if room_pk := data.get('room_pk'):
+                return Result.Ok(
+                    RedirectResultDTO(
+                        url='reserve',
+                        args=(room_pk,),
+                        messages=[MessageDTO(typ='error', msg=err.msg)],
+                    )
+                )
             return Result.Ok(
                 RedirectResultDTO(
                     url='rooms',
@@ -88,7 +96,7 @@ class ReservationService:
                     url='reserve',
                     args=(cmd.room_pk,),
                     messages=[
-                        MessageDTO(typ='error', msg=str(err.msg))
+                        MessageDTO(typ='error', msg=err.msg)
                     ],  # cast to str due it can be a lazy obj
                 )
             )
@@ -114,7 +122,8 @@ class ReservationService:
                     url='rooms',
                     messages=[
                         MessageDTO(
-                            typ='info', msg=str(ReservationMessages.ALREADY_HAVE_A_RESERVATION)
+                            typ='info',
+                            msg=str(ReservationMessages.ALREADY_HAVE_A_RESERVATION),
                         )
                     ],
                 )
@@ -156,7 +165,7 @@ class ReservationService:
             return Result.Ok(
                 RedirectResultDTO(
                     url='reservations_history',
-                    messages=[MessageDTO(typ='error', msg=str(result.unwrap_err().msg))],
+                    messages=[MessageDTO(typ='error', msg=result.unwrap_err().msg)],
                 )
             )
         res = result.unwrap()
@@ -188,7 +197,7 @@ class ReservationService:
             return Result.Ok(
                 RedirectResultDTO(
                     url='reservations_history',
-                    messages=[MessageDTO(typ='error', msg=str(res.unwrap_err().msg))],
+                    messages=[MessageDTO(typ='error', msg=res.unwrap_err().msg)],
                 )
             )
         self.logger.info(f'reservation {res.unwrap().id} cancelled')

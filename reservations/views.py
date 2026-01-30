@@ -13,7 +13,7 @@ from django.views.generic.list import ListView
 from base.dtos import TemplateRenderResultDTO
 from reservations.container import ReservationsContainer
 from reservations.domain.entities import Reservation
-from reservations.domain.repo import AbsRoomRepository
+from reservations.domain.repo import AbsReservationRepository, AbsRoomRepository
 from utils import support
 
 from .application import services
@@ -35,7 +35,7 @@ def setup_reservation_context(
         context (Any): View context
     """
     if request.user.is_authenticated:
-        context['reservation_on'] = svc.fetch_client_active_reservations(
+        context['reservations_on'] = svc.fetch_client_active_reservations(
             request.user.pk, include_scheduled=True
         ).unwrap_or([])
 
@@ -142,6 +142,7 @@ class Reserve(LoginRequired, View):
             'check_in': request.POST.get('checkin', '0001-01-01'),
             'check_out': request.POST.get('checkout', '0001-01-01'),
             'observations': request.POST.get('obs', ''),
+            'currency': request.POST.get('currency'),
         })
 
         return presenters.reserve_post_presenter(request, result).unwrap()
@@ -179,17 +180,22 @@ class ReservationsHistory(LoginRequired, ListView):
         )
         return reservations
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(
+        self,
+        reservation_repo: AbsReservationRepository = Provide[
+            ReservationsContainer.reservation_repo
+        ],
+        **kwargs,
+    ):
         """Add cancellation eligibility information."""
         context = super().get_context_data(**kwargs)
         context['reservation_items'] = self.svc.get_reservations_with_cancellation_info(
             context['reservations']
         )
         user_id: int = self.request.user.pk
-        context['can_create_reservation'] = self.svc.can_client_create_reservation(
-            user_id
+        context['can_create_reservation'] = not reservation_repo.has_active_reservation(
+            user_id, include_scheduled=True
         ).unwrap_or(False)
-        self.logger.debug(f'{context=}')
         return context
 
 
@@ -202,10 +208,19 @@ class ReservationHistory(LoginRequired, DetailView):
     def get_context_data(
         self,
         svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
+        reservation_repo: AbsReservationRepository = Provide[
+            ReservationsContainer.reservation_repo
+        ],
         **kwargs,
     ):
         """Add cancellation eligibility information."""
         context = super().get_context_data(**kwargs)
+
+        user_id: int = self.request.user.pk
+        context['can_create_reservation'] = not reservation_repo.has_active_reservation(
+            user_id, include_scheduled=True
+        ).unwrap_or(False)
+
         result_dto = svc.fetch_reservation_detail(
             reservation_id=self.kwargs.get('pk'), client_id=self.request.user.pk
         )

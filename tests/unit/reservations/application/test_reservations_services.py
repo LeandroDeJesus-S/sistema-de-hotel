@@ -99,9 +99,10 @@ class TestReservationService:
         assert dto.url == 'rooms'
         assert any(m.typ == 'error' for m in dto.messages)
 
-    def test_can_client_create_reservation_true(self, service, mock_reservation_repo):
+    def test_can_client_create_reservation_true(self, service, mock_reservation_repo, mock_room_repo, room_entity):
         """Should return a TemplateRenderResultDTO when the client has no active reservations."""
         mock_reservation_repo.has_active_reservation.return_value = Result.Ok(False)
+        mock_room_repo.find_by_id.return_value = Result.Ok(room_entity)
 
         result = service.can_client_create_reservation(client_id=1)
 

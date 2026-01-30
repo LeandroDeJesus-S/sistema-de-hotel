@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n currency_tags %}
 
 {% block content %}
 <div class="row">
@@ -12,7 +12,7 @@
         <p>{% trans "from" %} {{payment.reservation.checkin}} {% trans "to" %} {{payment.reservation.checkout}}</p>
         <p>{% trans "Class" %} {{payment.reservation.room.room_class.name}}</p>
         <p>{% trans "No." %}{{payment.reservation.room.number}}</p>
-        <p>{% trans "Total:" %} {{payment.reservation.amount}}</p>
+        <p>{% trans "Total:" %} {% render_localized_price payment.reservation %}</p>
     </div>
 
 </div>

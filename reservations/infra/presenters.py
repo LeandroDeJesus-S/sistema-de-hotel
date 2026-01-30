@@ -12,7 +12,7 @@ from exc import Result
 
 def reserve_get_presenter(
     request: HttpRequest,
-    result: Union[Result[TemplateRenderResultDTO], Result[RedirectResultDTO]],
+    result: Union[Result[TemplateRenderResultDTO | RedirectResultDTO]],
     room_id: int,
 ) -> Result[HttpResponse]:
     """Presenter for reserve get requests."""

@@ -3,6 +3,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as gtl
 
 from clients.models import Client
+from reservations.domain.value_objects import Currency
 from reservations.models import Reservation
 
 from .error_messages import PaymentErrorMessages
@@ -49,8 +50,8 @@ class Payment(models.Model):
     currency = models.CharField(
         gtl('Currency'),
         max_length=10,
-        choices=[('usd', gtl('USD')), ('brl', gtl('BRL'))],
-        default='usd',
+        choices=[(tag.value, tag.name) for tag in Currency],
+        default=Currency.USD.value,
         null=True,
         blank=True,
         help_text=gtl('Currency for the payment'),
@@ -128,7 +129,7 @@ class Payment(models.Model):
     refunded_currency = models.CharField(
         gtl('Refunded Currency'),
         max_length=10,
-        choices=[('usd', gtl('USD')), ('brl', gtl('BRL'))],
+        choices=[(tag.value, tag.name) for tag in Currency],
         null=True,
         blank=True,
         default=None,
