@@ -48,8 +48,8 @@ class ReserveRules:
     OBSERVATIONS_MAX_LEN = 100
     OBSERVATIONS_PATTERN = r'^[\w\s]*$'
 
-    AMOUNT_MAX_DIGITS = 10
-    AMOUNT_DECIMAL_PLACES = 2
+    PRICE_MAX_DIGITS = 10
+    PRICE_DECIMAL_PLACES = 2
 
     @classmethod
     def checkin_anticipation_offset(cls):

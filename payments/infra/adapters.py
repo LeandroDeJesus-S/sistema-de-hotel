@@ -98,7 +98,7 @@ class StripeCheckoutSession(AbsSessionBasedPayment):
     def process_refund(
         self,
         payment_intent_id: str,
-        amount: int,
+        price: int,
         reason: Literal[
             'duplicate', 'fraudulent', 'requested_by_customer'
         ] = 'requested_by_customer',
@@ -107,13 +107,13 @@ class StripeCheckoutSession(AbsSessionBasedPayment):
         try:
             refund = stripe.Refund.create(
                 payment_intent=payment_intent_id,
-                amount=amount,
+                amount=price,
                 reason=reason,
                 api_key=self._stripe_api_key,
             )
             return Result.Ok({
                 'refund_id': refund.id,
-                'amount': refund.amount,
+                'price': refund.amount,
                 'status': refund.status,
             })
         except stripe.StripeError as e:

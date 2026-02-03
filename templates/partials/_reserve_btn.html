@@ -1,7 +1,7 @@
 {% load i18n currency_tags %}
 {% if reservations_on %}
     {% for res_on in reservations_on %}
-        {% if res_on.room.id == room.id %}
+        {% if res_on.room.id == room.id and res_on.status in "IPAS" %}
             <a href="{% url "reservation_history" res_on.id %}" class="btn btn-outline-info">
             {% trans "See reservation" %}
             </a>

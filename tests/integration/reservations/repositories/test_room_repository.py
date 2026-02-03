@@ -99,6 +99,7 @@ class TestRoomRepository:
             long_desc='Long description',
             room_class=room_class_entity,
             hotel=hotel_entity,
+            available=False,  # Start unavailable to avoid validation issues
         ).unwrap()
 
         result = repo.save(new_room)
@@ -106,6 +107,7 @@ class TestRoomRepository:
         assert result.is_ok()
         saved_room = result.unwrap()
         assert saved_room.id is not None
+        assert saved_room.number == '888'
         assert RoomModel.objects.filter(id=saved_room.id).exists()
 
     def test_fetch_all_exception(self, repo, mocker):

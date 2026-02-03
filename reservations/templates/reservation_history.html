@@ -19,7 +19,7 @@
                 <h1 class="text-center display-4">{% trans "Room" %} {{reservation.room.number}} | {{reservation.room.room_class.name|capfirst}}</h1>
                 <div class="reservation-info ms-3 mt-3">
                     <p class="fs-5">{% trans "Stay period:" %} {{reservation.checkin}} - {{reservation.checkout}}</p>
-                    <p class="fs-5">{% trans "Total amount:" %} {% render_localized_price reservation %}</p>
+                    <p class="fs-5">{% trans "Total price:" %} {% render_localized_price reservation %}</p>
                     <p class="fs-5">{% trans "Issue date:" %} {{reservation.created_at|naturaltime}}</p>
                     <p class="fs-5">{% trans "Status:" %} {% include "partials/_reservation_status_badge.html" %}</small></p>
                 </div>

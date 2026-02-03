@@ -519,29 +519,29 @@ class CancelReservationUseCase:
 
         # Only process refund if payment was completed
         if payment.status == 'completed':
-            # Calculate refund amount based on policy
-            refund_amount = self._calculate_refund_amount(reservation, payment)
+            # Calculate refund price based on policy
+            refund_price = self._calculate_refund_price(reservation, payment)
 
             # Queue refund processing task
             self._task_queuer.queue_task(
                 'payments.infra.tasks.process_refund',
-                (payment.id, refund_amount, 'requested_by_customer'),
+                (payment.id, refund_price, 'requested_by_customer'),
                 name=f'process_refund_{payment.id}',
             )
 
         return Result.Ok(reservation)
 
-    def _calculate_refund_amount(self, reservation: Reservation, payment) -> int:
-        """Calculate refund amount in cents based on cancellation policy."""
+    def _calculate_refund_price(self, reservation: Reservation, payment) -> int:
+        """Calculate refund price in cents based on cancellation policy."""
         now = timezone.now()
-        checkin_datetime = datetime.combine(reservation.checkin, time.min, tzinfo=now.tzinfo)
+        checkin_datetime = reservation.checkin
 
         # Full refund if more than 24 hours before check-in
         if checkin_datetime - now >= timedelta(hours=24):
-            return int(payment.amount * 100)  # Full refund in cents
+            return int(payment.price)  # Full refund in cents
 
         # Partial refund (50%) if within 24 hours
-        return int(payment.amount * 100 * Decimal('0.5'))
+        return int(payment.price * Decimal('0.5'))
 
     def _send_notifications(self, reservation: Reservation) -> Result[Reservation]:
         """Send cancellation notifications."""

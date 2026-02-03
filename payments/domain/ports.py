@@ -25,7 +25,7 @@ class AbsSessionBasedPayment(Protocol):
     def process_refund(
         self,
         payment_intent_id: str,
-        amount: int,
+        price: int,
         reason: Literal[
             'duplicate', 'fraudulent', 'requested_by_customer'
         ] = 'requested_by_customer',

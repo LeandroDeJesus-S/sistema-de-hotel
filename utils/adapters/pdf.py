@@ -53,7 +53,7 @@ class ReportLabPDFReceiptGenerator(AbsPDFGenerator):
         """draw the logo, hotel name, and title of the pdf"""
         if hotel.logo:
             pdf_canvas.drawInlineImage(
-                os.path.join(settings.MEDIA_URL, hotel.logo), 30, h - 40
+                os.path.join(settings.MEDIA_ROOT, hotel.logo), 30, h - 40
             )
 
         pdf_canvas.setFontSize(30)

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static i18n %}
+{% load static i18n currency_tags %}
 
 {% block title %}{% trans "Cancel Reservation" %}{% endblock %}
 
@@ -28,7 +28,7 @@
                                     <p><strong>{% trans "Check-out:" %}</strong> {{ reservation.checkout|date:"Y-m-d" }}</p>
                                 </div>
                                 <div class="col-md-6">
-                                    <p><strong>{% trans "Total Amount:" %}</strong> {{ reservation.amount }}</p>
+                                    <p><strong>{% trans "Total Price:" %}</strong> {% render_localized_price reservation %}</p>
                                     <p><strong>{% trans "Status:" %}</strong>
                                         {% if reservation.status == 'A' %}{% trans "Active" %}{% endif %}
                                         {% if reservation.status == 'S' %}{% trans "Scheduled" %}{% endif %}

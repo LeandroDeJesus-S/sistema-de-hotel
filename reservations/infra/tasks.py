@@ -278,7 +278,8 @@ def send_cancellation_client_email_task(
             payment = payment_result.unwrap()
             if payment.refunded_price:
                 refund_info = {
-                    'amount': payment.refunded_price / 100,
+                    'price': payment.refunded_price,
+                    'currency': payment.refunded_currency or payment.currency,
                     'date': payment.refunded_at,
                 }
 
@@ -329,7 +330,8 @@ def send_cancellation_admin_email_task(
             payment = payment_result.unwrap()
             if payment.refunded_price:
                 refund_info = {
-                    'amount': payment.refunded_price / 100,
+                    'price': payment.refunded_price,
+                    'currency': payment.refunded_currency or payment.currency,
                     'date': payment.refunded_at,
                 }
 

@@ -83,7 +83,7 @@ def send_payment_confirmation(
 @inject
 def process_refund(
     payment_id: int,
-    refund_amount_cents: int,
+    refund_price_cents: int,
     reason: Literal[
         'duplicate', 'fraudulent', 'requested_by_customer'
     ] = 'requested_by_customer',
@@ -95,7 +95,7 @@ def process_refund(
 
     Args:
         payment_id: The ID of the payment to refund.
-        refund_amount_cents: The refund amount in cents.
+        refund_price_cents: The refund price in cents.
         reason: The reason for the refund.
         payment_repo: Optional. The payment repository to use. Defaults to PaymentRepository.
 
@@ -116,7 +116,7 @@ def process_refund(
 
     # Process refund through Stripe
     refund_result = stripe_adapter.process_refund(
-        payment.gateway_payment_intent_id, refund_amount_cents, reason
+        payment.gateway_payment_intent_id, refund_price_cents, reason
     )
 
     if refund_result.is_err():
@@ -129,7 +129,7 @@ def process_refund(
     # Update payment record with refund information
     payment.status = PaymentStatus.REFUNDED
     payment.refunded_currency = payment.currency
-    payment.refunded_price = refund_amount_cents
+    payment.refunded_price = refund_price_cents
     payment.refunded_at = timezone.now()
     payment.refund_reason = reason
 

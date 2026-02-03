@@ -267,6 +267,13 @@ class Room(models.Model):
         if self.image and not re.match(r'^[\w\-\/]+\.(jpg|png)$', self.image.name):
             error_messages['image'] = RoomErrorMessages.IMAGE_INVALID_NAME
 
+        # Ensure room cannot be available without at least one price
+        if self.available and self.id is not None and not self.prices.exists():
+            # Add the error to NON_FIELD_ERRORS if it's not a direct form field
+            raise ValidationError({
+                '__all__': [RoomErrorMessages.PRICES_REQUIRED_FOR_AVAILABLE]
+            })
+
         if error_messages:
             raise ValidationError(error_messages)
 
@@ -397,12 +404,6 @@ class Reservation(models.Model):
 
     def __str__(self) -> str:
         return f'<{self.__class__.__name__}: {self.pk}>'
-
-    def formatted_price(self) -> str:
-        """Total reservation value in CUR X.XX format"""
-        if self.price is not None:
-            return f'{self.currency.upper()} {self.price / 100:.2f}'
-        return 'Price not calculated'
 
     def calc_reservation_value(self) -> int:
         """Calculates the reservation value based on room price and duration."""

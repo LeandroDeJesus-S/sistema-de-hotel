@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n currency_tags %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -19,7 +19,7 @@
                 <li><strong>{% trans "Room:" %}</strong> {{ payment.reservation.room }}</li>
                 <li><strong>{% trans "Check-in:" %}</strong> {{ payment.reservation.checkin|date:"Y-m-d" }}</li>
                 <li><strong>{% trans "Check-out:" %}</strong> {{ payment.reservation.checkout|date:"Y-m-d" }}</li>
-                <li><strong>{% trans "Total Amount:" %}</strong> {{ payment.reservation.amount }}</li>
+                <li><strong>{% trans "Total Price:" %}</strong> {% render_localized_price payment.reservation %}</li>
                 <li><strong>{% trans "Payment Date:" %}</strong> {{ payment.created_at|date:"Y-m-d H:i" }}</li>
             </ul>
         </div>
@@ -28,7 +28,7 @@
             <h3 style="color: #155724;">{% trans "Payment Details" %}</h3>
             <ul style="list-style: none; padding: 0; color: #155724;">
                 <li><strong>{% trans "Payment ID:" %}</strong> {{ payment.id }}</li>
-                <li><strong>{% trans "Amount Paid:" %}</strong> $ {{ payment.amount }}</li>
+                <li><strong>{% trans "Price Paid:" %}</strong> {% render_localized_price payment %}</li>
                 <li><strong>{% trans "Status:" %}</strong> {{ payment.status.name }}</li>
             </ul>
             <p style="color: #155724;">{% trans "The PDF receipt is attached to this email." %}</p>

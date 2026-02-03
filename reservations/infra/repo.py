@@ -70,13 +70,16 @@ class RoomRepository(AbsRoomRepository):
 
         return Result.Ok(room_entity)
 
-    def fetch_all(self, with_benefits: bool = False) -> Result[list[entities.Room]]:
+    def fetch_all(
+        self, with_benefits: bool = False, active_only: bool = False
+    ) -> Result[list[entities.Room]]:
         try:
-            rooms_qs = self._modelclass.objects.select_related(
-                'room_class', 'hotel'
-            ).all()  # Original logic restored
+            rooms_qs = self._modelclass.objects.select_related('room_class', 'hotel')
             if with_benefits:
                 rooms_qs = rooms_qs.prefetch_related('benefits')
+            if active_only:
+                rooms_qs = rooms_qs.filter(available=True)
+
             rooms_qs = rooms_qs.prefetch_related('prices')
 
             rooms = rooms_qs.order_by('number')
@@ -130,11 +133,6 @@ class RoomRepository(AbsRoomRepository):
             return Result.Err(msg='Could not fetch room classes', src_error=e)
 
     def save(self, room: entities.Room) -> Result[entities.Room]:
-        # HACK: should I keep m2m logic here? I don't think so
-
-        # Extract M2M data before converting
-        # benefits_data = room.benefits.copy()
-
         model_instance_result = entity_to_model(room, self._modelclass)
         if model_instance_result.is_err():
             return model_instance_result
@@ -147,17 +145,23 @@ class RoomRepository(AbsRoomRepository):
             model_instance.full_clean()
             model_instance.save()
 
-            # Handle M2M relationship
-            # if benefits_data:
-            #     benefit_ids = [b.id for b in benefits_data if b.id is not None]
-            #     model_instance.benefits.set(benefit_ids)
+            # Handle ManyToMany relationships after saving
+            if room.prices:
+                price_ids = [p.id for p in room.prices if p.id]
+                if price_ids:
+                    model_instance.prices.set(price_ids)
 
+            # Refresh model from database to ensure relationships are loaded
+            model_instance.refresh_from_db()
         except ValidationError as e:
             return Result.Err(msg='Invalid room', src_error=e)
         except Exception as e:
             return Result.Err(msg='Could not save room', src_error=e)
 
-        return model_to_entity(model_instance, self._room_entity_class)
+        # Update the entity with the ID from the saved model instance
+        room.id = model_instance.id
+        # Return the updated entity
+        return Result.Ok(room)
 
 
 class ReservationRepository(AbsReservationRepository):

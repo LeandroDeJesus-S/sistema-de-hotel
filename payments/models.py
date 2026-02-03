@@ -60,7 +60,7 @@ class Payment(models.Model):
         gtl('Price'),
         null=True,
         blank=True,
-        help_text=gtl('Payment amount in cents'),
+        help_text=gtl('Payment price in cents'),
     )
     status = models.CharField(
         max_length=10,
@@ -139,7 +139,7 @@ class Payment(models.Model):
         gtl('Refunded Price'),
         null=True,
         blank=True,
-        help_text=gtl('Refunded amount in cents'),
+        help_text=gtl('Refunded price in cents'),
     )
     refunded_at = models.DateTimeField(
         null=True, blank=True, help_text=gtl('Data e hora do reembolso')
@@ -150,7 +150,7 @@ class Payment(models.Model):
 
     def clean(self):
         super().clean()
-        if self.amount != self.reservation.amount:
+        if self.price != self.reservation.price:
             raise ValidationError(PaymentErrorMessages.INVALID_PAYMENT_VALUE)
 
     def __str__(self):

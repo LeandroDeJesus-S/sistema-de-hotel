@@ -34,18 +34,7 @@
                 <div class="col-md-12 mt-3">
                     <div class="form-group">
                         <label for="currency" class="form-label">{% trans "Preferred Currency" %}</label>
-                        <select name="currency" id="currency" class="form-select">
-                            {% lang_to_currency LANGUAGE_CODE as lang_currency %}
-                            {% for price in room.prices %}
-                                {% if price.active %}
-                                    <option value="{{ price.currency.value }}"
-                                        {% if  lang_currency == price.currency %}selected
-                                        {% elif forloop.first %}selected{% endif %}>
-                                        {{ price.currency.value|upper }}
-                                    </option>
-                                {% endif %}
-                            {% endfor %}
-                        </select>
+                        {% currency_selector room.prices %}
                     </div>
                 </div>
 

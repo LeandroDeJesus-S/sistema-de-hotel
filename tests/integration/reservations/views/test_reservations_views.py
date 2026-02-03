@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from reservations.models import Reservation
 from datetime import datetime, timezone, timedelta
+from base.dtos import RedirectResultDTO, MessageDTO
 
 
 @pytest.mark.django_db
@@ -210,19 +211,25 @@ def test_reserve_view_setup_error(
     mock_room_repo.fetch_all_classes.return_value = Result.Err('Classes load error')
 
     with reservations_container.room_repo.override(mock_room_repo):
-        # We also need to mock can_client_create_reservation because it's called in GET
+        # We also need to mock render_reserve_form because it's called in GET
         mock_service = mocker.Mock()
-        mock_service.can_client_create_reservation.return_value = Result.Ok(
-            TemplateRenderResultDTO(template_name='reserve.html', context={})
+        mock_service.render_reserve_form.return_value = Result.Ok(
+            RedirectResultDTO(
+                url='rooms',
+                messages=[MessageDTO(typ='error', msg='Could not load room classes.')],
+            )
         )
         with reservations_container.reservation_service.override(mock_service):
-            response = client.get(reverse('reserve', kwargs={'room_pk': room_model_instance.pk}))
+            response = client.get(
+                reverse('reserve', kwargs={'room_pk': room_model_instance.pk})
+            )
 
-    assert response.status_code == 200
-    assert 'reserve.html' in [t.name for t in response.templates]
+    assert response.status_code == 302
+    assert response.url == '/reserva/quartos/'
 
-    # Check for error message from setup
-    messages = list(response.context['messages'])
+    # Follow redirect to check for error message
+    follow_response = client.get(response.url)
+    messages = list(follow_response.context['messages'])
     assert any('Could not load room classes.' in str(m) for m in messages)
 
 
@@ -239,9 +246,8 @@ def test_reservations_history_view_error(authenticated_client, reservations_cont
     mock_service.fetch_client_reservation_history.return_value = Result.Err(
         'History load error'
     )
-    # We also need get_reservations_with_cancellation_info and can_client_create_reservation for context data
+    # We also need get_reservations_with_cancellation_info for context data
     mock_service.get_reservations_with_cancellation_info.return_value = []
-    mock_service.can_client_create_reservation.return_value = Result.Ok(False)
 
     with reservations_container.reservation_service.override(mock_service):
         response = client.get(reverse('reservations_history'))

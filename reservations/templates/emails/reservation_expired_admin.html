@@ -2,9 +2,9 @@
 <h2>{% trans "Reservation Expired" %}</h2>
 <p>{% trans "The following reservation has expired:" %}</p>
 <ul>
-  <li>{% trans "Client:" %} {{ client.complete_name }}</li>
+  <li>{% trans "Client:" %} {{ client.first_name }} {{ client.last_name }}</li>
   <li>{% trans "Room:" %} {{ reservation.room.number }}</li>
-  <li>{% trans "Check-in:" %} {{ reservation.checkin|date:"Y-m-d" }}</li>
-  <li>{% trans "Check-out:" %} {{ reservation.checkout|date:"Y-m-d" }}</li>
+  <li>{% trans "Check-in:" %} {{ reservation.checkin }}</li>
+  <li>{% trans "Check-out:" %} {{ reservation.checkout }}</li>
 </ul>
 <p>{% trans "The room has been made available for new reservations." %}</p>

@@ -92,7 +92,9 @@ class AbsRoomRepository(Protocol):
         ...
 
     @abstractmethod
-    def fetch_all(self, with_benefits: bool = False) -> Result[list[entities.Room]]:
+    def fetch_all(
+        self, with_benefits: bool = False, active_only: bool = False
+    ) -> Result[list[entities.Room]]:
         """Fetches all rooms from the repository."""
         ...
 

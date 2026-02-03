@@ -140,7 +140,7 @@ class TestProcessRefundTask:
             payments_container.payment_repo.override(mock_payments_repository),
             payments_container.payment_gateway.override(mock_stripe),
         ):
-            result = process_refund(payment_id=1, refund_amount_cents=1000)
+            result = process_refund(payment_id=1, refund_price_cents=1000)
             assert result.is_ok()
             assert payment.status == PaymentStatus.REFUNDED
             mock_stripe.process_refund.assert_called_once_with(
@@ -154,7 +154,7 @@ class TestProcessRefundTask:
 
         with payments_container.payment_repo.override(mock_payments_repository):
             with pytest.raises(Error) as exc:
-                process_refund(payment_id=1, refund_amount_cents=1000)
+                process_refund(payment_id=1, refund_price_cents=1000)
             assert 'not found' in str(exc.value)
 
     def test_process_refund_no_pi_id(
@@ -166,7 +166,7 @@ class TestProcessRefundTask:
 
         with payments_container.payment_repo.override(mock_payments_repository):
             with pytest.raises(Error) as exc:
-                process_refund(payment_id=1, refund_amount_cents=1000)
+                process_refund(payment_id=1, refund_price_cents=1000)
             assert 'no associated payment intent ID' in str(exc.value)
 
     def test_process_refund_stripe_error(
@@ -184,7 +184,7 @@ class TestProcessRefundTask:
             payments_container.payment_gateway.override(mock_stripe),
         ):
             with pytest.raises(Error) as exc:
-                process_refund(payment_id=1, refund_amount_cents=1000)
+                process_refund(payment_id=1, refund_price_cents=1000)
             assert 'Failed to process refund with Stripe' in str(exc.value)
 
     def test_process_refund_update_error(
@@ -203,5 +203,5 @@ class TestProcessRefundTask:
             payments_container.payment_gateway.override(mock_stripe),
         ):
             with pytest.raises(Error) as exc:
-                process_refund(payment_id=1, refund_amount_cents=1000)
+                process_refund(payment_id=1, refund_price_cents=1000)
             assert 'Failed to update payment' in str(exc.value)

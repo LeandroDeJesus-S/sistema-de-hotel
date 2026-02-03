@@ -136,7 +136,7 @@ class TestCancelReservationUseCase:
         mock_payment = Mock()
         mock_payment.id = 1
         mock_payment.status = 'completed'
-        mock_payment.amount = Decimal('200.00')
+        mock_payment.price = 20000
         mock_payments_repo.get_by_reservation_id.return_value = Result.Ok(mock_payment)
 
         result = use_case(reservation_id=1, client_id=1, reason='Change of plans')
@@ -333,10 +333,10 @@ class TestCancelReservationUseCase:
         assert result.is_ok()
         mock_logger.warning.assert_called_with('Reservation has no ID, cannot process refund')
 
-    def test_calculate_refund_amount(self, use_case, client_entity, room_entity):
+    def test_calculate_refund_price(self, use_case, client_entity, room_entity):
         """Should calculate full refund if > 24h and partial if < 24h."""
         payment = Mock()
-        payment.amount = Decimal('100.00')
+        payment.price = 10000
 
         # 1. Full refund (> 24h)
         res_full = Reservation.safe_create(
@@ -346,11 +346,11 @@ class TestCancelReservationUseCase:
             room=room_entity,
             observations='',
             currency=Currency.USD,
-            price=int(Decimal('100.00') * 100),
+            price=10000,
             status=ReservationStatusEnum.SCHEDULED,
         ).unwrap()
 
-        refund_full = use_case._calculate_refund_amount(res_full, payment)
+        refund_full = use_case._calculate_refund_price(res_full, payment)
         assert refund_full == 10000
 
         # 2. Partial refund (< 24h)
@@ -361,11 +361,11 @@ class TestCancelReservationUseCase:
             room=room_entity,
             observations='',
             currency=Currency.USD,
-            price=int(Decimal('100.00') * 100),
+            price=10000,
             status=ReservationStatusEnum.SCHEDULED,
         ).unwrap()
 
-        refund_partial = use_case._calculate_refund_amount(res_partial, payment)
+        refund_partial = use_case._calculate_refund_price(res_partial, payment)
         assert refund_partial == 5000
 
     def test_send_notifications(self, use_case, mocker):

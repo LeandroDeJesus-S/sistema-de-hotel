@@ -5,9 +5,11 @@ from decimal import Decimal
 from exc import Result
 from base.dtos import RedirectResultDTO, TemplateRenderResultDTO
 from reservations.application.services import ReservationService
-from reservations.domain.entities import Reservation
+from reservations.domain.entities import Reservation, Room
 from reservations.domain.value_objects import Currency, PriceValue, ReservationStatusEnum
 from reservations.feedback_messages import ReservationMessages
+import utils
+from utils.support import model_to_entity
 
 
 class TestReservationService:
@@ -99,30 +101,39 @@ class TestReservationService:
         assert dto.url == 'rooms'
         assert any(m.typ == 'error' for m in dto.messages)
 
-    def test_can_client_create_reservation_true(self, service, mock_reservation_repo, mock_room_repo, room_entity):
+    def test_can_client_create_reservation_true(
+        self, service, mock_reservation_repo, mock_room_repo, room_entity
+    ):
         """Should return a TemplateRenderResultDTO when the client has no active reservations."""
         mock_reservation_repo.has_active_reservation.return_value = Result.Ok(False)
         mock_room_repo.find_by_id.return_value = Result.Ok(room_entity)
+        mock_room_repo.fetch_all_classes.return_value = Result.Ok([])
 
-        result = service.can_client_create_reservation(client_id=1)
+        result = service.render_reserve_form(client_id=1, room_id=1)
 
         assert result.is_ok()
         dto = result.unwrap()
         assert isinstance(dto, TemplateRenderResultDTO)
         assert dto.template_name == 'reserve.html'
 
-    def test_can_client_create_reservation_false(self, service, mock_reservation_repo):
+    def test_can_client_create_reservation_false(
+        self, service, mock_reservation_repo, mock_room_repo, room_model_instance
+    ):
         """Should return a RedirectResultDTO when the client already has an active reservation."""
         mock_reservation_repo.has_active_reservation.return_value = Result.Ok(True)
+        mock_room_repo.find_by_id.return_value = Result.Ok(
+            model_to_entity(room_model_instance, Room)
+        )
+        mock_room_repo.fetch_all_classes.return_value = Result.Ok([])
 
-        result = service.can_client_create_reservation(client_id=1)
+        result = service.render_reserve_form(client_id=1, room_id=room_model_instance.id)
 
         assert result.is_ok()
         dto = result.unwrap()
         assert isinstance(dto, RedirectResultDTO)
         assert dto.url == 'rooms'
         assert any(
-            str(ReservationMessages.ALREADY_HAVE_A_RESERVATION) in m.msg for m in dto.messages
+            str(ReservationMessages.ALREADY_HAVE_A_RESERVATION) == m.msg for m in dto.messages
         )
 
     def test_can_cancel_reservation_true(self, service, client_entity, room_entity):

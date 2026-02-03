@@ -63,6 +63,7 @@ class RoomErrorMessages:
     PRICE_EXCEEDED = _('The room price must be at most $%(max_daily_price).2f.') % {
         'max_daily_price': RoomRules.MAX_DAILY_PRICE
     }
+    PRICES_REQUIRED_FOR_AVAILABLE = _('Room must have at least one price to be available.')
 
 
 class ClasseErrorMessages:
@@ -85,3 +86,5 @@ class ReserveErrorMessages:
     }
     INVALID_ROOM_CHOICE = _('Please choose a valid room.')
     UNAVAILABLE_DATE = _('Unavailable reservation date. Available dates are %(dates)s')
+    ROOM_NOT_FOUND = _('Could not load room.')
+    CLASS_NOT_FOUND = _('Could not load room classes.')

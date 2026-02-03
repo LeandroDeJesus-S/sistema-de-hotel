@@ -13,7 +13,7 @@ from django.views.generic.list import ListView
 from base.dtos import TemplateRenderResultDTO
 from reservations.container import ReservationsContainer
 from reservations.domain.entities import Reservation
-from reservations.domain.repo import AbsReservationRepository, AbsRoomRepository
+from reservations.domain.repo import AbsReservationRepository
 from utils import support
 
 from .application import services
@@ -56,7 +56,7 @@ class Rooms(ListView):
         logger: logging.Logger = Provide[ReservationsContainer.logger],
     ):
         """Returns all rooms with their benefits"""
-        result = svc.room_repo.fetch_all(with_benefits=True)
+        result = svc.room_repo.fetch_all(with_benefits=True, active_only=True)
 
         def _on_ok(rs):
             logger.debug('successfully loaded rooms')
@@ -109,32 +109,23 @@ class Reserve(LoginRequired, View):
         request: HttpRequest,
         *args: Any,
         svc: services.ReservationService = Provide[ReservationsContainer.reservation_service],
-        room_repo: AbsRoomRepository = Provide[ReservationsContainer.room_repo],
+        # room_repo: AbsRoomRepository = Provide[ReservationsContainer.room_repo],
         logger: logging.Logger = Provide[ReservationsContainer.logger],
         **kwargs: Any,
     ) -> None:
         super().setup(request, *args, **kwargs)
         self.logger = logger
         self.svc = svc
-
-        result = room_repo.fetch_all_classes()
-        if result.is_err():
-            err = result.unwrap_err()
-            self.logger.error(err.msg, exc_info=err.src_error)
-            messages.error(request, _('Could not load room classes.'))
-
-        self.context: dict[str, Any] = {'room_classes': result.unwrap_or([])}
         self.template_name = 'reserve.html'
 
     def get(self, request: HttpRequest, room_pk: int):
         """Renders the form for a new reservation if the user does not
         have an active or scheduled reservation."""
-        result = self.svc.can_client_create_reservation(client_id=request.user.pk)
+        result = self.svc.render_reserve_form(client_id=request.user.pk, room_id=room_pk)
         return presenters.reserve_get_presenter(request, result, room_pk).unwrap()
 
     def post(self, request: HttpRequest, room_pk: int):
         self.logger.debug(f'reservation for room {room_pk} started')
-        self.context['room_pk'] = room_pk
 
         result = self.svc.create_reservation({
             'client_id': request.user.pk,

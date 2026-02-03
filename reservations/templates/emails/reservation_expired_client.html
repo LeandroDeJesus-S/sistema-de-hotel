@@ -1,8 +1,8 @@
 {% load i18n %}
 <h2>{% trans "Reservation Expired" %}</h2>
-<p>{% trans "Hello" %} {{ client.complete_name }},</p>
+<p>{% trans "Hello" %} {{ client.first_name|capfirst }},</p>
 <p>{% trans "Your reservation for room" %} {{ reservation.room.number }} {% trans "has expired." %}</p>
-<p>{% trans "Check-in:" %} {{ reservation.checkin|date:"Y-m-d" }}</p>
-<p>{% trans "Check-out:" %} {{ reservation.checkout|date:"Y-m-d" }}</p>
+<p>{% trans "Check-in:" %} {{ reservation.checkin }}</p>
+<p>{% trans "Check-out:" %} {{ reservation.checkout }}</p>
 <p>{% trans "If you need to make a new reservation, please visit our website." %}</p>
 <p>{% trans "Thank you for choosing our hotel!" %}</p>

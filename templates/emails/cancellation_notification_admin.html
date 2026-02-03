@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n currency_tags %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -27,7 +27,7 @@
                 <li><strong>{% trans "Room:" %}</strong> {{ reservation.room.number }} - {{ reservation.room.room_class.name }}</li>
                 <li><strong>{% trans "Check-in:" %}</strong> {{ reservation.checkin|date:"Y-m-d" }}</li>
                 <li><strong>{% trans "Check-out:" %}</strong> {{ reservation.checkout|date:"Y-m-d" }}</li>
-                <li><strong>{% trans "Total Amount:" %}</strong> {{ reservation.formatted_price }}</li>
+                <li><strong>{% trans "Total Price:" %}</strong> {% render_localized_price reservation %}</li>
                 <li><strong>{% trans "Cancellation Date:" %}</strong> {{ reservation.cancelled_at|date:"Y-m-d H:i" }}</li>
             </ul>
 
@@ -40,7 +40,7 @@
         <div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; margin: 20px 0; border-radius: 5px;">
             <h3 style="color: #155724;">{% trans "Refund Processed" %}</h3>
             <ul style="list-style: none; padding: 0; color: #155724;">
-                <li><strong>{% trans "Refunded Amount:" %}</strong> $ {{ refund_info.amount }}</li>
+                <li><strong>{% trans "Refunded Price:" %}</strong> {% render_localized_price refund_info %}</li>
                 <li><strong>{% trans "Refund Date:" %}</strong> {{ refund_info.date|date:"Y-m-d H:i" }}</li>
             </ul>
         </div>

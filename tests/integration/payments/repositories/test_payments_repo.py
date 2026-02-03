@@ -49,7 +49,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         # Convert to domain entities
         from utils.support import model_to_entity
@@ -71,7 +71,7 @@ class TestPaymentRepository:
             gateway_payment_session_id=None,
             gateway_payment_intent_id=None,
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         # Convert to domain entities
         from utils.support import model_to_entity
@@ -141,7 +141,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         # Convert to domain entities
         from utils.support import model_to_entity
@@ -210,7 +210,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         # Convert to domain entities
         from utils.support import model_to_entity
@@ -281,7 +281,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         # Convert to domain entities
         from utils.support import model_to_entity
@@ -346,7 +346,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         payment = G(PaymentModel, reservation=reservation)
 
@@ -407,7 +407,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         payment = G(PaymentModel, reservation=reservation)
 
@@ -450,7 +450,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         payment = G(PaymentModel, reservation=reservation)
 
@@ -500,7 +500,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         payment = PaymentModel.objects.create(
             reservation=reservation,
@@ -595,7 +595,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         payment = PaymentModel.objects.create(
             reservation=reservation,
@@ -689,7 +689,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         payment_model = PaymentModel.objects.create(
             reservation=reservation,
@@ -778,7 +778,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         payment_model = PaymentModel.objects.create(
             reservation=reservation,
@@ -840,7 +840,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         payment_model = PaymentModel.objects.create(
             reservation=reservation,
@@ -900,7 +900,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         payment = PaymentModel.objects.create(
             reservation=reservation,
@@ -984,7 +984,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         payment = PaymentModel.objects.create(
             reservation=reservation,
@@ -1041,7 +1041,7 @@ class TestPaymentRepository:
             price=0,
             status='I',
         )
-        reservation.amount = reservation.calc_reservation_value()
+        reservation.price = reservation.calc_reservation_value()
         reservation.save()
         PaymentModel.objects.create(
             reservation=reservation,

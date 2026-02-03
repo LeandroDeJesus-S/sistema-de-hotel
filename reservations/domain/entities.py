@@ -134,13 +134,16 @@ class Room(BaseEntity):
         'short_desc': {
             'value_error': RoomErrorMessages.SHORT_DESC_INVALID,
         },
+        'prices': {
+            'value_error': RoomErrorMessages.PRICES_REQUIRED_FOR_AVAILABLE,
+        },
     }
     number: RoomNumber
     adults_capacity: AdultsCapacity
     children_capacity: ChildrenCapacity
     size: RoomSize
     prices: list[Price] = []
-    available: bool = True
+    available: bool = False
     image: str = ''
     short_desc: RoomShortDesc
     long_desc: RoomLongDesc
@@ -149,6 +152,13 @@ class Room(BaseEntity):
     room_class: RoomClass
     hotel: Hotel
     id: int | None = None
+
+    @model_validator(mode='after')
+    def validate_prices_for_availability(self):
+        """Ensures room cannot be available without at least one price."""
+        if self.available and not self.prices:
+            raise ValueError(RoomErrorMessages.PRICES_REQUIRED_FOR_AVAILABLE)
+        return self
 
     def __str__(self) -> str:
         return f'{self.number} - {self.room_class.name}'

@@ -12,7 +12,7 @@ from exc import Result
 from payments.domain.ports import AbsPaymentsRepository
 from reservations.application.dtos import CreateReservationInput
 from reservations.domain.entities import Reservation
-from reservations.feedback_messages import ReservationMessages
+from reservations.feedback_messages import ReservationMessages, ReserveErrorMessages
 from utils.adapters.unit_of_work import AbsUnitOfWork
 
 from ..domain.repo import AbsReservationRepository, AbsRoomRepository
@@ -105,10 +105,32 @@ class ReservationService:
         self.logger.info(f'reservation {res.id} registered')
         return Result.Ok(RedirectResultDTO(url='checkout', args=(res.id,)))
 
-    def can_client_create_reservation(
-        self, client_id: int
-    ) -> Union[Result[TemplateRenderResultDTO], Result[RedirectResultDTO]]:
+    def render_reserve_form(
+        self, client_id: int, room_id: int
+    ) -> Result[TemplateRenderResultDTO | RedirectResultDTO]:
         """Check if client can create a new reservation (no active/scheduled ones)."""
+        room_result = self.room_repo.find_by_id(room_id)
+        if room_result.is_err():
+            return Result.Ok(
+                RedirectResultDTO(
+                    url='rooms',
+                    messages=[
+                        MessageDTO(typ='error', msg=str(ReserveErrorMessages.ROOM_NOT_FOUND))
+                    ],
+                )
+            )
+
+        classes_result = self.room_repo.fetch_all_classes()
+        if classes_result.is_err():
+            return Result.Ok(
+                RedirectResultDTO(
+                    url='rooms',
+                    messages=[
+                        MessageDTO(typ='error', msg=str(ReserveErrorMessages.CLASS_NOT_FOUND))
+                    ],
+                )
+            )
+
         has = self.reservation_repo.has_active_reservation(
             client_id=client_id, include_scheduled=True
         ).unwrap_or(False)
@@ -129,7 +151,15 @@ class ReservationService:
                 )
             )
 
-        return Result.Ok(TemplateRenderResultDTO(template_name='reserve.html', context={}))
+        return Result.Ok(
+            TemplateRenderResultDTO(
+                template_name='reserve.html',
+                context={
+                    'room': room_result.unwrap_or(None),
+                    'room_classes': classes_result.unwrap_or([]),
+                },
+            )
+        )
 
     def can_cancel_reservation(self, reservation: Reservation) -> Result[bool]:
         """Determine if a specific reservation can be cancelled."""

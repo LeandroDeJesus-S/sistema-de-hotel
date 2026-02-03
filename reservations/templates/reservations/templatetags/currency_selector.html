@@ -1,0 +1,8 @@
+<select name="currency" id="currency" class="form-select">
+    {% for price in prices %}
+        <option value="{{ price.currency.value }}"
+            {% if price.selected %}selected{% endif %}>
+            {{ price.currency.value|upper }}
+        </option>
+    {% endfor %}
+</select>

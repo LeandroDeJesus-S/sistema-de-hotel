@@ -12,7 +12,6 @@ Detalhes da Reserva Cancelada:
 - Quarto: {{ reservation.room }}
 - Check-in: {{ reservation.checkin|date:"d/m/Y" }}
 - Check-out: {{ reservation.checkout|date:"d/m/Y" }}
-- Valor Total: {{ reservation.formatted_price }}
 - Data do Cancelamento: {{ reservation.cancelled_at|date:"d/m/Y H:i" }}
 
 {% if reservation.cancellation_reason %}
@@ -21,7 +20,7 @@ Motivo do Cancelamento: {{ reservation.cancellation_reason }}
 
 {% if refund_info %}
 Reembolso Processado:
-- Valor Reembolsado: R$ {{ refund_info.amount }}
+- Valor Reembolsado: R$ {{ refund_info.price }}
 - Data do Reembolso: {{ refund_info.date|date:"d/m/Y H:i" }}
 {% else %}
 Nenhum reembolso foi processado para esta reserva.

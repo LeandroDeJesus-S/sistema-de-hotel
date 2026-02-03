@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n currency_tags %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -19,7 +19,7 @@
                 <li><strong>{% trans "Room:" %}</strong> {{ reservation.room }}</li>
                 <li><strong>{% trans "Check-in:" %}</strong> {{ reservation.checkin|date:"Y-m-d" }}</li>
                 <li><strong>{% trans "Check-out:" %}</strong> {{ reservation.checkout|date:"Y-m-d" }}</li>
-                <li><strong>{% trans "Total Amount:" %}</strong> {{ reservation.formatted_price }}</li>
+                <li><strong>{% trans "Total Price:" %}</strong> {% render_localized_price reservation %}</li>
             </ul>
         </div>
 
